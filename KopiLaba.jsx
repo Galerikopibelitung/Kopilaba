@@ -4,25 +4,47 @@ const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 
 const api = async (endpoint, method = "GET", body = null, token = null) => {
-  const headers = {
-    "Content-Type": "application/json",
-    "apikey": SUPABASE_KEY,
-    "Authorization": `Bearer ${token || SUPABASE_KEY}`,
-    "Prefer": "return=representation"
-  };
-  const res = await fetch(`${SUPABASE_URL}${endpoint}`, {
-    method, headers, body: body ? JSON.stringify(body) : null
-  });
-  return res.json();
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${token || SUPABASE_KEY}`,
+      "Prefer": "return=representation"
+    };
+    const res = await fetch(`${SUPABASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : null
+    });
+    if (!res.ok) {
+      throw new Error(`Gagal: ${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
 };
 
 const authApi = async (endpoint, body) => {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1${endpoint}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
-    body: JSON.stringify(body)
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error_description || "Auth gagal");
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Auth Error:", error);
+    throw error;
+  }
 };
 
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
@@ -36,12 +58,11 @@ export default function KopiLaba() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [networkError, setNetworkError] = useState(false);
 
-  // Form states
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [regForm, setRegForm] = useState({ nama: "", email: "", password: "", role: "pemilik", namaKafe: "", alamatKafe: "" });
 
-  // Data states
   const [transaksi, setTransaksi] = useState([]);
   const [menu, setMenu] = useState([]);
   const [kafe, setKafe] = useState(null);
@@ -52,7 +73,10 @@ export default function KopiLaba() {
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "" });
 
   useEffect(() => {
-    if (success) { const t = setTimeout(() => setSuccess(""), 3000); return () => clearTimeout(t); }
+    if (success) {
+      const t = setTimeout(() => setSuccess(""), 3000);
+      return () => clearTimeout(t);
+    }
   }, [success]);
 
   const loadData = async (tok, prof) => {
@@ -62,85 +86,229 @@ export default function KopiLaba() {
       if (!k && prof.kafe_id) {
         const k2 = await api(`/rest/v1/kafe?id=eq.${prof.kafe_id}&limit=1`, "GET", null, tok);
         setKafe(Array.isArray(k2) ? k2[0] : null);
-        loadTransaksi(tok, prof.kafe_id);
-        loadMenu(tok, prof.kafe_id);
+        await loadTransaksi(tok, prof.kafe_id);
+        await loadMenu(tok, prof.kafe_id);
       } else if (k) {
         setKafe(k);
-        loadTransaksi(tok, k.id);
-        loadMenu(tok, k.id);
+        await loadTransaksi(tok, k.id);
+        await loadMenu(tok, k.id);
       }
-    } catch (e) { console.log(e); }
+    } catch (err) {
+      console.error("Load data error:", err);
+      setNetworkError(true);
+      setError("Gagal memuat data. Periksa koneksi.");
+    }
   };
 
   const loadTransaksi = async (tok, kafeId) => {
-    const data = await api(`/rest/v1/transaksi?kafe_id=eq.${kafeId}&order=created_at.desc&limit=20`, "GET", null, tok);
-    setTransaksi(Array.isArray(data) ? data : []);
+    try {
+      const data = await api(`/rest/v1/transaksi?kafe_id=eq.${kafeId}&order=created_at.desc&limit=20`, "GET", null, tok);
+      setTransaksi(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load transaksi error:", err);
+      setTransaksi([]);
+    }
   };
 
   const loadMenu = async (tok, kafeId) => {
-    const data = await api(`/rest/v1/menu?kafe_id=eq.${kafeId}`, "GET", null, tok);
-    setMenu(Array.isArray(data) ? data : []);
+    try {
+      const data = await api(`/rest/v1/menu?kafe_id=eq.${kafeId}`, "GET", null, tok);
+      setMenu(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load menu error:", err);
+      setMenu([]);
+    }
   };
 
   const handleLogin = async () => {
-    setLoading(true); setError("");
-    const data = await authApi("/token?grant_type=password", loginForm);
-    if (data.access_token) {
-      const tok = data.access_token;
-      const u = data.user;
-      setToken(tok); setUser(u);
-      const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
-      const p = Array.isArray(prof) ? prof[0] : null;
-      if (p) { setProfile(p); await loadData(tok, p); setScreen("app"); }
-      else { setError("Profil tidak ditemukan."); }
-    } else { setError(data.error_description || "Login gagal. Cek email & password."); }
-    setLoading(false);
+    setLoading(true);
+    setError("");
+    setNetworkError(false);
+
+    try {
+      const data = await authApi("/token?grant_type=password", loginForm);
+      if (data.access_token) {
+        const tok = data.access_token;
+        const u = data.user;
+        setToken(tok);
+        setUser(u);
+        const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
+        const p = Array.isArray(prof) ? prof[0] : null;
+        if (p) {
+          setProfile(p);
+          await loadData(tok, p);
+          setScreen("app");
+        } else {
+          setError("Profil tidak ditemukan.");
+        }
+      } else {
+        setError(data.error_description || "Login gagal. Cek email & password.");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      if (err.message.includes("Failed to fetch") || err.message.includes("Network")) {
+        setNetworkError(true);
+        setError("Koneksi internet bermasalah. Periksa jaringan Anda.");
+      } else {
+        setError("Terjadi kesalahan. Coba lagi.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async () => {
-    setLoading(true); setError("");
-    if (!regForm.nama || !regForm.email || !regForm.password) { setError("Semua kolom wajib diisi!"); setLoading(false); return; }
-    if (regForm.role === "pemilik" && !regForm.namaKafe) { setError("Nama kafe wajib diisi!"); setLoading(false); return; }
-    const data = await authApi("/signup", { email: regForm.email, password: regForm.password });
-    if (data.user) {
-      const u = data.user;
-      const tok = data.access_token || SUPABASE_KEY;
-      let kafeId = null;
-      if (regForm.role === "pemilik") {
-        const k = await api("/rest/v1/kafe", "POST", { nama: regForm.namaKafe, alamat: regForm.alamatKafe, pemilik_id: u.id }, tok);
-        kafeId = Array.isArray(k) ? k[0]?.id : k?.id;
+    setLoading(true);
+    setError("");
+    setNetworkError(false);
+
+    if (!regForm.nama || !regForm.email || !regForm.password) {
+      setError("Semua kolom wajib diisi!");
+      setLoading(false);
+      return;
+    }
+    if (regForm.role === "pemilik" && !regForm.namaKafe) {
+      setError("Nama kafe wajib diisi!");
+      setLoading(false);
+      return;
+    }
+    if (regForm.password.length < 6) {
+      setError("Password minimal 6 karakter!");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await authApi("/signup", {
+        email: regForm.email,
+        password: regForm.password
+      });
+
+      if (data.user) {
+        const u = data.user;
+        const tok = data.access_token || SUPABASE_KEY;
+        let kafeId = null;
+
+        if (regForm.role === "pemilik") {
+          try {
+            const k = await api("/rest/v1/kafe", "POST", {
+              nama: regForm.namaKafe,
+              alamat: regForm.alamatKafe,
+              pemilik_id: u.id
+            }, tok);
+            kafeId = Array.isArray(k) ? k[0]?.id : k?.id;
+          } catch (kafeErr) {
+            console.error("Create kafe error:", kafeErr);
+            setError("Gagal membuat kafe. Coba lagi.");
+            setLoading(false);
+            return;
+          }
+        }
+
+        try {
+          await api("/rest/v1/profiles", "POST", {
+            id: u.id,
+            nama: regForm.nama,
+            role: regForm.role,
+            kafe_id: kafeId
+          }, tok);
+        } catch (profileErr) {
+          console.error("Create profile error:", profileErr);
+          setError("Gagal membuat profil. Coba lagi.");
+          setLoading(false);
+          return;
+        }
+
+        setSuccess("Daftar berhasil! Silakan login.");
+        setScreen("login");
+      } else {
+        setError(data.error_description || "Gagal daftar. Coba lagi.");
       }
-      await api("/rest/v1/profiles", "POST", { id: u.id, nama: regForm.nama, role: regForm.role, kafe_id: kafeId }, tok);
-      setSuccess("Daftar berhasil! Silakan login.");
-      setScreen("login");
-    } else { setError(data.error_description || "Gagal daftar. Coba lagi."); }
-    setLoading(false);
+    } catch (err) {
+      console.error("Register error:", err);
+      if (err.message.includes("Failed to fetch") || err.message.includes("Network")) {
+        setError("Koneksi internet bermasalah. Periksa jaringan Anda.");
+      } else if (err.message.includes("email")) {
+        setError("Email sudah terdaftar. Gunakan email lain.");
+      } else {
+        setError("Terjadi kesalahan saat pendaftaran. Coba lagi.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTambahTransaksi = async () => {
-    if (!addForm.item || !addForm.total) { setError("Isi semua kolom!"); return; }
-    const kafeId = kafe?.id || profile?.kafe_id;
-    await api("/rest/v1/transaksi", "POST", {
-      kafe_id: kafeId, item: addForm.item,
-      qty: parseInt(addForm.qty), total: parseInt(addForm.total), tipe: addType
-    }, token);
-    setAddForm({ item: "", qty: "1", total: "" });
-    setShowAdd(false);
-    setSuccess("Transaksi tersimpan!");
-    loadTransaksi(token, kafeId);
+    if (!addForm.item || !addForm.total) {
+      setError("Isi semua kolom!");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      if (!kafeId) {
+        setError("Kafe tidak ditemukan. Hubungi admin.");
+        setLoading(false);
+        return;
+      }
+
+      await api("/rest/v1/transaksi", "POST", {
+        kafe_id: kafeId,
+        item: addForm.item,
+        qty: parseInt(addForm.qty) || 1,
+        total: parseInt(addForm.total),
+        tipe: addType
+      }, token);
+
+      setAddForm({ item: "", qty: "1", total: "" });
+      setShowAdd(false);
+      setSuccess("Transaksi tersimpan!");
+      await loadTransaksi(token, kafeId);
+    } catch (err) {
+      console.error("Add transaksi error:", err);
+      setError("Gagal menyimpan transaksi. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTambahMenu = async () => {
-    if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) { setError("Isi semua kolom!"); return; }
-    const kafeId = kafe?.id || profile?.kafe_id;
-    await api("/rest/v1/menu", "POST", {
-      kafe_id: kafeId, nama: menuForm.nama,
-      harga: parseInt(menuForm.harga), hpp: parseInt(menuForm.hpp)
-    }, token);
-    setMenuForm({ nama: "", harga: "", hpp: "" });
-    setShowAddMenu(false);
-    setSuccess("Menu ditambahkan!");
-    loadMenu(token, kafeId);
+    if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) {
+      setError("Isi semua kolom!");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      if (!kafeId) {
+        setError("Kafe tidak ditemukan. Hubungi admin.");
+        setLoading(false);
+        return;
+      }
+
+      await api("/rest/v1/menu", "POST", {
+        kafe_id: kafeId,
+        nama: menuForm.nama,
+        harga: parseInt(menuForm.harga),
+        hpp: parseInt(menuForm.hpp)
+      }, token);
+
+      setMenuForm({ nama: "", harga: "", hpp: "" });
+      setShowAddMenu(false);
+      setSuccess("Menu ditambahkan!");
+      await loadMenu(token, kafeId);
+    } catch (err) {
+      console.error("Add menu error:", err);
+      setError("Gagal menambahkan menu. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const totalMasuk = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
@@ -156,7 +324,6 @@ export default function KopiLaba() {
     label: { fontSize: 12, color: "#8B7355", marginBottom: 4, display: "block" },
   };
 
-  // LOGIN SCREEN
   if (screen === "login") return (
     <div style={s.wrap}>
       <div style={{ padding: "60px 24px 24px" }}>
@@ -176,7 +343,6 @@ export default function KopiLaba() {
     </div>
   );
 
-  // REGISTER SCREEN
   if (screen === "register") return (
     <div style={s.wrap}>
       <div style={{ padding: "50px 24px 24px" }}>
@@ -209,7 +375,6 @@ export default function KopiLaba() {
     </div>
   );
 
-  // MAIN APP
   const tabs = [
     { id: "dashboard", icon: "⊞", label: "Ringkasan" },
     { id: "transaksi", icon: "↕", label: "Transaksi" },
@@ -218,7 +383,6 @@ export default function KopiLaba() {
 
   return (
     <div style={s.wrap}>
-      {/* Header */}
       <div style={{ padding: "48px 20px 16px", background: "#1A0F07" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -229,13 +393,16 @@ export default function KopiLaba() {
         </div>
       </div>
 
-      {/* Toast */}
       {success && <div style={{ margin: "0 20px", background: "#1A2A1A", border: "1px solid #2A5A2A", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#6DBF5A" }}>{success}</div>}
       {error && <div style={{ margin: "0 20px", background: "#2A1A1A", border: "1px solid #5A2A2A", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#EF8080" }} onClick={() => setError("")}>{error}</div>}
+      {networkError && (
+        <div style={{ margin: "0 20px 10px", background: "#2A1A1A", border: "1px solid #5A2A2A", borderRadius: 12, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "#EF8080" }}>⚠️ {error || "Koneksi bermasalah"}</span>
+          <button onClick={() => { setNetworkError(false); if (token && profile) loadData(token, profile); }} style={{ background: "#C8822A", border: "none", borderRadius: 8, padding: "4px 12px", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 12 }}>Coba Lagi</button>
+        </div>
+      )}
 
       <div style={{ padding: "14px 20px 100px" }}>
-
-        {/* DASHBOARD */}
         {tab === "dashboard" && <>
           <div style={{ background: "linear-gradient(135deg,#C8822A,#8B5A1A)", borderRadius: 20, padding: 24, marginBottom: 14, position: "relative", overflow: "hidden" }}>
             <p style={{ margin: "0 0 4px", fontSize: 12, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Laba Bersih</p>
@@ -276,7 +443,6 @@ export default function KopiLaba() {
           </div>
         </>}
 
-        {/* TRANSAKSI */}
         {tab === "transaksi" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Semua Transaksi</p>
@@ -299,7 +465,6 @@ export default function KopiLaba() {
           </div>
         </>}
 
-        {/* MENU */}
         {tab === "menu" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Menu & HPP</p>
@@ -336,7 +501,6 @@ export default function KopiLaba() {
         </>}
       </div>
 
-      {/* Modal Tambah Transaksi */}
       {showAdd && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: "#1A1208", borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 430, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -365,7 +529,6 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* Modal Tambah Menu */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: "#1A1208", borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 430, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -381,7 +544,6 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* Bottom Nav */}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "#1A1208", borderTop: "1px solid #2A1F10", display: "flex", padding: "8px 0 20px" }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0" }}>
