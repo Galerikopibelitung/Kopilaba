@@ -51,6 +51,9 @@ const authApi = async (endpoint, body) => {
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
 export default function KopiLaba() {
+  // ------------------------------------------------------------
+  // STATE UMUM
+  // ------------------------------------------------------------
   const [screen, setScreen] = useState("login");
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -63,44 +66,74 @@ export default function KopiLaba() {
   const [darkMode, setDarkMode] = useState(true);
   const [showLaba, setShowLaba] = useState(true);
 
+  // ------------------------------------------------------------
+  // STATE LOGIN / REGISTER
+  // ------------------------------------------------------------
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [regForm, setRegForm] = useState({ nama: "", email: "", password: "", namaKafe: "", alamatKafe: "" });
 
+  // ------------------------------------------------------------
+  // STATE DATA UTAMA
+  // ------------------------------------------------------------
   const [transaksi, setTransaksi] = useState([]);
   const [menu, setMenu] = useState([]);
   const [kategori, setKategori] = useState([]);
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL TRANSAKSI
+  // ------------------------------------------------------------
   const [showAdd, setShowAdd] = useState(false);
   const [addType, setAddType] = useState("masuk");
   const [addForm, setAddForm] = useState({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
   const [editTransaksiId, setEditTransaksiId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL MENU
+  // ------------------------------------------------------------
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
   const [editMenuId, setEditMenuId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL KATEGORI
+  // ------------------------------------------------------------
   const [showAddKategori, setShowAddKategori] = useState(false);
   const [kategoriForm, setKategoriForm] = useState({ nama: "" });
   const [editKategoriId, setEditKategoriId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL KARYAWAN
+  // ------------------------------------------------------------
   const [showAddKaryawan, setShowAddKaryawan] = useState(false);
   const [karyawanForm, setKaryawanForm] = useState({ nama: "", email: "", password: "" });
   const [editKaryawanId, setEditKaryawanId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL STOK (terpisah)
+  // ------------------------------------------------------------
   const [showStok, setShowStok] = useState(false);
   const [stokForm, setStokForm] = useState({ menu_id: "", stok: "" });
 
+  // ------------------------------------------------------------
+  // STATE KASIR
+  // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
 
+  // ------------------------------------------------------------
+  // STATE LAPORAN & STRUK
+  // ------------------------------------------------------------
   const [filterTglMulai, setFilterTglMulai] = useState("");
   const [filterTglSelesai, setFilterTglSelesai] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [selectedTransaksi, setSelectedTransaksi] = useState(null);
 
+  // ------------------------------------------------------------
+  // EFFECT SUCCESS TOAST
+  // ------------------------------------------------------------
   useEffect(() => {
     if (success) {
       const t = setTimeout(() => setSuccess(""), 3000);
@@ -108,6 +141,9 @@ export default function KopiLaba() {
     }
   }, [success]);
 
+  // ------------------------------------------------------------
+  // LOAD DATA
+  // ------------------------------------------------------------
   const loadData = async (tok, prof) => {
     try {
       const kafeData = await api(`/rest/v1/kafe?pemilik_id=eq.${prof.id}&limit=1`, "GET", null, tok);
@@ -173,6 +209,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // AUTH
+  // ------------------------------------------------------------
   const handleLogin = async () => {
     setLoading(true);
     setError("");
@@ -282,6 +321,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // CRUD TRANSAKSI
+  // ------------------------------------------------------------
   const handleTambahTransaksi = async () => {
     if (!addForm.item || !addForm.total) {
       setError("Isi semua kolom!");
@@ -360,6 +402,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // CRUD MENU (dengan kategori)
+  // ------------------------------------------------------------
   const handleTambahMenu = async () => {
     if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) {
       setError("Nama, harga, dan HPP wajib diisi!");
@@ -438,6 +483,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // CRUD KATEGORI
+  // ------------------------------------------------------------
   const handleTambahKategori = async () => {
     if (!kategoriForm.nama) {
       setError("Nama kategori wajib diisi!");
@@ -485,6 +533,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // CRUD KARYAWAN (hanya pemilik)
+  // ------------------------------------------------------------
   const handleTambahKaryawan = async () => {
     if (profile?.role !== "pemilik") {
       setError("Hanya pemilik yang bisa mengelola karyawan.");
@@ -564,6 +615,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // STOK (terpisah)
+  // ------------------------------------------------------------
   const handleUpdateStok = async () => {
     if (!stokForm.menu_id || stokForm.stok === "") {
       setError("Pilih menu dan isi stok!");
@@ -584,6 +638,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // KASIR / KERANJANG
+  // ------------------------------------------------------------
   const tambahKeKeranjang = (item) => {
     if (item.stok !== undefined && item.stok <= 0) {
       setError(`Stok ${item.nama} habis!`);
@@ -663,6 +720,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ------------------------------------------------------------
+  // LAPORAN + GRAFIK + EXPORT
+  // ------------------------------------------------------------
   const getFilteredTransaksi = () => {
     let filtered = [...transaksi];
     if (filterTglMulai) {
@@ -689,6 +749,7 @@ export default function KopiLaba() {
   const laba = totalMasuk - totalKeluar;
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
+  // Chart data (7 hari terakhir)
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -715,6 +776,9 @@ export default function KopiLaba() {
     setSuccess("Laporan berhasil di-download!");
   };
 
+  // ------------------------------------------------------------
+  // THEME
+  // ------------------------------------------------------------
   const theme = darkMode ? {
     bg: "#0F0A06",
     card: "#1A1208",
@@ -804,34 +868,103 @@ export default function KopiLaba() {
     },
   };
 
+  // ============================================================
+  // RENDER LOGIN (Full screen, rata kiri, tanpa ikon, tanpa "Premium")
+  // ============================================================
   if (screen === "login") return (
-    <div style={s.wrap}>
-      <div style={{ padding: "60px 24px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 64, marginBottom: 8 }}>☕</div>
-        <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 4, letterSpacing: 2 }}>
-          <span style={{ color: theme.gold }}>KOPI</span>
+    <div style={{
+      ...s.wrap,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "100vh",
+      padding: 0,
+      margin: 0,
+      background: darkMode ? "#0F0A06" : "#F8F4F0",
+      maxWidth: "100%"
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 400,
+        padding: "24px",
+        textAlign: "left"
+      }}>
+        <h1 style={{
+          fontSize: 44,
+          fontWeight: 900,
+          marginBottom: 4,
+          letterSpacing: 4,
+          fontFamily: "'Inter',system-ui,sans-serif",
+          textAlign: "center"
+        }}>
+          <span style={{
+            color: theme.gold,
+            textShadow: darkMode ? "0 0 40px rgba(200,130,42,0.3)" : "0 0 40px rgba(184,134,11,0.15)"
+          }}>KOPI</span>
           <span style={{ color: theme.text }}>LABA</span>
         </h1>
-        <div style={{ width: 60, height: 3, background: theme.gold, margin: "8px auto 16px", borderRadius: 2 }}></div>
-        <p style={{ color: theme.textMuted, marginBottom: 32 }}>Manajemen Keuangan Kafe</p>
+        <div style={{
+          width: 80,
+          height: 3,
+          background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+          margin: "8px auto 16px",
+          borderRadius: 2
+        }}></div>
+        <p style={{
+          color: theme.textMuted,
+          marginBottom: 40,
+          fontSize: 14,
+          letterSpacing: 1,
+          fontWeight: 300,
+          textAlign: "center"
+        }}>
+          Manajemen Keuangan Kafe
+        </p>
+
         {error && <div style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${theme.danger}`, borderRadius: 12, padding: 12, marginBottom: 14, fontSize: 13, color: theme.danger }}>{error}</div>}
         {success && <div style={{ background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${theme.success}`, borderRadius: 12, padding: 12, marginBottom: 14, fontSize: 13, color: theme.success }}>{success}</div>}
+
         <label style={s.label}>Email</label>
         <input style={s.input} type="email" placeholder="email@kamu.com" value={loginForm.email} onChange={e => setLoginForm({ ...loginForm, email: e.target.value })} />
+
         <label style={s.label}>Password</label>
         <input style={s.input} type="password" placeholder="Masukkan password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} />
-        <button style={s.btn} onClick={handleLogin} disabled={loading}>{loading ? "Masuk..." : "Masuk"}</button>
+
+        <button style={s.btn} onClick={handleLogin} disabled={loading}>
+          {loading ? "Masuk..." : "Masuk"}
+        </button>
+
         <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>
           Belum punya akun? <span style={{ color: theme.gold, cursor: "pointer", fontWeight: 600 }} onClick={() => { setScreen("register"); setError(""); }}>Daftar</span>
         </p>
+
         <div style={{ marginTop: 30, display: "flex", justifyContent: "center", gap: 12 }}>
-          <button onClick={() => setDarkMode(true)} style={{ padding: "6px 20px", borderRadius: 20, border: darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`, background: "transparent", color: darkMode ? theme.gold : theme.textMuted, cursor: "pointer", fontSize: 13 }}>🌙 Dark</button>
-          <button onClick={() => setDarkMode(false)} style={{ padding: "6px 20px", borderRadius: 20, border: !darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`, background: "transparent", color: !darkMode ? theme.gold : theme.textMuted, cursor: "pointer", fontSize: 13 }}>☀️ Light</button>
+          <button onClick={() => setDarkMode(true)} style={{
+            padding: "6px 20px",
+            borderRadius: 20,
+            border: darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
+            background: "transparent",
+            color: darkMode ? theme.gold : theme.textMuted,
+            cursor: "pointer",
+            fontSize: 13
+          }}>🌙 Dark</button>
+          <button onClick={() => setDarkMode(false)} style={{
+            padding: "6px 20px",
+            borderRadius: 20,
+            border: !darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
+            background: "transparent",
+            color: !darkMode ? theme.gold : theme.textMuted,
+            cursor: "pointer",
+            fontSize: 13
+          }}>☀️ Light</button>
         </div>
       </div>
     </div>
   );
 
+  // ------------------------------------------------------------
+  // RENDER REGISTER
+  // ------------------------------------------------------------
   if (screen === "register") return (
     <div style={s.wrap}>
       <div style={{ padding: "50px 24px 24px" }}>
@@ -863,6 +996,9 @@ export default function KopiLaba() {
     </div>
   );
 
+  // ------------------------------------------------------------
+  // MAIN APP
+  // ------------------------------------------------------------
   const tabs = [
     { id: "dashboard", icon: "⊞", label: "Ringkasan" },
     { id: "transaksi", icon: "↕", label: "Transaksi" },
@@ -876,6 +1012,7 @@ export default function KopiLaba() {
 
   return (
     <div style={s.wrap}>
+      {/* HEADER */}
       <div style={{ padding: "48px 20px 16px", background: theme.headerBg, transition: "all 0.3s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -897,6 +1034,7 @@ export default function KopiLaba() {
         </div>
       </div>
 
+      {/* TOAST */}
       {success && <div style={{ margin: "0 20px", background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${theme.success}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: theme.success }}>{success}</div>}
       {error && <div style={{ margin: "0 20px", background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${theme.danger}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: theme.danger }} onClick={() => setError("")}>{error}</div>}
       {networkError && (
@@ -907,6 +1045,7 @@ export default function KopiLaba() {
       )}
 
       <div style={{ padding: "14px 20px 100px" }}>
+        {/* ===== DASHBOARD ===== */}
         {tab === "dashboard" && <>
           <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 20, padding: 24, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -970,6 +1109,7 @@ export default function KopiLaba() {
           </div>
         </>}
 
+        {/* ===== TRANSAKSI ===== */}
         {tab === "transaksi" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Semua Transaksi</p>
@@ -1008,6 +1148,7 @@ export default function KopiLaba() {
           </div>
         </>}
 
+        {/* ===== MENU ===== */}
         {tab === "menu" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Menu & Kategori</p>
@@ -1083,6 +1224,7 @@ export default function KopiLaba() {
           })}
         </>}
 
+        {/* ===== KARYAWAN ===== */}
         {tab === "karyawan" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Daftar Karyawan</p>
@@ -1107,6 +1249,7 @@ export default function KopiLaba() {
           ))}
         </>}
 
+        {/* ===== LAPORAN ===== */}
         {tab === "laporan" && <>
           <div style={s.card}>
             <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📊 Laporan Keuangan</p>
@@ -1187,6 +1330,7 @@ export default function KopiLaba() {
           </div>
         </>}
 
+        {/* ===== STRUK ===== */}
         {tab === "struk" && (
           <div style={s.card}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
@@ -1251,7 +1395,7 @@ export default function KopiLaba() {
         )}
       </div>
 
-      {/* MODAL TRANSAKSI */}
+      {/* ===== MODAL TRANSAKSI ===== */}
       {showAdd && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1317,7 +1461,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* MODAL MENU */}
+      {/* ===== MODAL MENU ===== */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1342,7 +1486,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* MODAL KATEGORI */}
+      {/* ===== MODAL KATEGORI ===== */}
       {showAddKategori && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1354,7 +1498,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* MODAL KARYAWAN */}
+      {/* ===== MODAL KARYAWAN ===== */}
       {showAddKaryawan && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1374,7 +1518,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* MODAL STOK */}
+      {/* ===== MODAL STOK ===== */}
       {showStok && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1395,7 +1539,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* MODAL KASIR */}
+      {/* ===== MODAL KASIR ===== */}
       {showKasir && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1435,6 +1579,7 @@ export default function KopiLaba() {
         </div>
       )}
 
+      {/* ===== BOTTOM NAV ===== */}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: theme.card, borderTop: `1px solid ${theme.cardBorder}`, display: "flex", padding: "8px 0 20px", transition: "all 0.3s ease" }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0" }}>
