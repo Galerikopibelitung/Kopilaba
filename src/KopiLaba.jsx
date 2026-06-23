@@ -1,14 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
-// ============================================================
-// KONSTANTA SUPABASE
-// ============================================================
 const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 
-// ============================================================
-// FUNGSI API & AUTH
-// ============================================================
 const api = async (endpoint, method = "GET", body = null, token = null) => {
   try {
     const headers = {
@@ -56,13 +50,7 @@ const authApi = async (endpoint, body) => {
 
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
-// ============================================================
-// KOMPONEN UTAMA
-// ============================================================
 export default function KopiLaba() {
-  // ------------------------------------------------------------
-  // STATE UMUM
-  // ------------------------------------------------------------
   const [screen, setScreen] = useState("login");
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -73,81 +61,46 @@ export default function KopiLaba() {
   const [success, setSuccess] = useState("");
   const [networkError, setNetworkError] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
-  const [showLaba, setShowLaba] = useState(true); // toggle laba bersih
+  const [showLaba, setShowLaba] = useState(true);
 
-  // ------------------------------------------------------------
-  // STATE LOGIN / REGISTER
-  // ------------------------------------------------------------
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [regForm, setRegForm] = useState({ nama: "", email: "", password: "", namaKafe: "", alamatKafe: "" });
 
-  // ------------------------------------------------------------
-  // STATE DATA UTAMA
-  // ------------------------------------------------------------
   const [transaksi, setTransaksi] = useState([]);
   const [menu, setMenu] = useState([]);
   const [kategori, setKategori] = useState([]);
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL TRANSAKSI
-  // ------------------------------------------------------------
   const [showAdd, setShowAdd] = useState(false);
   const [addType, setAddType] = useState("masuk");
   const [addForm, setAddForm] = useState({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
   const [editTransaksiId, setEditTransaksiId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL MENU
-  // ------------------------------------------------------------
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
   const [editMenuId, setEditMenuId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL KATEGORI
-  // ------------------------------------------------------------
   const [showAddKategori, setShowAddKategori] = useState(false);
   const [kategoriForm, setKategoriForm] = useState({ nama: "" });
   const [editKategoriId, setEditKategoriId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL KARYAWAN
-  // ------------------------------------------------------------
   const [showAddKaryawan, setShowAddKaryawan] = useState(false);
   const [karyawanForm, setKaryawanForm] = useState({ nama: "", email: "", password: "" });
   const [editKaryawanId, setEditKaryawanId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL STOK (terpisah)
-  // ------------------------------------------------------------
   const [showStok, setShowStok] = useState(false);
   const [stokForm, setStokForm] = useState({ menu_id: "", stok: "" });
 
-  // ------------------------------------------------------------
-  // STATE MODAL KASIR (keranjang)
-  // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
 
-  // ------------------------------------------------------------
-  // STATE LAPORAN
-  // ------------------------------------------------------------
   const [filterTglMulai, setFilterTglMulai] = useState("");
   const [filterTglSelesai, setFilterTglSelesai] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [selectedTransaksi, setSelectedTransaksi] = useState(null);
 
-  // ------------------------------------------------------------
-  // REF UNTUK EXPORT EXCEL
-  // ------------------------------------------------------------
-  const laporanRef = useRef(null);
-
-  // ------------------------------------------------------------
-  // EFFECT: SUCCESS TOAST
-  // ------------------------------------------------------------
   useEffect(() => {
     if (success) {
       const t = setTimeout(() => setSuccess(""), 3000);
@@ -155,9 +108,6 @@ export default function KopiLaba() {
     }
   }, [success]);
 
-  // ------------------------------------------------------------
-  // EFFECT: LOAD DATA SAAT LOGIN
-  // ------------------------------------------------------------
   const loadData = async (tok, prof) => {
     try {
       const kafeData = await api(`/rest/v1/kafe?pemilik_id=eq.${prof.id}&limit=1`, "GET", null, tok);
@@ -205,7 +155,7 @@ export default function KopiLaba() {
 
   const loadKategori = async (tok) => {
     try {
-      const data = await api(`/rest/v1/kategori?order=nama.asc`, "GET", null, tok);
+      const data = await api("/rest/v1/kategori?order=nama.asc", "GET", null, tok);
       setKategori(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Load kategori error:", err);
@@ -223,9 +173,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // AUTH: LOGIN & REGISTER
-  // ------------------------------------------------------------
   const handleLogin = async () => {
     setLoading(true);
     setError("");
@@ -335,9 +282,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD TRANSAKSI (dengan role check)
-  // ------------------------------------------------------------
   const handleTambahTransaksi = async () => {
     if (!addForm.item || !addForm.total) {
       setError("Isi semua kolom!");
@@ -416,9 +360,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD MENU (dengan kategori)
-  // ------------------------------------------------------------
   const handleTambahMenu = async () => {
     if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) {
       setError("Nama, harga, dan HPP wajib diisi!");
@@ -497,9 +438,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD KATEGORI
-  // ------------------------------------------------------------
   const handleTambahKategori = async () => {
     if (!kategoriForm.nama) {
       setError("Nama kategori wajib diisi!");
@@ -547,9 +485,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD KARYAWAN (hanya pemilik)
-  // ------------------------------------------------------------
   const handleTambahKaryawan = async () => {
     if (profile?.role !== "pemilik") {
       setError("Hanya pemilik yang bisa mengelola karyawan.");
@@ -629,9 +564,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // FITUR STOK (terpisah)
-  // ------------------------------------------------------------
   const handleUpdateStok = async () => {
     if (!stokForm.menu_id || stokForm.stok === "") {
       setError("Pilih menu dan isi stok!");
@@ -652,9 +584,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // KERANJANG KASIR
-  // ------------------------------------------------------------
   const tambahKeKeranjang = (item) => {
     if (item.stok !== undefined && item.stok <= 0) {
       setError(`Stok ${item.nama} habis!`);
@@ -734,9 +663,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // LAPORAN + FILTER TANGGAL + CHART (sederhana) + EXPORT EXCEL
-  // ------------------------------------------------------------
   const getFilteredTransaksi = () => {
     let filtered = [...transaksi];
     if (filterTglMulai) {
@@ -761,10 +687,8 @@ export default function KopiLaba() {
   const totalMasuk = filtered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
   const totalKeluar = filtered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
   const laba = totalMasuk - totalKeluar;
-
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
-  // Chart data sederhana (per hari)
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -777,7 +701,6 @@ export default function KopiLaba() {
   const chartKeluar = chartLabels.map(d => chartData[d].keluar);
   const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
 
-  // Export Excel (CSV sederhana)
   const exportExcel = () => {
     const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
     const rows = filtered.map(t =>
@@ -792,9 +715,6 @@ export default function KopiLaba() {
     setSuccess("Laporan berhasil di-download!");
   };
 
-  // ------------------------------------------------------------
-  // THEME
-  // ------------------------------------------------------------
   const theme = darkMode ? {
     bg: "#0F0A06",
     card: "#1A1208",
@@ -884,9 +804,6 @@ export default function KopiLaba() {
     },
   };
 
-  // ============================================================
-  // RENDER LOGIN
-  // ============================================================
   if (screen === "login") return (
     <div style={s.wrap}>
       <div style={{ padding: "60px 24px 24px", textAlign: "center" }}>
@@ -915,9 +832,6 @@ export default function KopiLaba() {
     </div>
   );
 
-  // ============================================================
-  // RENDER REGISTER
-  // ============================================================
   if (screen === "register") return (
     <div style={s.wrap}>
       <div style={{ padding: "50px 24px 24px" }}>
@@ -949,9 +863,6 @@ export default function KopiLaba() {
     </div>
   );
 
-  // ============================================================
-  // RENDER MAIN APP
-  // ============================================================
   const tabs = [
     { id: "dashboard", icon: "⊞", label: "Ringkasan" },
     { id: "transaksi", icon: "↕", label: "Transaksi" },
@@ -962,11 +873,9 @@ export default function KopiLaba() {
   ];
 
   const isPemilik = profile?.role === "pemilik";
-  const isBarista = profile?.role === "barista";
 
   return (
     <div style={s.wrap}>
-      {/* HEADER */}
       <div style={{ padding: "48px 20px 16px", background: theme.headerBg, transition: "all 0.3s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -988,7 +897,6 @@ export default function KopiLaba() {
         </div>
       </div>
 
-      {/* TOAST */}
       {success && <div style={{ margin: "0 20px", background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${theme.success}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: theme.success }}>{success}</div>}
       {error && <div style={{ margin: "0 20px", background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${theme.danger}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: theme.danger }} onClick={() => setError("")}>{error}</div>}
       {networkError && (
@@ -999,12 +907,10 @@ export default function KopiLaba() {
       )}
 
       <div style={{ padding: "14px 20px 100px" }}>
-
-        {/* ===== DASHBOARD ===== */}
         {tab === "dashboard" && <>
-          <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 20, padding: 24, marginBottom: 14, position: "relative", overflow: "hidden" }}>
+          <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 20, padding: 24, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Laba Bersih</p>
+              <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
               <button onClick={() => setShowLaba(!showLaba)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", color: "rgba(255,255,255,0.8)" }}>
                 {showLaba ? "👁️" : "🙈"}
               </button>
@@ -1064,7 +970,6 @@ export default function KopiLaba() {
           </div>
         </>}
 
-        {/* ===== TRANSAKSI ===== */}
         {tab === "transaksi" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Semua Transaksi</p>
@@ -1072,7 +977,7 @@ export default function KopiLaba() {
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {["semua", "lunas", "belum_lunas"].map(s => (
-              <button key={s} onClick={() => setFilterStatus(s)} style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: "none", background: filterStatus === s ? theme.gold : theme.input, color: filterStatus === s ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontWeight: filterStatus === s ? 700 : 400, cursor: "pointer", fontSize: 12, textTransform: "capitalize" }}>
+              <button key={s} onClick={() => setFilterStatus(s)} style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: "none", background: filterStatus === s ? theme.gold : theme.input, color: filterStatus === s ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontWeight: filterStatus === s ? 700 : 400, cursor: "pointer", fontSize: 12 }}>
                 {s === "semua" ? "Semua" : s === "lunas" ? "✅ Lunas" : "🔴 Piutang"}
               </button>
             ))}
@@ -1103,7 +1008,6 @@ export default function KopiLaba() {
           </div>
         </>}
 
-        {/* ===== MENU ===== */}
         {tab === "menu" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Menu & Kategori</p>
@@ -1117,7 +1021,6 @@ export default function KopiLaba() {
             </div>
           </div>
 
-          {/* Kategori */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
             {kategori.map(k => (
               <div key={k.id} style={{ background: theme.input, borderRadius: 20, padding: "4px 14px", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1180,7 +1083,6 @@ export default function KopiLaba() {
           })}
         </>}
 
-        {/* ===== KARYAWAN ===== */}
         {tab === "karyawan" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Daftar Karyawan</p>
@@ -1205,12 +1107,9 @@ export default function KopiLaba() {
           ))}
         </>}
 
-        {/* ===== LAPORAN ===== */}
         {tab === "laporan" && <>
-          <div style={s.card} ref={laporanRef}>
+          <div style={s.card}>
             <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📊 Laporan Keuangan</p>
-
-            {/* Filter Tanggal */}
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
                 <label style={s.label}>Dari</label>
@@ -1222,7 +1121,6 @@ export default function KopiLaba() {
               </div>
             </div>
 
-            {/* Ringkasan */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
@@ -1242,7 +1140,6 @@ export default function KopiLaba() {
               </div>
             </div>
 
-            {/* Grafik Sederhana */}
             {chartLabels.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>📈 Grafik 7 Hari Terakhir</p>
@@ -1253,8 +1150,8 @@ export default function KopiLaba() {
                     return (
                       <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                         <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 80 }}>
-                          <div style={{ width: 10, height: Math.max(4, hMasuk), background: theme.success, borderRadius: "4px 4px 0 0", transition: "height 0.3s" }}></div>
-                          <div style={{ width: 10, height: Math.max(4, hKeluar), background: theme.danger, borderRadius: "4px 4px 0 0", transition: "height 0.3s" }}></div>
+                          <div style={{ width: 10, height: Math.max(4, hMasuk), background: theme.success, borderRadius: "4px 4px 0 0" }}></div>
+                          <div style={{ width: 10, height: Math.max(4, hKeluar), background: theme.danger, borderRadius: "4px 4px 0 0" }}></div>
                         </div>
                         <span style={{ fontSize: 8, color: theme.textMuted }}>{label.slice(0, 5)}</span>
                       </div>
@@ -1268,14 +1165,12 @@ export default function KopiLaba() {
               </div>
             )}
 
-            {/* Tombol Export */}
             {filtered.length > 0 && (
               <button onClick={exportExcel} style={{ ...s.btnSm, width: "100%", background: theme.gold }}>
                 ⬇️ Download Excel (.csv)
               </button>
             )}
 
-            {/* Detail Transaksi */}
             <div style={{ marginTop: 14 }}>
               <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Detail Transaksi</p>
               {filtered.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada transaksi.</p>}
@@ -1292,7 +1187,6 @@ export default function KopiLaba() {
           </div>
         </>}
 
-        {/* ===== STRUK ===== */}
         {tab === "struk" && (
           <div style={s.card}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
@@ -1343,12 +1237,8 @@ export default function KopiLaba() {
                 </div>
 
                 <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                  <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>
-                    🖨️ Cetak
-                  </button>
-                  <button onClick={() => { setSelectedTransaksi(null); setTab("transaksi"); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, flex: 1 }}>
-                    Kembali
-                  </button>
+                  <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>🖨️ Cetak</button>
+                  <button onClick={() => { setSelectedTransaksi(null); setTab("transaksi"); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, flex: 1 }}>Kembali</button>
                 </div>
               </>
             ) : (
@@ -1361,9 +1251,7 @@ export default function KopiLaba() {
         )}
       </div>
 
-      {/* ============================================================
-          MODAL TRANSAKSI (dengan dropdown menu & kategori)
-          ============================================================ */}
+      {/* MODAL TRANSAKSI */}
       {showAdd && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1376,7 +1264,6 @@ export default function KopiLaba() {
               ))}
             </div>
 
-            {/* Pilih Kategori dulu */}
             <label style={s.label}>Kategori Menu</label>
             <select style={s.input} value={addForm.kategori_id} onChange={e => {
               setAddForm({ ...addForm, kategori_id: e.target.value, menu_id: "" });
@@ -1385,7 +1272,6 @@ export default function KopiLaba() {
               {kategori.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
             </select>
 
-            {/* Pilih Menu berdasarkan kategori */}
             <label style={s.label}>Pilih Menu</label>
             <select style={s.input} value={addForm.menu_id} onChange={e => {
               const selected = menu.find(m => m.id === e.target.value);
@@ -1431,9 +1317,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          MODAL MENU
-          ============================================================ */}
+      {/* MODAL MENU */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1458,9 +1342,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          MODAL KATEGORI
-          ============================================================ */}
+      {/* MODAL KATEGORI */}
       {showAddKategori && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1472,9 +1354,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          MODAL KARYAWAN
-          ============================================================ */}
+      {/* MODAL KARYAWAN */}
       {showAddKaryawan && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1494,9 +1374,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          MODAL STOK (terpisah)
-          ============================================================ */}
+      {/* MODAL STOK */}
       {showStok && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1517,9 +1395,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          MODAL KASIR (keranjang)
-          ============================================================ */}
+      {/* MODAL KASIR */}
       {showKasir && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1551,9 +1427,7 @@ export default function KopiLaba() {
                     </button>
                   ))}
                 </div>
-                <button style={s.btn} onClick={handleCheckout} disabled={loading}>
-                  {loading ? "Memproses..." : "✅ Bayar"}
-                </button>
+                <button style={s.btn} onClick={handleCheckout} disabled={loading}>{loading ? "Memproses..." : "✅ Bayar"}</button>
               </>
             )}
             <button onClick={() => setShowKasir(false)} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, marginTop: 8 }}>Tutup</button>
@@ -1561,9 +1435,6 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ============================================================
-          BOTTOM NAV
-          ============================================================ */}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: theme.card, borderTop: `1px solid ${theme.cardBorder}`, display: "flex", padding: "8px 0 20px", transition: "all 0.3s ease" }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0" }}>
