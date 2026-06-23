@@ -141,6 +141,23 @@ export default function KopiLaba() {
     }
   }, [success]);
 
+  // ============================================================
+  // EFFECT: UPDATE TOTAL OTOMATIS SAAT QTY ATAU MENU BERUBAH
+  // ============================================================
+  useEffect(() => {
+    if (addForm.menu_id && addForm.qty) {
+      const selectedMenu = menu.find(m => m.id === addForm.menu_id);
+      if (selectedMenu) {
+        const qty = parseInt(addForm.qty) || 1;
+        const harga = selectedMenu.harga || 0;
+        setAddForm(prev => ({
+          ...prev,
+          total: String(qty * harga)
+        }));
+      }
+    }
+  }, [addForm.qty, addForm.menu_id, menu]);
+
   // ------------------------------------------------------------
   // LOAD DATA
   // ------------------------------------------------------------
@@ -359,9 +376,21 @@ export default function KopiLaba() {
         setSuccess("Transaksi tersimpan!");
       }
 
+      // ============================================================
+      // UPDATE STOK: Kurangi stok menu yang dibeli
+      // ============================================================
+      if (addForm.menu_id) {
+        const selectedMenu = menu.find(m => m.id === addForm.menu_id);
+        if (selectedMenu) {
+          const newStok = (selectedMenu.stok || 0) - (parseInt(addForm.qty) || 1);
+          await api(`/rest/v1/menu?id=eq.${addForm.menu_id}`, "PATCH", { stok: newStok }, token);
+        }
+      }
+
       setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
       setShowAdd(false);
       await loadTransaksi(token, kafeId);
+      await loadMenu(token, kafeId);
     } catch (err) {
       console.error("Transaksi error:", err);
       setError("Gagal menyimpan transaksi.");
@@ -868,9 +897,9 @@ export default function KopiLaba() {
     },
   };
 
-  // ============================================================
-  // RENDER LOGIN (Full screen, rata kiri, tanpa ikon, tanpa "Premium")
-  // ============================================================
+  // ------------------------------------------------------------
+  // RENDER LOGIN
+  // ------------------------------------------------------------
   if (screen === "login") return (
     <div style={{
       ...s.wrap,
