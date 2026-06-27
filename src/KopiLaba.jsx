@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ============================================================
 // KONFIGURASI
@@ -14,35 +13,6 @@ const SUPER_ADMIN = {
   nama: "Super Admin",
   role: "super_admin",
   kafe_id: null
-};
-
-// ============================================
-// GEMINI (API Key dari Environment Variables)
-// ============================================
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-let genAI = null;
-try {
-  if (GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  }
-} catch (e) {
-  console.warn("Gemini init error:", e);
-}
-
-const tanyaGemini = async (prompt) => {
-  if (!genAI) throw new Error("API_KEY_MISSING");
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini error:", error);
-    if (error.message.includes("API key")) throw new Error("API_KEY_INVALID");
-    if (error.message.includes("quota")) throw new Error("QUOTA_EXCEEDED");
-    if (error.message.includes("fetch") || error.message.includes("network")) throw new Error("NETWORK_ERROR");
-    throw new Error("UNKNOWN_ERROR");
-  }
 };
 
 // ============================================================
@@ -360,24 +330,28 @@ export default function KopiLaba() {
       setTransaksi(Array.isArray(data) ? data : []);
     } catch (err) { setTransaksi([]); }
   };
+
   const loadMenu = async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/menu?kafe_id=eq.${kafeId}`, "GET", null, tok);
       setMenu(Array.isArray(data) ? data : []);
     } catch (err) { setMenu([]); }
   };
+
   const loadKategori = async (tok) => {
     try {
       const data = await api("/rest/v1/kategori?order=nama.asc", "GET", null, tok);
       setKategori(Array.isArray(data) ? data : []);
     } catch (err) { setKategori([]); }
   };
+
   const loadKaryawan = async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/profiles?kafe_id=eq.${kafeId}&role=eq.barista`, "GET", null, tok);
       setKaryawan(Array.isArray(data) ? data : []);
     } catch (err) { setKaryawan([]); }
   };
+
   const loadAbsensi = async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/absensi?kafe_id=eq.${kafeId}&order=tanggal.desc`, "GET", null, tok);
@@ -1279,7 +1253,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (Gemini)
+  // AI AGENT (Gratis - Puter.js)
   // ============================================================
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) {
@@ -1287,35 +1261,14 @@ export default function KopiLaba() {
       return;
     }
     setAiLoading(true);
-    setAiAnswer("⏳ Menghubungi Gemini...");
+    setAiAnswer("⏳ Menghubungi AI...");
 
     try {
-      if (!genAI) {
-        setAiAnswer("⚠️ API Key Gemini tidak ditemukan. Pastikan VITE_GEMINI_API_KEY sudah diatur di Netlify.");
-        setAiLoading(false);
-        return;
-      }
-      const geminiAnswer = await tanyaGemini(aiQuery);
-      if (geminiAnswer) {
-        setAiAnswer(geminiAnswer);
-      } else {
-        setAiAnswer("⚠️ Gemini tidak merespons. Coba lagi nanti.");
-      }
+      const response = await puter.ai.chat(aiQuery);
+      setAiAnswer(response);
     } catch (err) {
       console.error("AI error:", err);
-      let errorMsg = "⚠️ Gagal menghubungi Gemini. ";
-      if (err.message === "API_KEY_MISSING") {
-        errorMsg += "API Key tidak ditemukan. Tambahkan VITE_GEMINI_API_KEY di environment variables.";
-      } else if (err.message === "API_KEY_INVALID") {
-        errorMsg += "API Key tidak valid. Periksa kembali API Key Anda.";
-      } else if (err.message === "QUOTA_EXCEEDED") {
-        errorMsg += "Kuota API habis. Coba besok atau upgrade paket.";
-      } else if (err.message === "NETWORK_ERROR") {
-        errorMsg += "Periksa koneksi internet Anda.";
-      } else {
-        errorMsg += "Terjadi kesalahan tak terduga. Coba lagi nanti.";
-      }
-      setAiAnswer(errorMsg);
+      setAiAnswer("⚠️ Gagal menghubungi AI. Coba lagi nanti.");
     } finally {
       setAiLoading(false);
     }
@@ -1972,7 +1925,7 @@ export default function KopiLaba() {
 
             {/* AI Agent */}
             <div style={{ marginBottom: 16, padding: 12, background: theme.input, borderRadius: 12, border: `1px solid ${theme.gold}` }}>
-              <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent (Gemini) - Tanya apa saja</p>
+              <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya apa saja</p>
               <div style={{ display: "flex", gap: 8 }}>
                 <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, cuaca, ekonomi..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
                 <button style={s.btnSm} onClick={handleAiQuery} disabled={aiLoading}>{aiLoading ? "⏳" : "Tanya"}</button>
