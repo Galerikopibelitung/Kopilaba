@@ -91,7 +91,7 @@ export default function KopiLaba() {
   const [pesananItems, setPesananItems] = useState([]);
   const [editTransaksiId, setEditTransaksiId] = useState(null);
   const [pajakEnabled, setPajakEnabled] = useState(true);
-  const [persentasePajak, setPersentasePajak] = useState(10); // 10%
+  const [persentasePajak, setPersentasePajak] = useState(10);
 
   // ------------------------------------------------------------
   // STATE MODAL MENU, KATEGORI, KARYAWAN, STOK
@@ -129,12 +129,19 @@ export default function KopiLaba() {
   const [bayarAmount, setBayarAmount] = useState("");
 
   // ------------------------------------------------------------
-  // STATE LAPORAN & STRUK
+  // STATE LAPORAN
   // ------------------------------------------------------------
   const [filterTglMulai, setFilterTglMulai] = useState("");
   const [filterTglSelesai, setFilterTglSelesai] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [selectedTransaksi, setSelectedTransaksi] = useState(null);
+  const [laporanStokOn, setLaporanStokOn] = useState(true);
+
+  // ============================================================
+  // STATE AI AGENT
+  // ============================================================
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiAnswer, setAiAnswer] = useState("");
 
   // ------------------------------------------------------------
   // EFFECT SUCCESS TOAST
@@ -195,7 +202,7 @@ export default function KopiLaba() {
 
   const loadTransaksi = async (tok, kafeId) => {
     try {
-      const data = await api(`/rest/v1/transaksi?kafe_id=eq.${kafeId}&order=created_at.desc&limit=200`, "GET", null, tok);
+      const data = await api(`/rest/v1/transaksi?kafe_id=eq.${kafeId}&order=created_at.desc&limit=500`, "GET", null, tok);
       setTransaksi(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Load transaksi error:", err);
@@ -390,7 +397,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-      // Gabungkan item menjadi satu string untuk field "item"
       const itemNames = pesananItems.map(p => `${p.nama} x${p.qty}`).join(", ");
       const totalQty = pesananItems.reduce((sum, p) => sum + p.qty, 0);
       const subtotal = pesananItems.reduce((sum, p) => sum + p.total, 0);
@@ -400,7 +406,6 @@ export default function KopiLaba() {
       }
       const grandTotal = subtotal + pajak;
 
-      // Simpan transaksi (simpan juga detail pajak untuk struk)
       const payload = {
         kafe_id: kafeId,
         item: itemNames,
@@ -420,7 +425,6 @@ export default function KopiLaba() {
         await api("/rest/v1/transaksi", "POST", payload, token);
         setSuccess("Transaksi tersimpan!");
       }
-      // Update stok untuk setiap item
       for (const item of pesananItems) {
         const selectedMenu = menu.find(m => m.id === item.menu_id);
         if (selectedMenu) {
@@ -686,9 +690,13 @@ export default function KopiLaba() {
   };
 
   // ------------------------------------------------------------
-  // ABSENSI
+  // ABSENSI (Hanya pemilik yang bisa edit kehadiran)
   // ------------------------------------------------------------
   const handleAbsenMasuk = async () => {
+    if (profile?.role !== "pemilik") {
+      setError("Hanya pemilik yang bisa melakukan absensi.");
+      return;
+    }
     if (!absensiForm.pegawai_id) {
       setError("Pilih pegawai!");
       return;
@@ -718,6 +726,10 @@ export default function KopiLaba() {
   };
 
   const handleAbsenKeluar = async (id) => {
+    if (profile?.role !== "pemilik") {
+      setError("Hanya pemilik yang bisa mengupdate absensi.");
+      return;
+    }
     if (!confirm("Absen keluar untuk pegawai ini?")) return;
     setLoading(true);
     setError("");
@@ -842,7 +854,7 @@ export default function KopiLaba() {
   };
 
   // ------------------------------------------------------------
-  // LAPORAN + GRAFIK + EXPORT
+  // LAPORAN + GRAFIK + EXPORT + AI AGENT
   // ------------------------------------------------------------
   const getFilteredTransaksi = () => {
     let filtered = [...transaksi];
@@ -870,6 +882,7 @@ export default function KopiLaba() {
   const laba = totalMasuk - totalKeluar;
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
+  // Chart data
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -882,6 +895,76 @@ export default function KopiLaba() {
   const chartKeluar = chartLabels.map(d => chartData[d].keluar);
   const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
 
+  // Laporan stok
+  const laporanStokData = menu.map(m => ({
+    ...m,
+    terjual: 0, // akan dihitung dari transaksi
+    sisa: m.stok || 0
+  }));
+  // Hitung terjual dari transaksi (hanya yang tipe masuk)
+  transaksi.forEach(t => {
+    if (t.tipe === "masuk" && t.item) {
+      // coba ekstrak nama menu dari item string
+      const items = t.item.split(", ");
+      items.forEach(itemStr => {
+        const parts = itemStr.split(" x");
+        const nama = parts[0]?.trim();
+        const qty = parseInt(parts[1]) || 1;
+        const found = laporanStokData.find(m => m.nama === nama);
+        if (found) {
+          found.terjual = (found.terjual || 0) + qty;
+          found.sisa = (found.stok || 0) - found.terjual;
+        }
+      });
+    }
+  });
+
+  // Laporan kategori terlaris
+  const kategoriPenjualan = {};
+  transaksi.forEach(t => {
+    if (t.tipe === "masuk" && t.item) {
+      const items = t.item.split(", ");
+      items.forEach(itemStr => {
+        const parts = itemStr.split(" x");
+        const nama = parts[0]?.trim();
+        const qty = parseInt(parts[1]) || 1;
+        const menuItem = menu.find(m => m.nama === nama);
+        if (menuItem) {
+          const kat = menuItem.kategori_id || "umum";
+          const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
+          if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
+          kategoriPenjualan[katNama] += qty;
+        }
+      });
+    }
+  });
+  const sortedKategori = Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]);
+  const top5Kategori = sortedKategori.slice(0, 5);
+  const bottom5Kategori = sortedKategori.slice(-5).reverse();
+
+  // Laporan produk per kategori
+  const produkPerKategori = {};
+  menu.forEach(m => {
+    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
+    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
+    produkPerKategori[katNama].push(m);
+  });
+  // Hitung penjualan per produk
+  const produkTerjual = {};
+  transaksi.forEach(t => {
+    if (t.tipe === "masuk" && t.item) {
+      const items = t.item.split(", ");
+      items.forEach(itemStr => {
+        const parts = itemStr.split(" x");
+        const nama = parts[0]?.trim();
+        const qty = parseInt(parts[1]) || 1;
+        if (!produkTerjual[nama]) produkTerjual[nama] = 0;
+        produkTerjual[nama] += qty;
+      });
+    }
+  });
+
+  // Export Excel
   const exportExcel = () => {
     const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
     const rows = filtered.map(t =>
@@ -894,6 +977,98 @@ export default function KopiLaba() {
     link.download = `laporan_keuangan_${new Date().toISOString().slice(0,10)}.csv`;
     link.click();
     setSuccess("Laporan berhasil di-download!");
+  };
+
+  // ============================================================
+  // AI AGENT (Natural Language Query)
+  // ============================================================
+  const handleAiQuery = () => {
+    if (!aiQuery.trim()) {
+      setAiAnswer("Silakan tulis pertanyaan Anda.");
+      return;
+    }
+    const q = aiQuery.toLowerCase();
+    let answer = "";
+
+    // --- Total penjualan ---
+    if (q.includes("total penjualan") || q.includes("omzet") || q.includes("total pemasukan")) {
+      const total = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+      answer = `Total pemasukan (omzet) seluruh periode: ${fmt(total)}`;
+    }
+    // --- Laba bersih ---
+    else if (q.includes("laba") || q.includes("keuntungan")) {
+      const masuk = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+      const keluar = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+      answer = `Laba bersih: ${fmt(masuk - keluar)} (Pemasukan ${fmt(masuk)}, Pengeluaran ${fmt(keluar)})`;
+    }
+    // --- Stok menipis ---
+    else if (q.includes("stok") && (q.includes("menipis") || q.includes("habis") || q.includes("kurang"))) {
+      const low = menu.filter(m => (m.stok || 0) < 5);
+      if (low.length === 0) {
+        answer = "Semua stok produk aman (>=5).";
+      } else {
+        answer = `Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}`;
+      }
+    }
+    // --- Total stok ---
+    else if (q.includes("total stok") || q.includes("jumlah stok")) {
+      const total = menu.reduce((sum, m) => sum + (m.stok || 0), 0);
+      answer = `Total stok seluruh produk: ${total} item`;
+    }
+    // --- Karyawan ---
+    else if (q.includes("karyawan") || q.includes("pegawai") || q.includes("staff")) {
+      answer = `Jumlah karyawan: ${karyawan.length} orang.`;
+    }
+    // --- Absensi hari ini ---
+    else if (q.includes("absensi") || q.includes("kehadiran")) {
+      const today = new Date().toISOString().slice(0,10);
+      const todayAbsen = absensi.filter(a => a.tanggal === today);
+      if (todayAbsen.length === 0) {
+        answer = "Belum ada absensi hari ini.";
+      } else {
+        const hadir = todayAbsen.filter(a => a.jam_masuk).length;
+        answer = `Absensi hari ini: ${hadir} orang masuk.`;
+      }
+    }
+    // --- Produk terlaris ---
+    else if (q.includes("produk terlaris") || q.includes("terbanyak") || q.includes("best seller")) {
+      const top = Object.entries(produkTerjual).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      if (top.length === 0) {
+        answer = "Belum ada data penjualan produk.";
+      } else {
+        answer = `Top 5 produk terlaris:\n${top.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}`;
+      }
+    }
+    // --- Kategori terlaris ---
+    else if (q.includes("kategori") && (q.includes("terlaris") || q.includes("terbanyak"))) {
+      if (top5Kategori.length === 0) {
+        answer = "Belum ada data kategori.";
+      } else {
+        answer = `Top 5 kategori terlaris:\n${top5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
+      }
+    }
+    // --- Kategori terendah ---
+    else if (q.includes("kategori") && (q.includes("terendah") || q.includes("paling sedikit"))) {
+      if (bottom5Kategori.length === 0) {
+        answer = "Belum ada data kategori.";
+      } else {
+        answer = `5 kategori dengan penjualan terendah:\n${bottom5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
+      }
+    }
+    // --- Laporan stok per produk ---
+    else if (q.includes("laporan stok") || q.includes("stok per produk") || q.includes("stok produk")) {
+      const rows = menu.map(m => `- ${m.nama}: stok ${m.stok || 0}, terjual ${produkTerjual[m.nama] || 0}, sisa ${(m.stok || 0) - (produkTerjual[m.nama] || 0)}`).join("\n");
+      answer = `Laporan stok per produk:\n${rows}`;
+    }
+    // --- Pertanyaan umum tentang data ---
+    else if (q.includes("total transaksi") || q.includes("jumlah transaksi")) {
+      answer = `Total transaksi: ${transaksi.length} transaksi.`;
+    }
+    else {
+      answer = "Maaf, saya belum bisa menjawab pertanyaan itu. Coba tanyakan tentang: total penjualan, laba, stok, karyawan, absensi, produk terlaris, kategori terlaris, laporan stok, total transaksi.";
+    }
+
+    setAiAnswer(answer);
   };
 
   // ------------------------------------------------------------
@@ -1365,55 +1540,75 @@ export default function KopiLaba() {
                       <button onClick={() => handleHapusKaryawan(k.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
                     </>
                   )}
-                  <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>
+                  {isPemilik && (
+                    <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Tabel Absensi */}
-          <div style={{ marginTop: 20 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>📋 Riwayat Absensi</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-              <input style={s.input} placeholder="Cari nama..." value={filterNama} onChange={e => setFilterNama(e.target.value)} />
-              <input style={s.input} type="date" value={filterTglMulaiAbsen} onChange={e => setFilterTglMulaiAbsen(e.target.value)} />
-              <input style={s.input} type="date" value={filterTglSelesaiAbsen} onChange={e => setFilterTglSelesaiAbsen(e.target.value)} />
-              <button style={s.btnSm} onClick={() => { setFilterNama(""); setFilterTglMulaiAbsen(""); setFilterTglSelesaiAbsen(""); }}>Reset</button>
-            </div>
-            <div style={s.card}>
-              {filteredAbsensi.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada data absensi.</p>}
-              {filteredAbsensi.map(a => {
-                const pegawai = karyawan.find(k => k.id === a.pegawai_id);
-                return (
-                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>
-                        {a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}
-                      </p>
-                      {a.jam_masuk && (
-                        <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>
-                          {a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}
+          {/* Tabel Absensi (hanya pemilik yang bisa lihat) */}
+          {isPemilik && (
+            <div style={{ marginTop: 20 }}>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>📋 Riwayat Absensi</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                <input style={s.input} placeholder="Cari nama..." value={filterNama} onChange={e => setFilterNama(e.target.value)} />
+                <input style={s.input} type="date" value={filterTglMulaiAbsen} onChange={e => setFilterTglMulaiAbsen(e.target.value)} />
+                <input style={s.input} type="date" value={filterTglSelesaiAbsen} onChange={e => setFilterTglSelesaiAbsen(e.target.value)} />
+                <button style={s.btnSm} onClick={() => { setFilterNama(""); setFilterTglMulaiAbsen(""); setFilterTglSelesaiAbsen(""); }}>Reset</button>
+              </div>
+              <div style={s.card}>
+                {filteredAbsensi.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada data absensi.</p>}
+                {filteredAbsensi.map(a => {
+                  const pegawai = karyawan.find(k => k.id === a.pegawai_id);
+                  return (
+                    <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>
+                          {a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}
                         </p>
-                      )}
-                      {isPemilik && a.jam_masuk && !a.jam_keluar && (
-                        <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>
-                      )}
+                        {a.jam_masuk && (
+                          <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>
+                            {a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}
+                          </p>
+                        )}
+                        {isPemilik && a.jam_masuk && !a.jam_keluar && (
+                          <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </>}
 
         {/* ===== LAPORAN ===== */}
         {tab === "laporan" && <>
           <div style={s.card}>
             <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📊 Laporan Keuangan</p>
+
+            {/* AI Agent */}
+            <div style={{ marginBottom: 16, padding: 12, background: theme.input, borderRadius: 12, border: `1px solid ${theme.gold}` }}>
+              <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya data apa saja</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, laba, stok..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
+                <button style={s.btnSm} onClick={handleAiQuery}>Tanya</button>
+              </div>
+              {aiAnswer && (
+                <div style={{ marginTop: 8, padding: 8, background: theme.card, borderRadius: 8, whiteSpace: "pre-wrap", fontSize: 13, color: theme.text }}>
+                  {aiAnswer}
+                </div>
+              )}
+            </div>
+
+            {/* Filter tanggal */}
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
                 <label style={s.label}>Dari</label>
@@ -1425,6 +1620,7 @@ export default function KopiLaba() {
               </div>
             </div>
 
+            {/* Ringkasan */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
@@ -1444,6 +1640,7 @@ export default function KopiLaba() {
               </div>
             </div>
 
+            {/* Grafik */}
             {chartLabels.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>📈 Grafik 7 Hari Terakhir</p>
@@ -1469,13 +1666,79 @@ export default function KopiLaba() {
               </div>
             )}
 
+            {/* Laporan Stok (Toggle On/Off) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <label style={s.label}>Tampilkan Laporan Stok</label>
+              <button onClick={() => setLaporanStokOn(!laporanStokOn)} style={{ ...s.btnSm, padding: "4px 12px" }}>
+                {laporanStokOn ? "ON" : "OFF"}
+              </button>
+            </div>
+
+            {laporanStokOn && (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📦 Laporan Stok Per Produk</p>
+                <div style={s.card}>
+                  {laporanStokData.length === 0 && <p style={{ color: theme.textMuted }}>Belum ada produk.</p>}
+                  {laporanStokData.map(m => (
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                      <span>{m.nama}</span>
+                      <span>Stok: {m.stok || 0} | Terjual: {m.terjual || 0} | Sisa: {m.sisa || 0}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Kategori Tertinggi & Terendah */}
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🏷️ Top 5 Kategori Terlaris</p>
+              <div style={s.card}>
+                {top5Kategori.length === 0 ? <p style={{ color: theme.textMuted }}>Belum ada data.</p> : top5Kategori.map(([kat, qty]) => (
+                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <span>{kat}</span>
+                    <span>{qty} item</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 6 }}>📉 5 Kategori Terendah</p>
+              <div style={s.card}>
+                {bottom5Kategori.length === 0 ? <p style={{ color: theme.textMuted }}>Belum ada data.</p> : bottom5Kategori.map(([kat, qty]) => (
+                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <span>{kat}</span>
+                    <span>{qty} item</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Produk per Kategori Tertinggi & Terendah */}
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📌 Produk Terlaris per Kategori</p>
+              {Object.keys(produkPerKategori).map(kat => {
+                const sorted = produkPerKategori[kat].sort((a, b) => (produkTerjual[b.nama] || 0) - (produkTerjual[a.nama] || 0));
+                const top = sorted.slice(0, 3);
+                const bottom = sorted.slice(-3).reverse();
+                return (
+                  <div key={kat} style={s.card}>
+                    <p style={{ fontWeight: 600 }}>{kat}</p>
+                    <p style={{ fontSize: 12, marginBottom: 4 }}>🔥 Top 3:</p>
+                    {top.map(m => <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, paddingBottom: 2 }}><span>{m.nama}</span><span>{(produkTerjual[m.nama] || 0)} item</span></div>)}
+                    <p style={{ fontSize: 12, marginTop: 6, marginBottom: 4 }}>📉 Bottom 3:</p>
+                    {bottom.map(m => <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, paddingBottom: 2 }}><span>{m.nama}</span><span>{(produkTerjual[m.nama] || 0)} item</span></div>)}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Export Excel */}
             {filtered.length > 0 && (
-              <button onClick={exportExcel} style={{ ...s.btnSm, width: "100%", background: theme.gold }}>
+              <button onClick={exportExcel} style={{ ...s.btnSm, width: "100%", background: theme.gold, marginBottom: 14 }}>
                 ⬇️ Download Excel (.csv)
               </button>
             )}
 
-            <div style={{ marginTop: 14 }}>
+            {/* Detail Transaksi */}
+            <div>
               <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Detail Transaksi</p>
               {filtered.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada transaksi.</p>}
               {filtered.slice(0, 10).map(t => (
@@ -1507,17 +1770,15 @@ export default function KopiLaba() {
                   <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
                 </div>
 
-                {/* Item pesanan */}
                 <div>
                   {selectedTransaksi.item?.split(", ").map((item, idx) => {
                     const [nama, qtyStr] = item.split(" x");
                     const qty = parseInt(qtyStr) || 1;
-                    // Untuk harga, kita perlu ambil dari data transaksi (tidak ada detail per item)
-                    // Tampilkan sederhana
+                    // Untuk harga, kita tampilkan perkiraan
                     return (
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
                         <span>{nama} x{qty}</span>
-                        <span>{fmt(selectedTransaksi.total)}</span> {/* Tidak akurat untuk multi item */}
+                        <span>{fmt(selectedTransaksi.total)}</span>
                       </div>
                     );
                   })}
@@ -1620,7 +1881,6 @@ export default function KopiLaba() {
               <button onClick={tambahItemPesanan} style={{ ...s.btnSm, flex: 1 }}>Tambah Item</button>
             </div>
 
-            {/* Daftar item pesanan */}
             {pesananItems.length > 0 && (
               <div style={s.card}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Item Pesanan:</p>
@@ -1638,7 +1898,6 @@ export default function KopiLaba() {
               </div>
             )}
 
-            {/* Pengaturan pajak */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <label style={s.label}>Pajak {persentasePajak}%</label>
               <button onClick={() => setPajakEnabled(!pajakEnabled)} style={{ ...s.btnSm, flex: 0, padding: "4px 12px" }}>
