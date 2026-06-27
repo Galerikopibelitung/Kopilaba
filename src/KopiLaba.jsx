@@ -80,48 +80,53 @@ export default function KopiLaba() {
   const [kategori, setKategori] = useState([]);
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
+  const [absensi, setAbsensi] = useState([]);
 
   // ------------------------------------------------------------
-  // STATE MODAL TRANSAKSI
+  // STATE MODAL TRANSAKSI (multi-item)
   // ------------------------------------------------------------
   const [showAdd, setShowAdd] = useState(false);
   const [addType, setAddType] = useState("masuk");
   const [addForm, setAddForm] = useState({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
+  const [pesananItems, setPesananItems] = useState([]);
   const [editTransaksiId, setEditTransaksiId] = useState(null);
+  const [pajakEnabled, setPajakEnabled] = useState(true);
+  const [persentasePajak, setPersentasePajak] = useState(10); // 10%
 
   // ------------------------------------------------------------
-  // STATE MODAL MENU
+  // STATE MODAL MENU, KATEGORI, KARYAWAN, STOK
   // ------------------------------------------------------------
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
   const [editMenuId, setEditMenuId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL KATEGORI
-  // ------------------------------------------------------------
   const [showAddKategori, setShowAddKategori] = useState(false);
   const [kategoriForm, setKategoriForm] = useState({ nama: "" });
   const [editKategoriId, setEditKategoriId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL KARYAWAN
-  // ------------------------------------------------------------
   const [showAddKaryawan, setShowAddKaryawan] = useState(false);
   const [karyawanForm, setKaryawanForm] = useState({ nama: "", email: "", password: "" });
   const [editKaryawanId, setEditKaryawanId] = useState(null);
 
-  // ------------------------------------------------------------
-  // STATE MODAL STOK (terpisah)
-  // ------------------------------------------------------------
   const [showStok, setShowStok] = useState(false);
   const [stokForm, setStokForm] = useState({ menu_id: "", stok: "" });
 
   // ------------------------------------------------------------
-  // STATE KASIR
+  // STATE ABSENSI
+  // ------------------------------------------------------------
+  const [showAbsensi, setShowAbsensi] = useState(false);
+  const [absensiForm, setAbsensiForm] = useState({ pegawai_id: "", tanggal: "", jam_masuk: "", jam_keluar: "" });
+  const [filterNama, setFilterNama] = useState("");
+  const [filterTglMulaiAbsen, setFilterTglMulaiAbsen] = useState("");
+  const [filterTglSelesaiAbsen, setFilterTglSelesaiAbsen] = useState("");
+
+  // ------------------------------------------------------------
+  // STATE KASIR (keranjang)
   // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
+  const [bayarAmount, setBayarAmount] = useState("");
 
   // ------------------------------------------------------------
   // STATE LAPORAN & STRUK
@@ -141,9 +146,9 @@ export default function KopiLaba() {
     }
   }, [success]);
 
-  // ============================================================
+  // ------------------------------------------------------------
   // EFFECT: UPDATE TOTAL OTOMATIS SAAT QTY ATAU MENU BERUBAH
-  // ============================================================
+  // ------------------------------------------------------------
   useEffect(() => {
     if (addForm.menu_id && addForm.qty) {
       const selectedMenu = menu.find(m => m.id === addForm.menu_id);
@@ -172,12 +177,14 @@ export default function KopiLaba() {
         await loadMenu(tok, prof.kafe_id);
         await loadKategori(tok);
         await loadKaryawan(tok, prof.kafe_id);
+        await loadAbsensi(tok, prof.kafe_id);
       } else if (k) {
         setKafe(k);
         await loadTransaksi(tok, k.id);
         await loadMenu(tok, k.id);
         await loadKategori(tok);
         await loadKaryawan(tok, k.id);
+        await loadAbsensi(tok, k.id);
       }
     } catch (err) {
       console.error("Load data error:", err);
@@ -226,6 +233,16 @@ export default function KopiLaba() {
     }
   };
 
+  const loadAbsensi = async (tok, kafeId) => {
+    try {
+      const data = await api(`/rest/v1/absensi?kafe_id=eq.${kafeId}&order=tanggal.desc`, "GET", null, tok);
+      setAbsensi(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load absensi error:", err);
+      setAbsensi([]);
+    }
+  };
+
   // ------------------------------------------------------------
   // AUTH
   // ------------------------------------------------------------
@@ -233,7 +250,6 @@ export default function KopiLaba() {
     setLoading(true);
     setError("");
     setNetworkError(false);
-
     try {
       const data = await authApi("/token?grant_type=password", loginForm);
       if (data.access_token) {
@@ -270,7 +286,6 @@ export default function KopiLaba() {
     setLoading(true);
     setError("");
     setNetworkError(false);
-
     if (!regForm.nama || !regForm.email || !regForm.password || !regForm.namaKafe) {
       setError("Semua kolom wajib diisi!");
       setLoading(false);
@@ -281,18 +296,15 @@ export default function KopiLaba() {
       setLoading(false);
       return;
     }
-
     try {
       const data = await authApi("/signup", {
         email: regForm.email,
         password: regForm.password
       });
-
       if (data.user) {
         const u = data.user;
         const tok = data.access_token || SUPABASE_KEY;
         let kafeId = null;
-
         try {
           const k = await api("/rest/v1/kafe", "POST", {
             nama: regForm.namaKafe,
@@ -306,7 +318,6 @@ export default function KopiLaba() {
           setLoading(false);
           return;
         }
-
         try {
           await api("/rest/v1/profiles", "POST", {
             id: u.id,
@@ -320,7 +331,6 @@ export default function KopiLaba() {
           setLoading(false);
           return;
         }
-
         setSuccess("Daftar berhasil! Silakan login.");
         setScreen("login");
       } else {
@@ -339,16 +349,40 @@ export default function KopiLaba() {
   };
 
   // ------------------------------------------------------------
-  // CRUD TRANSAKSI
+  // CRUD TRANSAKSI (multi-item)
   // ------------------------------------------------------------
+  const tambahItemPesanan = () => {
+    if (!addForm.menu_id) {
+      setError("Pilih menu terlebih dahulu!");
+      return;
+    }
+    const selectedMenu = menu.find(m => m.id === addForm.menu_id);
+    if (!selectedMenu) return;
+    const qty = parseInt(addForm.qty) || 1;
+    const total = qty * selectedMenu.harga;
+    const newItem = {
+      menu_id: selectedMenu.id,
+      nama: selectedMenu.nama,
+      qty: qty,
+      harga: selectedMenu.harga,
+      total: total
+    };
+    setPesananItems(prev => [...prev, newItem]);
+    setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
+    setSuccess("Item ditambahkan ke pesanan!");
+  };
+
+  const hapusItemPesanan = (idx) => {
+    setPesananItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleTambahTransaksi = async () => {
-    if (!addForm.item || !addForm.total) {
-      setError("Isi semua kolom!");
+    if (pesananItems.length === 0) {
+      setError("Tambahkan minimal satu item!");
       return;
     }
     setLoading(true);
     setError("");
-
     try {
       const kafeId = kafe?.id || profile?.kafe_id;
       if (!kafeId) {
@@ -356,17 +390,28 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
+      // Gabungkan item menjadi satu string untuk field "item"
+      const itemNames = pesananItems.map(p => `${p.nama} x${p.qty}`).join(", ");
+      const totalQty = pesananItems.reduce((sum, p) => sum + p.qty, 0);
+      const subtotal = pesananItems.reduce((sum, p) => sum + p.total, 0);
+      let pajak = 0;
+      if (pajakEnabled) {
+        pajak = Math.round(subtotal * (persentasePajak / 100));
+      }
+      const grandTotal = subtotal + pajak;
 
+      // Simpan transaksi (simpan juga detail pajak untuk struk)
       const payload = {
         kafe_id: kafeId,
-        item: addForm.item,
-        qty: parseInt(addForm.qty) || 1,
-        total: parseInt(addForm.total),
+        item: itemNames,
+        qty: totalQty,
+        total: grandTotal,
         tipe: addType,
-        status: "lunas"
+        status: "lunas",
+        subtotal: subtotal,
+        pajak: pajak,
+        pajak_enabled: pajakEnabled
       };
-      if (addForm.menu_id) payload.menu_id = addForm.menu_id;
-
       if (editTransaksiId) {
         await api(`/rest/v1/transaksi?id=eq.${editTransaksiId}`, "PATCH", payload, token);
         setSuccess("Transaksi diupdate!");
@@ -375,19 +420,15 @@ export default function KopiLaba() {
         await api("/rest/v1/transaksi", "POST", payload, token);
         setSuccess("Transaksi tersimpan!");
       }
-
-      // ============================================================
-      // UPDATE STOK: Kurangi stok menu yang dibeli
-      // ============================================================
-      if (addForm.menu_id) {
-        const selectedMenu = menu.find(m => m.id === addForm.menu_id);
+      // Update stok untuk setiap item
+      for (const item of pesananItems) {
+        const selectedMenu = menu.find(m => m.id === item.menu_id);
         if (selectedMenu) {
-          const newStok = (selectedMenu.stok || 0) - (parseInt(addForm.qty) || 1);
-          await api(`/rest/v1/menu?id=eq.${addForm.menu_id}`, "PATCH", { stok: newStok }, token);
+          const newStok = (selectedMenu.stok || 0) - item.qty;
+          await api(`/rest/v1/menu?id=eq.${item.menu_id}`, "PATCH", { stok: newStok }, token);
         }
       }
-
-      setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
+      setPesananItems([]);
       setShowAdd(false);
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
@@ -406,13 +447,7 @@ export default function KopiLaba() {
     }
     setEditTransaksiId(t.id);
     setAddType(t.tipe);
-    setAddForm({
-      item: t.item,
-      qty: String(t.qty),
-      total: String(t.total),
-      kategori_id: "",
-      menu_id: t.menu_id || ""
-    });
+    setPesananItems([]);
     setShowAdd(true);
   };
 
@@ -432,7 +467,7 @@ export default function KopiLaba() {
   };
 
   // ------------------------------------------------------------
-  // CRUD MENU (dengan kategori)
+  // CRUD MENU, KATEGORI, KARYAWAN, STOK
   // ------------------------------------------------------------
   const handleTambahMenu = async () => {
     if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) {
@@ -441,7 +476,6 @@ export default function KopiLaba() {
     }
     setLoading(true);
     setError("");
-
     try {
       const kafeId = kafe?.id || profile?.kafe_id;
       if (!kafeId) {
@@ -449,7 +483,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-
       const payload = {
         kafe_id: kafeId,
         nama: menuForm.nama,
@@ -459,7 +492,6 @@ export default function KopiLaba() {
         kategori_id: menuForm.kategori_id || null,
         foto: menuForm.foto || ""
       };
-
       if (editMenuId) {
         await api(`/rest/v1/menu?id=eq.${editMenuId}`, "PATCH", payload, token);
         setSuccess("Menu diupdate!");
@@ -468,7 +500,6 @@ export default function KopiLaba() {
         await api("/rest/v1/menu", "POST", payload, token);
         setSuccess("Menu ditambahkan!");
       }
-
       setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
       setShowAddMenu(false);
       await loadMenu(token, kafeId);
@@ -512,9 +543,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD KATEGORI
-  // ------------------------------------------------------------
   const handleTambahKategori = async () => {
     if (!kategoriForm.nama) {
       setError("Nama kategori wajib diisi!");
@@ -522,7 +550,6 @@ export default function KopiLaba() {
     }
     setLoading(true);
     setError("");
-
     try {
       if (editKategoriId) {
         await api(`/rest/v1/kategori?id=eq.${editKategoriId}`, "PATCH", { nama: kategoriForm.nama }, token);
@@ -562,9 +589,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD KARYAWAN (hanya pemilik)
-  // ------------------------------------------------------------
   const handleTambahKaryawan = async () => {
     if (profile?.role !== "pemilik") {
       setError("Hanya pemilik yang bisa mengelola karyawan.");
@@ -580,7 +604,6 @@ export default function KopiLaba() {
     }
     setLoading(true);
     setError("");
-
     try {
       const kafeId = kafe?.id || profile?.kafe_id;
       if (!kafeId) {
@@ -588,7 +611,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-
       if (editKaryawanId) {
         await api(`/rest/v1/profiles?id=eq.${editKaryawanId}`, "PATCH", { nama: karyawanForm.nama }, token);
         setSuccess("Karyawan diupdate!");
@@ -612,7 +634,6 @@ export default function KopiLaba() {
           return;
         }
       }
-
       setKaryawanForm({ nama: "", email: "", password: "" });
       setEditKaryawanId(null);
       setShowAddKaryawan(false);
@@ -644,9 +665,6 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // STOK (terpisah)
-  // ------------------------------------------------------------
   const handleUpdateStok = async () => {
     if (!stokForm.menu_id || stokForm.stok === "") {
       setError("Pilih menu dan isi stok!");
@@ -666,6 +684,71 @@ export default function KopiLaba() {
       setLoading(false);
     }
   };
+
+  // ------------------------------------------------------------
+  // ABSENSI
+  // ------------------------------------------------------------
+  const handleAbsenMasuk = async () => {
+    if (!absensiForm.pegawai_id) {
+      setError("Pilih pegawai!");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      const now = new Date().toISOString();
+      await api("/rest/v1/absensi", "POST", {
+        pegawai_id: absensiForm.pegawai_id,
+        kafe_id: kafeId,
+        tanggal: new Date().toISOString().slice(0,10),
+        jam_masuk: now,
+        jam_keluar: null
+      }, token);
+      setSuccess("Absen masuk berhasil!");
+      setAbsensiForm({ pegawai_id: "", tanggal: "", jam_masuk: "", jam_keluar: "" });
+      setShowAbsensi(false);
+      await loadAbsensi(token, kafeId);
+    } catch (err) {
+      console.error("Absen masuk error:", err);
+      setError("Gagal absen masuk.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAbsenKeluar = async (id) => {
+    if (!confirm("Absen keluar untuk pegawai ini?")) return;
+    setLoading(true);
+    setError("");
+    try {
+      const now = new Date().toISOString();
+      await api(`/rest/v1/absensi?id=eq.${id}`, "PATCH", { jam_keluar: now }, token);
+      setSuccess("Absen keluar berhasil!");
+      await loadAbsensi(token, kafe?.id || profile?.kafe_id);
+    } catch (err) {
+      console.error("Absen keluar error:", err);
+      setError("Gagal absen keluar.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter absensi
+  const filteredAbsensi = absensi.filter(a => {
+    let match = true;
+    if (filterNama) {
+      const pegawai = karyawan.find(k => k.id === a.pegawai_id);
+      match = match && (pegawai?.nama || "").toLowerCase().includes(filterNama.toLowerCase());
+    }
+    if (filterTglMulaiAbsen) {
+      match = match && new Date(a.tanggal) >= new Date(filterTglMulaiAbsen);
+    }
+    if (filterTglSelesaiAbsen) {
+      match = match && new Date(a.tanggal) <= new Date(filterTglSelesaiAbsen);
+    }
+    return match;
+  });
 
   // ------------------------------------------------------------
   // KASIR / KERANJANG
@@ -720,15 +803,23 @@ export default function KopiLaba() {
       }
 
       const itemNames = keranjang.map(item => `${item.nama} x${item.qty}`).join(", ");
-      const total = totalKeranjang;
+      const subtotal = totalKeranjang;
+      let pajak = 0;
+      if (pajakEnabled) {
+        pajak = Math.round(subtotal * (persentasePajak / 100));
+      }
+      const grandTotal = subtotal + pajak;
 
       await api("/rest/v1/transaksi", "POST", {
         kafe_id: kafeId,
         item: itemNames,
         qty: keranjang.reduce((sum, item) => sum + item.qty, 0),
-        total: total,
+        total: grandTotal,
         tipe: "masuk",
-        status: pembayaran === "tunai" ? "lunas" : "belum_lunas"
+        status: pembayaran === "tunai" ? "lunas" : "belum_lunas",
+        subtotal: subtotal,
+        pajak: pajak,
+        pajak_enabled: pajakEnabled
       }, token);
 
       for (const item of keranjang) {
@@ -738,6 +829,7 @@ export default function KopiLaba() {
 
       setKeranjang([]);
       setShowKasir(false);
+      setBayarAmount("");
       setSuccess("Transaksi berhasil!");
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
@@ -778,7 +870,6 @@ export default function KopiLaba() {
   const laba = totalMasuk - totalKeluar;
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
-  // Chart data (7 hari terakhir)
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -1094,11 +1185,11 @@ export default function KopiLaba() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-            <button onClick={() => { setShowAdd(true); setAddType("masuk"); setEditTransaksiId(null); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${darkMode ? "#2A4A2A" : "#A5D6A7"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
+            <button onClick={() => { setShowAdd(true); setAddType("masuk"); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${darkMode ? "#2A4A2A" : "#A5D6A7"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
               <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>Catat Pemasukan</p>
             </button>
-            <button onClick={() => { setShowAdd(true); setAddType("keluar"); setEditTransaksiId(null); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${darkMode ? "#4A2A2A" : "#EF9A9A"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
+            <button onClick={() => { setShowAdd(true); setAddType("keluar"); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${darkMode ? "#4A2A2A" : "#EF9A9A"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
               <p style={{ margin: "0 0 4px", fontSize: 20 }}>🧾</p>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>Catat Pengeluaran</p>
             </button>
@@ -1142,7 +1233,7 @@ export default function KopiLaba() {
         {tab === "transaksi" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Semua Transaksi</p>
-            <button style={s.btnSm} onClick={() => { setShowAdd(true); setEditTransaksiId(null); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }}>+ Tambah</button>
+            <button style={s.btnSm} onClick={() => { setShowAdd(true); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }}>+ Tambah</button>
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {["semua", "lunas", "belum_lunas"].map(s => (
@@ -1253,7 +1344,7 @@ export default function KopiLaba() {
           })}
         </>}
 
-        {/* ===== KARYAWAN ===== */}
+        {/* ===== KARYAWAN & ABSENSI ===== */}
         {tab === "karyawan" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Daftar Karyawan</p>
@@ -1267,15 +1358,56 @@ export default function KopiLaba() {
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{k.nama}</p>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: theme.textMuted }}>{k.email || "Barista"}</p>
                 </div>
-                {isPemilik && (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => handleEditKaryawan(k)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 14 }}>✏️</button>
-                    <button onClick={() => handleHapusKaryawan(k.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
-                  </div>
-                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  {isPemilik && (
+                    <>
+                      <button onClick={() => handleEditKaryawan(k)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 14 }}>✏️</button>
+                      <button onClick={() => handleHapusKaryawan(k.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
+                    </>
+                  )}
+                  <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>
+                </div>
               </div>
             </div>
           ))}
+
+          {/* Tabel Absensi */}
+          <div style={{ marginTop: 20 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>📋 Riwayat Absensi</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              <input style={s.input} placeholder="Cari nama..." value={filterNama} onChange={e => setFilterNama(e.target.value)} />
+              <input style={s.input} type="date" value={filterTglMulaiAbsen} onChange={e => setFilterTglMulaiAbsen(e.target.value)} />
+              <input style={s.input} type="date" value={filterTglSelesaiAbsen} onChange={e => setFilterTglSelesaiAbsen(e.target.value)} />
+              <button style={s.btnSm} onClick={() => { setFilterNama(""); setFilterTglMulaiAbsen(""); setFilterTglSelesaiAbsen(""); }}>Reset</button>
+            </div>
+            <div style={s.card}>
+              {filteredAbsensi.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada data absensi.</p>}
+              {filteredAbsensi.map(a => {
+                const pegawai = karyawan.find(k => k.id === a.pegawai_id);
+                return (
+                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>
+                        {a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}
+                      </p>
+                      {a.jam_masuk && (
+                        <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>
+                          {a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}
+                        </p>
+                      )}
+                      {isPemilik && a.jam_masuk && !a.jam_keluar && (
+                        <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </>}
 
         {/* ===== LAPORAN ===== */}
@@ -1362,69 +1494,84 @@ export default function KopiLaba() {
         {/* ===== STRUK ===== */}
         {tab === "struk" && (
           <div style={s.card}>
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: theme.gold }}>☕ KOPI LABA</h2>
-              <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{kafe?.nama || "Kafe Kamu"}</p>
-              <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>{kafe?.alamat || ""}</p>
-              <div style={{ width: "100%", height: 1, background: theme.cardBorder, margin: "10px 0" }}></div>
-            </div>
-
             {selectedTransaksi ? (
-              <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 12, marginBottom: 12 }}>
-                  <p style={{ margin: 0, color: theme.textMuted }}>No. Transaksi</p>
-                  <p style={{ margin: 0, fontWeight: 600, textAlign: "right" }}>{selectedTransaksi.id?.slice(0, 12) || "N/A"}</p>
-                  <p style={{ margin: 0, color: theme.textMuted }}>Tanggal</p>
-                  <p style={{ margin: 0, fontWeight: 600, textAlign: "right" }}>{new Date(selectedTransaksi.created_at).toLocaleString("id-ID")}</p>
-                  <p style={{ margin: 0, color: theme.textMuted }}>Kasir</p>
-                  <p style={{ margin: 0, fontWeight: 600, textAlign: "right" }}>{profile?.nama || "Admin"}</p>
-                  <p style={{ margin: 0, color: theme.textMuted }}>Tipe</p>
-                  <p style={{ margin: 0, fontWeight: 600, textAlign: "right", color: selectedTransaksi.tipe === "masuk" ? theme.success : theme.danger }}>
-                    {selectedTransaksi.tipe === "masuk" ? "Pemasukan" : "Pengeluaran"}
-                  </p>
-                  <p style={{ margin: 0, color: theme.textMuted }}>Status</p>
-                  <p style={{ margin: 0, fontWeight: 600, textAlign: "right", color: selectedTransaksi.status === "belum_lunas" ? theme.danger : theme.success }}>
-                    {selectedTransaksi.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}
-                  </p>
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 13, maxWidth: "100%", wordWrap: "break-word" }}>
+                <div style={{ textAlign: "center", marginBottom: 10 }}>
+                  <h3 style={{ margin: 0, fontWeight: 800 }}>{kafe?.nama?.toUpperCase() || "KAFE ANDA"}</h3>
+                  <p style={{ margin: 0, fontSize: 11 }}>{kafe?.alamat || ""}</p>
+                  <p style={{ margin: 0, fontSize: 11 }}>Telp: {profile?.telepon || "-"}</p>
+                  <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
+                  <p style={{ margin: 0, fontSize: 11 }}>No: {selectedTransaksi.id?.slice(0, 12) || "N/A"}</p>
+                  <p style={{ margin: 0, fontSize: 11 }}>Tanggal: {new Date(selectedTransaksi.created_at).toLocaleString("id-ID")}</p>
+                  <p style={{ margin: 0, fontSize: 11 }}>Kasir: {profile?.nama || "Admin"}</p>
+                  <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
                 </div>
 
-                <div style={{ width: "100%", height: 1, background: theme.cardBorder, margin: "8px 0" }}></div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 14 }}>
-                  <span>{selectedTransaksi.item}</span>
-                  <span>Qty: {selectedTransaksi.qty}</span>
+                {/* Item pesanan */}
+                <div>
+                  {selectedTransaksi.item?.split(", ").map((item, idx) => {
+                    const [nama, qtyStr] = item.split(" x");
+                    const qty = parseInt(qtyStr) || 1;
+                    // Untuk harga, kita perlu ambil dari data transaksi (tidak ada detail per item)
+                    // Tampilkan sederhana
+                    return (
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                        <span>{nama} x{qty}</span>
+                        <span>{fmt(selectedTransaksi.total)}</span> {/* Tidak akurat untuk multi item */}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div style={{ width: "100%", height: 1, background: theme.cardBorder, margin: "8px 0" }}></div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, padding: "8px 0" }}>
-                  <span>Total</span>
-                  <span style={{ color: selectedTransaksi.tipe === "masuk" ? theme.success : theme.danger }}>
-                    {fmt(selectedTransaksi.total)}
-                  </span>
+                <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span>Subtotal</span>
+                  <span>{fmt(selectedTransaksi.subtotal || selectedTransaksi.total)}</span>
+                </div>
+                {selectedTransaksi.pajak_enabled && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                    <span>Pajak ({persentasePajak}%)</span>
+                    <span>{fmt(selectedTransaksi.pajak || 0)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "1px solid #888", paddingTop: 6, marginTop: 6 }}>
+                  <span>Grand Total</span>
+                  <span>{fmt(selectedTransaksi.total)}</span>
                 </div>
 
-                <div style={{ textAlign: "center", marginTop: 16, fontSize: 10, color: theme.textMuted }}>
-                  <p style={{ margin: 0 }}>Terima kasih!</p>
-                  <p style={{ margin: 0 }}>☕ KopiLaba</p>
-                </div>
+                {pembayaran === "tunai" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+                    <span>Bayar</span>
+                    <span>{fmt(selectedTransaksi.total)}</span>
+                  </div>
+                )}
+                {pembayaran === "piutang" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+                    <span>Status</span>
+                    <span style={{ color: theme.danger }}>Piutang</span>
+                  </div>
+                )}
 
-                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                  <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>🖨️ Cetak</button>
-                  <button onClick={() => { setSelectedTransaksi(null); setTab("transaksi"); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, flex: 1 }}>Kembali</button>
+                <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, borderTop: "1px dashed #888", paddingTop: 8 }}>
+                  <p style={{ margin: 0 }}>Powered by KopiLaba</p>
+                  <p style={{ margin: 0 }}>Manajemen Keuangan Kafe</p>
                 </div>
-              </>
+              </div>
             ) : (
               <div style={{ textAlign: "center", padding: 30 }}>
                 <p style={{ color: theme.textMuted }}>Pilih transaksi untuk lihat struk</p>
                 <button onClick={() => setTab("transaksi")} style={s.btnSm}>Ke Transaksi</button>
               </div>
             )}
+            <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+              <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>🖨️ Cetak</button>
+              <button onClick={() => { setSelectedTransaksi(null); setTab("transaksi"); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, flex: 1 }}>Kembali</button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* ===== MODAL TRANSAKSI ===== */}
+      {/* ===== MODAL TRANSAKSI (multi-item) ===== */}
       {showAdd && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1465,26 +1612,42 @@ export default function KopiLaba() {
               ))}
             </select>
 
-            <label style={s.label}>Nama Item</label>
-            <input style={s.input} placeholder="cth: Cappuccino" value={addForm.item} onChange={e => setAddForm({ ...addForm, item: e.target.value })} />
+            <label style={s.label}>Jumlah</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <button onClick={() => setAddForm({ ...addForm, qty: String(Math.max(1, parseInt(addForm.qty) - 1 || 1)) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>−</button>
+              <input style={{ ...s.input, textAlign: "center", marginBottom: 0 }} type="number" value={addForm.qty} onChange={e => setAddForm({ ...addForm, qty: e.target.value })} />
+              <button onClick={() => setAddForm({ ...addForm, qty: String(parseInt(addForm.qty) + 1 || 2) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>+</button>
+              <button onClick={tambahItemPesanan} style={{ ...s.btnSm, flex: 1 }}>Tambah Item</button>
+            </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label style={s.label}>Jumlah</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button onClick={() => setAddForm({ ...addForm, qty: String(Math.max(1, parseInt(addForm.qty) - 1 || 1)) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>−</button>
-                  <input style={{ ...s.input, textAlign: "center", marginBottom: 0 }} type="number" value={addForm.qty} onChange={e => setAddForm({ ...addForm, qty: e.target.value })} />
-                  <button onClick={() => setAddForm({ ...addForm, qty: String(parseInt(addForm.qty) + 1 || 2) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>+</button>
+            {/* Daftar item pesanan */}
+            {pesananItems.length > 0 && (
+              <div style={s.card}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Item Pesanan:</p>
+                {pesananItems.map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingBottom: 4, marginBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <span>{item.nama} x{item.qty}</span>
+                    <span>{fmt(item.total)}</span>
+                    <button onClick={() => hapusItemPesanan(idx)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer" }}>✕</button>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 6 }}>
+                  <span>Subtotal</span>
+                  <span>{fmt(pesananItems.reduce((sum, i) => sum + i.total, 0))}</span>
                 </div>
               </div>
-              <div style={{ flex: 2 }}>
-                <label style={s.label}>Total (Rp)</label>
-                <input style={s.input} type="number" placeholder="45000" value={addForm.total} onChange={e => setAddForm({ ...addForm, total: e.target.value })} />
-              </div>
+            )}
+
+            {/* Pengaturan pajak */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <label style={s.label}>Pajak {persentasePajak}%</label>
+              <button onClick={() => setPajakEnabled(!pajakEnabled)} style={{ ...s.btnSm, flex: 0, padding: "4px 12px" }}>
+                {pajakEnabled ? "ON" : "OFF"}
+              </button>
             </div>
 
             <button style={{ ...s.btn, background: addType === "masuk" ? (darkMode ? "#2D5A2D" : "#2E7D32") : (darkMode ? "#5A2D2D" : "#C62828"), color: "#fff" }} onClick={handleTambahTransaksi} disabled={loading}>
-              {loading ? "Menyimpan..." : editTransaksiId ? "Update" : "Simpan"}
+              {loading ? "Menyimpan..." : editTransaksiId ? "Update" : "Simpan Transaksi"}
             </button>
           </div>
         </div>
@@ -1568,7 +1731,22 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL KASIR ===== */}
+      {/* ===== MODAL ABSENSI ===== */}
+      {showAbsensi && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAbsensi(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Absensi Pegawai</p>
+            <label style={s.label}>Pegawai</label>
+            <select style={s.input} value={absensiForm.pegawai_id} onChange={e => setAbsensiForm({ ...absensiForm, pegawai_id: e.target.value })}>
+              <option value="">-- Pilih Pegawai --</option>
+              {karyawan.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+            <button style={s.btn} onClick={handleAbsenMasuk} disabled={loading}>{loading ? "Menyimpan..." : "Absen Masuk"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== KASIR (keranjang) ===== */}
       {showKasir && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -1590,8 +1768,20 @@ export default function KopiLaba() {
             {keranjang.length > 0 && (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `2px solid ${theme.cardBorder}` }}>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Total</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Subtotal</p>
                   <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang)}</p>
+                </div>
+                {pajakEnabled && (
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                    <span>Pajak {persentasePajak}%</span>
+                    <span>{fmt(Math.round(totalKeranjang * persentasePajak / 100))}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${theme.cardBorder}` }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Total</p>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>
+                    {fmt(totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))}
+                  </p>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                   {["tunai", "piutang"].map(p => (
@@ -1600,6 +1790,12 @@ export default function KopiLaba() {
                     </button>
                   ))}
                 </div>
+                {pembayaran === "tunai" && (
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <input style={{ ...s.input, flex: 1 }} type="number" placeholder="Jumlah bayar" value={bayarAmount} onChange={e => setBayarAmount(e.target.value)} />
+                    <span style={{ display: "flex", alignItems: "center", color: theme.textMuted }}>Kembali: {bayarAmount ? fmt(parseInt(bayarAmount) - (totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))) : fmt(0)}</span>
+                  </div>
+                )}
                 <button style={s.btn} onClick={handleCheckout} disabled={loading}>{loading ? "Memproses..." : "✅ Bayar"}</button>
               </>
             )}
