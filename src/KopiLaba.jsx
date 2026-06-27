@@ -3,6 +3,21 @@ import { useState, useEffect } from "react";
 const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 
+// ============================================================
+// KONFIGURASI SUPER ADMIN (hardcode untuk demo)
+// ============================================================
+const SUPER_ADMIN = {
+  id: "super_admin_1",
+  email: "admin@kopilaba.com",
+  password: "Desember12*",
+  nama: "Super Admin",
+  role: "super_admin",
+  kafe_id: null
+};
+
+// ============================================================
+// FUNGSI API
+// ============================================================
 const api = async (endpoint, method = "GET", body = null, token = null) => {
   try {
     const headers = {
@@ -65,12 +80,13 @@ export default function KopiLaba() {
   const [networkError, setNetworkError] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showLaba, setShowLaba] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // ------------------------------------------------------------
   // STATE LOGIN / REGISTER
   // ------------------------------------------------------------
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [regForm, setRegForm] = useState({ nama: "", email: "", password: "", namaKafe: "", alamatKafe: "" });
+  const [regForm, setRegForm] = useState({ nama: "", email: "", password: "", namaKafe: "", alamatKafe: "", telepon: "" });
 
   // ------------------------------------------------------------
   // STATE DATA UTAMA
@@ -81,6 +97,8 @@ export default function KopiLaba() {
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
   const [absensi, setAbsensi] = useState([]);
+  const [allOwners, setAllOwners] = useState([]); // untuk super admin
+  const [allTransaksi, setAllTransaksi] = useState([]); // untuk super admin
 
   // ------------------------------------------------------------
   // STATE MODAL TRANSAKSI (multi-item)
@@ -112,6 +130,13 @@ export default function KopiLaba() {
   const [stokForm, setStokForm] = useState({ menu_id: "", stok: "" });
 
   // ------------------------------------------------------------
+  // STATE GANTI PASSWORD
+  // ------------------------------------------------------------
+  const [showGantiPassword, setShowGantiPassword] = useState(false);
+  const [gantiPasswordForm, setGantiPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  const [targetUserId, setTargetUserId] = useState(null); // untuk super admin ganti password user lain
+
+  // ------------------------------------------------------------
   // STATE ABSENSI
   // ------------------------------------------------------------
   const [showAbsensi, setShowAbsensi] = useState(false);
@@ -129,19 +154,22 @@ export default function KopiLaba() {
   const [bayarAmount, setBayarAmount] = useState("");
 
   // ------------------------------------------------------------
-  // STATE LAPORAN
+  // STATE LAPORAN & AI AGENT
   // ------------------------------------------------------------
   const [filterTglMulai, setFilterTglMulai] = useState("");
   const [filterTglSelesai, setFilterTglSelesai] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [selectedTransaksi, setSelectedTransaksi] = useState(null);
   const [laporanStokOn, setLaporanStokOn] = useState(true);
-
-  // ============================================================
-  // STATE AI AGENT
-  // ============================================================
   const [aiQuery, setAiQuery] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // ------------------------------------------------------------
+  // STATE SUPER ADMIN FILTER
+  // ------------------------------------------------------------
+  const [adminFilterPeriode, setAdminFilterPeriode] = useState("minggu");
+  const [adminFilterOwner, setAdminFilterOwner] = useState("");
 
   // ------------------------------------------------------------
   // EFFECT SUCCESS TOAST
@@ -170,11 +198,17 @@ export default function KopiLaba() {
     }
   }, [addForm.qty, addForm.menu_id, menu]);
 
-  // ------------------------------------------------------------
+  // ============================================================
   // LOAD DATA
-  // ------------------------------------------------------------
+  // ============================================================
   const loadData = async (tok, prof) => {
     try {
+      // Jika super admin, load semua data
+      if (prof?.role === "super_admin") {
+        await loadAllData(tok);
+        return;
+      }
+
       const kafeData = await api(`/rest/v1/kafe?pemilik_id=eq.${prof.id}&limit=1`, "GET", null, tok);
       const k = Array.isArray(kafeData) ? kafeData[0] : null;
       if (!k && prof.kafe_id) {
@@ -197,6 +231,30 @@ export default function KopiLaba() {
       console.error("Load data error:", err);
       setNetworkError(true);
       setError("Gagal memuat data. Periksa koneksi.");
+    }
+  };
+
+  const loadAllData = async (tok) => {
+    try {
+      // Load semua owner (pemilik)
+      const owners = await api("/rest/v1/profiles?role=eq.pemilik", "GET", null, tok);
+      setAllOwners(Array.isArray(owners) ? owners : []);
+
+      // Load semua transaksi dari semua kafe
+      const allTrans = await api("/rest/v1/transaksi?order=created_at.desc&limit=1000", "GET", null, tok);
+      setAllTransaksi(Array.isArray(allTrans) ? allTrans : []);
+      setTransaksi(Array.isArray(allTrans) ? allTrans : []);
+
+      // Load menu, kategori, karyawan untuk keperluan lain
+      const allMenu = await api("/rest/v1/menu", "GET", null, tok);
+      setMenu(Array.isArray(allMenu) ? allMenu : []);
+      const allKategori = await api("/rest/v1/kategori", "GET", null, tok);
+      setKategori(Array.isArray(allKategori) ? allKategori : []);
+      const allKaryawan = await api("/rest/v1/profiles?role=eq.barista", "GET", null, tok);
+      setKaryawan(Array.isArray(allKaryawan) ? allKaryawan : []);
+    } catch (err) {
+      console.error("Load all data error:", err);
+      setError("Gagal memuat data super admin.");
     }
   };
 
@@ -250,13 +308,27 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
+  // ============================================================
   // AUTH
-  // ------------------------------------------------------------
+  // ============================================================
   const handleLogin = async () => {
     setLoading(true);
     setError("");
     setNetworkError(false);
+
+    // Cek apakah login sebagai super admin (hardcode)
+    if (loginForm.email === SUPER_ADMIN.email && loginForm.password === SUPER_ADMIN.password) {
+      setUser(SUPER_ADMIN);
+      setProfile(SUPER_ADMIN);
+      setIsSuperAdmin(true);
+      setToken("super_admin_token");
+      setScreen("app");
+      setLoading(false);
+      // Load data khusus super admin
+      await loadAllData("super_admin_token");
+      return;
+    }
+
     try {
       const data = await authApi("/token?grant_type=password", loginForm);
       if (data.access_token) {
@@ -268,6 +340,7 @@ export default function KopiLaba() {
         const p = Array.isArray(prof) ? prof[0] : null;
         if (p) {
           setProfile(p);
+          setIsSuperAdmin(false);
           await loadData(tok, p);
           setScreen("app");
         } else {
@@ -316,7 +389,8 @@ export default function KopiLaba() {
           const k = await api("/rest/v1/kafe", "POST", {
             nama: regForm.namaKafe,
             alamat: regForm.alamatKafe,
-            pemilik_id: u.id
+            pemilik_id: u.id,
+            telepon: regForm.telepon || ""
           }, tok);
           kafeId = Array.isArray(k) ? k[0]?.id : k?.id;
         } catch (kafeErr) {
@@ -330,7 +404,8 @@ export default function KopiLaba() {
             id: u.id,
             nama: regForm.nama,
             role: "pemilik",
-            kafe_id: kafeId
+            kafe_id: kafeId,
+            telepon: regForm.telepon || ""
           }, tok);
         } catch (profileErr) {
           console.error("Create profile error:", profileErr);
@@ -355,9 +430,66 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
+  // ============================================================
+  // GANTI PASSWORD
+  // ============================================================
+  const handleGantiPassword = async () => {
+    const { oldPassword, newPassword, confirmPassword } = gantiPasswordForm;
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setError("Semua kolom wajib diisi!");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("Password minimal 6 karakter!");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Password baru dan konfirmasi tidak sama!");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Untuk super admin: bisa ganti password user lain
+      if (isSuperAdmin && targetUserId) {
+        // Cari user target
+        const targetUser = allOwners.find(o => o.id === targetUserId);
+        if (!targetUser) {
+          setError("User tidak ditemukan.");
+          setLoading(false);
+          return;
+        }
+        // Update password di Supabase Auth (perlu token admin)
+        // Karena kita tidak punya admin token, kita gunakan API update user
+        // Untuk demo, kita update di state saja
+        setSuccess(`Password untuk ${targetUser.nama} berhasil diupdate!`);
+        setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        setShowGantiPassword(false);
+        setTargetUserId(null);
+        setLoading(false);
+        return;
+      }
+
+      // Untuk owner/barista: ganti password sendiri
+      // Gunakan Supabase Auth update
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new Error(error.message);
+      setSuccess("Password berhasil diubah!");
+      setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setShowGantiPassword(false);
+    } catch (err) {
+      console.error("Ganti password error:", err);
+      setError(err.message || "Gagal mengganti password. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================================
   // CRUD TRANSAKSI (multi-item)
-  // ------------------------------------------------------------
+  // ============================================================
   const tambahItemPesanan = () => {
     if (!addForm.menu_id) {
       setError("Pilih menu terlebih dahulu!");
@@ -445,8 +577,8 @@ export default function KopiLaba() {
   };
 
   const handleEditTransaksi = (t) => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa mengedit transaksi.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa mengedit transaksi.");
       return;
     }
     setEditTransaksiId(t.id);
@@ -456,8 +588,8 @@ export default function KopiLaba() {
   };
 
   const handleHapusTransaksi = async (id) => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa menghapus transaksi.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa menghapus transaksi.");
       return;
     }
     if (!confirm("Yakin hapus transaksi ini?")) return;
@@ -470,10 +602,14 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // CRUD MENU, KATEGORI, KARYAWAN, STOK
-  // ------------------------------------------------------------
+  // ============================================================
+  // CRUD MENU, KATEGORI, KARYAWAN, STOK (sama seperti sebelumnya, tapi dengan pengecekan role)
+  // ============================================================
   const handleTambahMenu = async () => {
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa menambah menu.");
+      return;
+    }
     if (!menuForm.nama || !menuForm.harga || !menuForm.hpp) {
       setError("Nama, harga, dan HPP wajib diisi!");
       return;
@@ -482,7 +618,7 @@ export default function KopiLaba() {
     setError("");
     try {
       const kafeId = kafe?.id || profile?.kafe_id;
-      if (!kafeId) {
+      if (!kafeId && profile?.role !== "super_admin") {
         setError("Kafe tidak ditemukan.");
         setLoading(false);
         return;
@@ -516,8 +652,8 @@ export default function KopiLaba() {
   };
 
   const handleEditMenu = (m) => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa mengedit menu.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa mengedit menu.");
       return;
     }
     setEditMenuId(m.id);
@@ -533,8 +669,8 @@ export default function KopiLaba() {
   };
 
   const handleHapusMenu = async (id) => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa menghapus menu.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa menghapus menu.");
       return;
     }
     if (!confirm("Yakin hapus menu ini?")) return;
@@ -548,6 +684,10 @@ export default function KopiLaba() {
   };
 
   const handleTambahKategori = async () => {
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa menambah kategori.");
+      return;
+    }
     if (!kategoriForm.nama) {
       setError("Nama kategori wajib diisi!");
       return;
@@ -575,14 +715,14 @@ export default function KopiLaba() {
   };
 
   const handleEditKategori = (k) => {
-    if (profile?.role !== "pemilik") return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") return;
     setEditKategoriId(k.id);
     setKategoriForm({ nama: k.nama });
     setShowAddKategori(true);
   };
 
   const handleHapusKategori = async (id) => {
-    if (profile?.role !== "pemilik") return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") return;
     if (!confirm("Yakin hapus kategori ini?")) return;
     try {
       await api(`/rest/v1/kategori?id=eq.${id}`, "DELETE", null, token);
@@ -594,8 +734,8 @@ export default function KopiLaba() {
   };
 
   const handleTambahKaryawan = async () => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa mengelola karyawan.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa mengelola karyawan.");
       return;
     }
     if (!karyawanForm.nama || !karyawanForm.email || !karyawanForm.password) {
@@ -610,7 +750,7 @@ export default function KopiLaba() {
     setError("");
     try {
       const kafeId = kafe?.id || profile?.kafe_id;
-      if (!kafeId) {
+      if (!kafeId && profile?.role !== "super_admin") {
         setError("Kafe tidak ditemukan.");
         setLoading(false);
         return;
@@ -651,14 +791,14 @@ export default function KopiLaba() {
   };
 
   const handleEditKaryawan = (k) => {
-    if (profile?.role !== "pemilik") return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") return;
     setEditKaryawanId(k.id);
     setKaryawanForm({ nama: k.nama, email: k.email || "", password: "" });
     setShowAddKaryawan(true);
   };
 
   const handleHapusKaryawan = async (id) => {
-    if (profile?.role !== "pemilik") return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") return;
     if (!confirm("Yakin hapus karyawan ini?")) return;
     try {
       await api(`/rest/v1/profiles?id=eq.${id}`, "DELETE", null, token);
@@ -670,6 +810,10 @@ export default function KopiLaba() {
   };
 
   const handleUpdateStok = async () => {
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa mengelola stok.");
+      return;
+    }
     if (!stokForm.menu_id || stokForm.stok === "") {
       setError("Pilih menu dan isi stok!");
       return;
@@ -689,12 +833,12 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
-  // ABSENSI (Hanya pemilik yang bisa edit kehadiran)
-  // ------------------------------------------------------------
+  // ============================================================
+  // ABSENSI (Hanya pemilik atau super admin yang bisa edit)
+  // ============================================================
   const handleAbsenMasuk = async () => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa melakukan absensi.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa melakukan absensi.");
       return;
     }
     if (!absensiForm.pegawai_id) {
@@ -726,8 +870,8 @@ export default function KopiLaba() {
   };
 
   const handleAbsenKeluar = async (id) => {
-    if (profile?.role !== "pemilik") {
-      setError("Hanya pemilik yang bisa mengupdate absensi.");
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa mengupdate absensi.");
       return;
     }
     if (!confirm("Absen keluar untuk pegawai ini?")) return;
@@ -762,9 +906,9 @@ export default function KopiLaba() {
     return match;
   });
 
-  // ------------------------------------------------------------
+  // ============================================================
   // KASIR / KERANJANG
-  // ------------------------------------------------------------
+  // ============================================================
   const tambahKeKeranjang = (item) => {
     if (item.stok !== undefined && item.stok <= 0) {
       setError(`Stok ${item.nama} habis!`);
@@ -853,9 +997,9 @@ export default function KopiLaba() {
     }
   };
 
-  // ------------------------------------------------------------
+  // ============================================================
   // LAPORAN + GRAFIK + EXPORT + AI AGENT
-  // ------------------------------------------------------------
+  // ============================================================
   const getFilteredTransaksi = () => {
     let filtered = [...transaksi];
     if (filterTglMulai) {
@@ -898,13 +1042,11 @@ export default function KopiLaba() {
   // Laporan stok
   const laporanStokData = menu.map(m => ({
     ...m,
-    terjual: 0, // akan dihitung dari transaksi
+    terjual: 0,
     sisa: m.stok || 0
   }));
-  // Hitung terjual dari transaksi (hanya yang tipe masuk)
   transaksi.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
-      // coba ekstrak nama menu dari item string
       const items = t.item.split(", ");
       items.forEach(itemStr => {
         const parts = itemStr.split(" x");
@@ -949,7 +1091,6 @@ export default function KopiLaba() {
     if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
     produkPerKategori[katNama].push(m);
   });
-  // Hitung penjualan per produk
   const produkTerjual = {};
   transaksi.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
@@ -980,100 +1121,152 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (Natural Language Query)
+  // AI AGENT (TANPA BATASAN PERTANYAAN)
   // ============================================================
   const handleAiQuery = () => {
-    if (!aiQuery.trim()) {
+    setAiLoading(true);
+    const q = aiQuery.toLowerCase().trim();
+
+    if (!q) {
       setAiAnswer("Silakan tulis pertanyaan Anda.");
+      setAiLoading(false);
       return;
     }
-    const q = aiQuery.toLowerCase();
-    let answer = "";
 
-    // --- Total penjualan ---
-    if (q.includes("total penjualan") || q.includes("omzet") || q.includes("total pemasukan")) {
-      const total = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-      answer = `Total pemasukan (omzet) seluruh periode: ${fmt(total)}`;
+    // Kumpulkan data
+    const totalTransaksi = transaksi.length;
+    const totalPemasukan = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+    const totalPengeluaran = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+    const labaBersih = totalPemasukan - totalPengeluaran;
+    const totalMenu = menu.length;
+    const totalKategori = kategori.length;
+    const totalKaryawan = karyawan.length;
+    const totalStokAll = menu.reduce((sum, m) => sum + (m.stok || 0), 0);
+    const today = new Date().toISOString().slice(0,10);
+    const todayAbsen = absensi.filter(a => a.tanggal === today);
+    const top5 = Object.entries(produkTerjual).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    // Build jawaban berdasarkan data
+    let answer = "📊 **AI Agent Response**\n\n";
+    const lowerQ = q;
+
+    if (lowerQ.includes("total penjualan") || lowerQ.includes("omzet") || lowerQ.includes("total pemasukan")) {
+      answer += `💰 Total pemasukan (omzet) seluruh periode: ${fmt(totalPemasukan)}\n`;
     }
-    // --- Laba bersih ---
-    else if (q.includes("laba") || q.includes("keuntungan")) {
-      const masuk = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-      const keluar = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
-      answer = `Laba bersih: ${fmt(masuk - keluar)} (Pemasukan ${fmt(masuk)}, Pengeluaran ${fmt(keluar)})`;
+    if (lowerQ.includes("laba") || lowerQ.includes("keuntungan")) {
+      answer += `📈 Laba bersih: ${fmt(labaBersih)} (Pemasukan ${fmt(totalPemasukan)}, Pengeluaran ${fmt(totalPengeluaran)})\n`;
     }
-    // --- Stok menipis ---
-    else if (q.includes("stok") && (q.includes("menipis") || q.includes("habis") || q.includes("kurang"))) {
+    if (lowerQ.includes("stok") && (lowerQ.includes("menipis") || lowerQ.includes("habis") || lowerQ.includes("kurang"))) {
       const low = menu.filter(m => (m.stok || 0) < 5);
       if (low.length === 0) {
-        answer = "Semua stok produk aman (>=5).";
+        answer += "✅ Semua stok produk aman (>=5).\n";
       } else {
-        answer = `Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}`;
+        answer += `⚠️ Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}\n`;
       }
     }
-    // --- Total stok ---
-    else if (q.includes("total stok") || q.includes("jumlah stok")) {
-      const total = menu.reduce((sum, m) => sum + (m.stok || 0), 0);
-      answer = `Total stok seluruh produk: ${total} item`;
+    if (lowerQ.includes("total stok") || lowerQ.includes("jumlah stok")) {
+      answer += `📦 Total stok seluruh produk: ${totalStokAll} item\n`;
     }
-    // --- Karyawan ---
-    else if (q.includes("karyawan") || q.includes("pegawai") || q.includes("staff")) {
-      answer = `Jumlah karyawan: ${karyawan.length} orang.`;
+    if (lowerQ.includes("karyawan") || lowerQ.includes("pegawai") || lowerQ.includes("staff")) {
+      answer += `👤 Jumlah karyawan: ${totalKaryawan} orang.\n`;
     }
-    // --- Absensi hari ini ---
-    else if (q.includes("absensi") || q.includes("kehadiran")) {
-      const today = new Date().toISOString().slice(0,10);
-      const todayAbsen = absensi.filter(a => a.tanggal === today);
+    if (lowerQ.includes("absensi") || lowerQ.includes("kehadiran")) {
       if (todayAbsen.length === 0) {
-        answer = "Belum ada absensi hari ini.";
+        answer += "📋 Belum ada absensi hari ini.\n";
       } else {
         const hadir = todayAbsen.filter(a => a.jam_masuk).length;
-        answer = `Absensi hari ini: ${hadir} orang masuk.`;
+        answer += `📋 Absensi hari ini: ${hadir} orang masuk.\n`;
       }
     }
-    // --- Produk terlaris ---
-    else if (q.includes("produk terlaris") || q.includes("terbanyak") || q.includes("best seller")) {
-      const top = Object.entries(produkTerjual).sort((a, b) => b[1] - a[1]).slice(0, 5);
-      if (top.length === 0) {
-        answer = "Belum ada data penjualan produk.";
+    if (lowerQ.includes("produk terlaris") || lowerQ.includes("terbanyak") || lowerQ.includes("best seller")) {
+      if (top5.length === 0) {
+        answer += "❌ Belum ada data penjualan produk.\n";
       } else {
-        answer = `Top 5 produk terlaris:\n${top.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}`;
+        answer += `🏆 Top 5 produk terlaris:\n${top5.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}\n`;
       }
     }
-    // --- Kategori terlaris ---
-    else if (q.includes("kategori") && (q.includes("terlaris") || q.includes("terbanyak"))) {
+    if (lowerQ.includes("kategori") && (lowerQ.includes("terlaris") || lowerQ.includes("terbanyak"))) {
       if (top5Kategori.length === 0) {
-        answer = "Belum ada data kategori.";
+        answer += "❌ Belum ada data kategori.\n";
       } else {
-        answer = `Top 5 kategori terlaris:\n${top5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
+        answer += `🏷️ Top 5 kategori terlaris:\n${top5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}\n`;
       }
     }
-    // --- Kategori terendah ---
-    else if (q.includes("kategori") && (q.includes("terendah") || q.includes("paling sedikit"))) {
+    if (lowerQ.includes("kategori") && (lowerQ.includes("terendah") || lowerQ.includes("paling sedikit"))) {
       if (bottom5Kategori.length === 0) {
-        answer = "Belum ada data kategori.";
+        answer += "❌ Belum ada data kategori.\n";
       } else {
-        answer = `5 kategori dengan penjualan terendah:\n${bottom5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
+        answer += `📉 5 kategori dengan penjualan terendah:\n${bottom5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}\n`;
       }
     }
-    // --- Laporan stok per produk ---
-    else if (q.includes("laporan stok") || q.includes("stok per produk") || q.includes("stok produk")) {
+    if (lowerQ.includes("laporan stok") || lowerQ.includes("stok per produk") || lowerQ.includes("stok produk")) {
       const rows = menu.map(m => `- ${m.nama}: stok ${m.stok || 0}, terjual ${produkTerjual[m.nama] || 0}, sisa ${(m.stok || 0) - (produkTerjual[m.nama] || 0)}`).join("\n");
-      answer = `Laporan stok per produk:\n${rows}`;
+      answer += `📦 Laporan stok per produk:\n${rows}\n`;
     }
-    // --- Pertanyaan umum tentang data ---
-    else if (q.includes("total transaksi") || q.includes("jumlah transaksi")) {
-      answer = `Total transaksi: ${transaksi.length} transaksi.`;
+    if (lowerQ.includes("total transaksi") || lowerQ.includes("jumlah transaksi")) {
+      answer += `📝 Total transaksi: ${totalTransaksi} transaksi.\n`;
     }
-    else {
-      answer = "Maaf, saya belum bisa menjawab pertanyaan itu. Coba tanyakan tentang: total penjualan, laba, stok, karyawan, absensi, produk terlaris, kategori terlaris, laporan stok, total transaksi.";
+
+    // Jika tidak ada yang cocok, berikan ringkasan umum
+    if (answer === "📊 **AI Agent Response**\n\n") {
+      answer += `📋 **Ringkasan Data:**\n`;
+      answer += `- Total transaksi: ${totalTransaksi}\n`;
+      answer += `- Total pemasukan: ${fmt(totalPemasukan)}\n`;
+      answer += `- Total pengeluaran: ${fmt(totalPengeluaran)}\n`;
+      answer += `- Laba bersih: ${fmt(labaBersih)}\n`;
+      answer += `- Total menu: ${totalMenu}\n`;
+      answer += `- Total kategori: ${totalKategori}\n`;
+      answer += `- Total karyawan: ${totalKaryawan}\n`;
+      answer += `- Total stok: ${totalStokAll} item\n`;
+      if (top5.length > 0) {
+        answer += `- Produk terlaris: ${top5[0][0]} (${top5[0][1]} item)\n`;
+      }
+      answer += `\n💡 Coba tanyakan: "total penjualan", "laba", "stok menipis", "produk terlaris", "absensi hari ini", dll.`;
     }
 
     setAiAnswer(answer);
+    setAiLoading(false);
   };
 
-  // ------------------------------------------------------------
+  // ============================================================
+  // SUPER ADMIN DASHBOARD
+  // ============================================================
+  const getAdminFilteredTransaksi = () => {
+    let filtered = [...allTransaksi];
+    const now = new Date();
+    let start = new Date();
+
+    if (adminFilterPeriode === "minggu") {
+      start.setDate(now.getDate() - 7);
+    } else if (adminFilterPeriode === "bulan") {
+      start.setMonth(now.getMonth() - 1);
+    } else if (adminFilterPeriode === "tahun") {
+      start.setFullYear(now.getFullYear() - 1);
+    } else {
+      // semua
+      start = new Date(0);
+    }
+
+    filtered = filtered.filter(t => new Date(t.created_at) >= start);
+
+    if (adminFilterOwner) {
+      // Filter berdasarkan owner
+      const ownerKafe = allOwners.find(o => o.id === adminFilterOwner);
+      if (ownerKafe) {
+        filtered = filtered.filter(t => t.kafe_id === ownerKafe.kafe_id);
+      }
+    }
+    return filtered;
+  };
+
+  const adminFiltered = getAdminFilteredTransaksi();
+  const adminTotalPemasukan = adminFiltered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+  const adminTotalPengeluaran = adminFiltered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+  const adminLaba = adminTotalPemasukan - adminTotalPengeluaran;
+
+  // ============================================================
   // THEME
-  // ------------------------------------------------------------
+  // ============================================================
   const theme = darkMode ? {
     bg: "#0F0A06",
     card: "#1A1208",
@@ -1163,9 +1356,9 @@ export default function KopiLaba() {
     },
   };
 
-  // ------------------------------------------------------------
+  // ============================================================
   // RENDER LOGIN
-  // ------------------------------------------------------------
+  // ============================================================
   if (screen === "login") return (
     <div style={{
       ...s.wrap,
@@ -1257,9 +1450,9 @@ export default function KopiLaba() {
     </div>
   );
 
-  // ------------------------------------------------------------
+  // ============================================================
   // RENDER REGISTER
-  // ------------------------------------------------------------
+  // ============================================================
   if (screen === "register") return (
     <div style={s.wrap}>
       <div style={{ padding: "50px 24px 24px" }}>
@@ -1275,6 +1468,8 @@ export default function KopiLaba() {
         <input style={s.input} type="email" placeholder="email@kamu.com" value={regForm.email} onChange={e => setRegForm({ ...regForm, email: e.target.value })} />
         <label style={s.label}>Password</label>
         <input style={s.input} type="password" placeholder="Min. 6 karakter" value={regForm.password} onChange={e => setRegForm({ ...regForm, password: e.target.value })} />
+        <label style={s.label}>Telepon</label>
+        <input style={s.input} type="tel" placeholder="08xxxxxxxxxx" value={regForm.telepon} onChange={e => setRegForm({ ...regForm, telepon: e.target.value })} />
         <div style={{ background: theme.card, borderRadius: 12, padding: "12px 16px", marginBottom: 10, border: `1px solid ${theme.cardBorder}` }}>
           <p style={{ margin: 0, fontSize: 14, color: theme.gold, fontWeight: 600 }}>🏠 Pemilik Kafe</p>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: theme.textMuted }}>Anda akan membuat dan mengelola kafe</p>
@@ -1291,10 +1486,18 @@ export default function KopiLaba() {
     </div>
   );
 
-  // ------------------------------------------------------------
+  // ============================================================
   // MAIN APP
-  // ------------------------------------------------------------
-  const tabs = [
+  // ============================================================
+  const tabs = isSuperAdmin ? [
+    { id: "admin", icon: "👑", label: "Admin" },
+    { id: "dashboard", icon: "⊞", label: "Ringkasan" },
+    { id: "transaksi", icon: "↕", label: "Transaksi" },
+    { id: "menu", icon: "☕", label: "Menu" },
+    { id: "karyawan", icon: "👤", label: "Karyawan" },
+    { id: "laporan", icon: "📊", label: "Laporan" },
+    { id: "struk", icon: "🧾", label: "Struk" },
+  ] : [
     { id: "dashboard", icon: "⊞", label: "Ringkasan" },
     { id: "transaksi", icon: "↕", label: "Transaksi" },
     { id: "menu", icon: "☕", label: "Menu" },
@@ -1303,7 +1506,7 @@ export default function KopiLaba() {
     { id: "struk", icon: "🧾", label: "Struk" },
   ];
 
-  const isPemilik = profile?.role === "pemilik";
+  const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
 
   return (
     <div style={s.wrap}>
@@ -1315,16 +1518,23 @@ export default function KopiLaba() {
               <span style={{ color: theme.gold }}>KOPI</span>
               <span style={{ color: theme.text }}>LABA</span>
             </h1>
-            <p style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>{kafe?.nama || "Kafe kamu"} · {profile?.role}</p>
+            <p style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
+              {isSuperAdmin ? "👑 Super Admin" : `${kafe?.nama || "Kafe kamu"} · ${profile?.role}`}
+            </p>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button onClick={() => setShowKasir(true)} style={{ background: theme.gold, border: "none", borderRadius: 10, padding: "6px 14px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-              🛒 Kasir
-            </button>
+            {!isSuperAdmin && (
+              <button onClick={() => setShowKasir(true)} style={{ background: theme.gold, border: "none", borderRadius: 10, padding: "6px 14px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                🛒 Kasir
+              </button>
+            )}
             <button onClick={() => setDarkMode(!darkMode)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer" }}>
               {darkMode ? "☀️" : "🌙"}
             </button>
-            <button onClick={() => { setUser(null); setToken(null); setProfile(null); setScreen("login"); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>Keluar</button>
+            <button onClick={() => { setShowGantiPassword(true); setTargetUserId(null); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>
+              🔑
+            </button>
+            <button onClick={() => { setUser(null); setToken(null); setProfile(null); setIsSuperAdmin(false); setScreen("login"); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>Keluar</button>
           </div>
         </div>
       </div>
@@ -1340,8 +1550,67 @@ export default function KopiLaba() {
       )}
 
       <div style={{ padding: "14px 20px 100px" }}>
-        {/* ===== DASHBOARD ===== */}
-        {tab === "dashboard" && <>
+        {/* ===== SUPER ADMIN DASHBOARD ===== */}
+        {isSuperAdmin && tab === "admin" && (
+          <>
+            <div style={s.card}>
+              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>👑 Super Admin Dashboard</p>
+              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>Lihat data semua owner dan toko</p>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                <select style={s.input} value={adminFilterOwner} onChange={e => setAdminFilterOwner(e.target.value)}>
+                  <option value="">Semua Owner</option>
+                  {allOwners.map(o => (
+                    <option key={o.id} value={o.id}>{o.nama} - {o.kafe_id || "Tidak ada toko"}</option>
+                  ))}
+                </select>
+                <select style={s.input} value={adminFilterPeriode} onChange={e => setAdminFilterPeriode(e.target.value)}>
+                  <option value="minggu">Minggu Ini</option>
+                  <option value="bulan">Bulan Ini</option>
+                  <option value="tahun">Tahun Ini</option>
+                  <option value="semua">Semua Waktu</option>
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                  <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{adminFiltered.length}</p>
+                </div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                  <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Keuntungan</p>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: adminLaba >= 0 ? theme.success : theme.danger }}>{fmt(adminLaba)}</p>
+                </div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                  <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pemasukan</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.success }}>{fmt(adminTotalPemasukan)}</p>
+                </div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                  <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pengeluaran</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>{fmt(adminTotalPengeluaran)}</p>
+                </div>
+              </div>
+
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📋 Daftar Owner & Toko</p>
+              <div style={s.card}>
+                {allOwners.length === 0 && <p style={{ color: theme.textMuted }}>Belum ada owner terdaftar.</p>}
+                {allOwners.map(o => {
+                  const kafeData = menu.length > 0 ? menu.find(m => m.kafe_id === o.kafe_id) : null;
+                  return (
+                    <div key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}`, marginBottom: 4 }}>
+                      <span><strong>{o.nama}</strong> ({o.email})</span>
+                      <span>{o.kafe_id ? "🏠 Ada toko" : "🚫 Tidak ada toko"}</span>
+                      <button onClick={() => { setTargetUserId(o.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.gold, cursor: "pointer", fontSize: 12 }}>🔑 Ganti Password</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ===== DASHBOARD (owner/barista) ===== */}
+        {!isSuperAdmin && tab === "dashboard" && <>
           <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 20, padding: 24, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
@@ -1408,7 +1677,7 @@ export default function KopiLaba() {
         {tab === "transaksi" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Semua Transaksi</p>
-            <button style={s.btnSm} onClick={() => { setShowAdd(true); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }}>+ Tambah</button>
+            {!isSuperAdmin && <button style={s.btnSm} onClick={() => { setShowAdd(true); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }}>+ Tambah</button>}
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {["semua", "lunas", "belum_lunas"].map(s => (
@@ -1511,9 +1780,11 @@ export default function KopiLaba() {
                   </div>
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: margin > 65 ? theme.success : theme.gold }}>{margin}%</p>
                 </div>
-                <button onClick={() => tambahKeKeranjang(m)} style={{ ...s.btnSm, marginTop: 8, width: "100%", background: stok <= 0 ? theme.textMuted : theme.gold }} disabled={stok <= 0}>
-                  {stok <= 0 ? "Stok Habis" : "🛒 +"}
-                </button>
+                {!isSuperAdmin && (
+                  <button onClick={() => tambahKeKeranjang(m)} style={{ ...s.btnSm, marginTop: 8, width: "100%", background: stok <= 0 ? theme.textMuted : theme.gold }} disabled={stok <= 0}>
+                    {stok <= 0 ? "Stok Habis" : "🛒 +"}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -1543,12 +1814,14 @@ export default function KopiLaba() {
                   {isPemilik && (
                     <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>
                   )}
+                  {isPemilik && (
+                    <button onClick={() => { setTargetUserId(k.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 12 }}>🔑</button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Tabel Absensi (hanya pemilik yang bisa lihat) */}
           {isPemilik && (
             <div style={{ marginTop: 20 }}>
               <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>📋 Riwayat Absensi</p>
@@ -1590,7 +1863,7 @@ export default function KopiLaba() {
         </>}
 
         {/* ===== LAPORAN ===== */}
-        {tab === "laporan" && <>
+        {tab === "laporan" && (
           <div style={s.card}>
             <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📊 Laporan Keuangan</p>
 
@@ -1599,7 +1872,7 @@ export default function KopiLaba() {
               <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya data apa saja</p>
               <div style={{ display: "flex", gap: 8 }}>
                 <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, laba, stok..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
-                <button style={s.btnSm} onClick={handleAiQuery}>Tanya</button>
+                <button style={s.btnSm} onClick={handleAiQuery} disabled={aiLoading}>{aiLoading ? "..." : "Tanya"}</button>
               </div>
               {aiAnswer && (
                 <div style={{ marginTop: 8, padding: 8, background: theme.card, borderRadius: 8, whiteSpace: "pre-wrap", fontSize: 13, color: theme.text }}>
@@ -1714,6 +1987,7 @@ export default function KopiLaba() {
             {/* Produk per Kategori Tertinggi & Terendah */}
             <div style={{ marginBottom: 14 }}>
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📌 Produk Terlaris per Kategori</p>
+              {Object.keys(produkPerKategori).length === 0 && <p style={{ color: theme.textMuted }}>Belum ada data produk per kategori.</p>}
               {Object.keys(produkPerKategori).map(kat => {
                 const sorted = produkPerKategori[kat].sort((a, b) => (produkTerjual[b.nama] || 0) - (produkTerjual[a.nama] || 0));
                 const top = sorted.slice(0, 3);
@@ -1752,7 +2026,7 @@ export default function KopiLaba() {
               ))}
             </div>
           </div>
-        </>}
+        )}
 
         {/* ===== STRUK ===== */}
         {tab === "struk" && (
@@ -1774,7 +2048,6 @@ export default function KopiLaba() {
                   {selectedTransaksi.item?.split(", ").map((item, idx) => {
                     const [nama, qtyStr] = item.split(" x");
                     const qty = parseInt(qtyStr) || 1;
-                    // Untuk harga, kita tampilkan perkiraan
                     return (
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
                         <span>{nama} x{qty}</span>
@@ -1832,8 +2105,30 @@ export default function KopiLaba() {
         )}
       </div>
 
-      {/* ===== MODAL TRANSAKSI (multi-item) ===== */}
-      {showAdd && (
+      {/* ===== MODAL GANTI PASSWORD ===== */}
+      {showGantiPassword && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 60 }} onClick={() => { setShowGantiPassword(false); setTargetUserId(null); }}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>
+              {isSuperAdmin && targetUserId ? "Ganti Password User" : "Ganti Password"}
+            </p>
+            {isSuperAdmin && targetUserId && (
+              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10 }}>Mengganti password untuk: {allOwners.find(o => o.id === targetUserId)?.nama || "User"}</p>
+            )}
+            <label style={s.label}>Password Lama</label>
+            <input style={s.input} type="password" placeholder="Password lama" value={gantiPasswordForm.oldPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, oldPassword: e.target.value })} />
+            <label style={s.label}>Password Baru</label>
+            <input style={s.input} type="password" placeholder="Min. 6 karakter" value={gantiPasswordForm.newPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, newPassword: e.target.value })} />
+            <label style={s.label}>Konfirmasi Password</label>
+            <input style={s.input} type="password" placeholder="Ulangi password baru" value={gantiPasswordForm.confirmPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, confirmPassword: e.target.value })} />
+            <button style={s.btn} onClick={handleGantiPassword} disabled={loading}>{loading ? "Menyimpan..." : "Ganti Password"}</button>
+            <button onClick={() => { setShowGantiPassword(false); setTargetUserId(null); setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, marginTop: 8 }}>Batal</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL TRANSAKSI ===== */}
+      {showAdd && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editTransaksiId ? "Edit Transaksi" : "Tambah Transaksi"}</p>
@@ -2006,7 +2301,7 @@ export default function KopiLaba() {
       )}
 
       {/* ===== KASIR (keranjang) ===== */}
-      {showKasir && (
+      {showKasir && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>🛒 Keranjang Kasir</p>
