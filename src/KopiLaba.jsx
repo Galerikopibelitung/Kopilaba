@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 
+// ============================================================
+// KONFIGURASI
+// ============================================================
 const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 
-// ============================================================
-// KONFIGURASI SUPER ADMIN (hardcode untuk demo)
-// ============================================================
 const SUPER_ADMIN = {
   id: "super_admin_1",
   email: "admin@kopilaba.com",
@@ -65,6 +65,9 @@ const authApi = async (endpoint, body) => {
 
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 
+// ============================================================
+// KOMPONEN UTAMA
+// ============================================================
 export default function KopiLaba() {
   // ------------------------------------------------------------
   // STATE UMUM
@@ -97,8 +100,8 @@ export default function KopiLaba() {
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
   const [absensi, setAbsensi] = useState([]);
-  const [allOwners, setAllOwners] = useState([]); // untuk super admin
-  const [allTransaksi, setAllTransaksi] = useState([]); // untuk super admin
+  const [allOwners, setAllOwners] = useState([]);
+  const [allTransaksi, setAllTransaksi] = useState([]);
 
   // ------------------------------------------------------------
   // STATE MODAL TRANSAKSI (multi-item)
@@ -134,7 +137,7 @@ export default function KopiLaba() {
   // ------------------------------------------------------------
   const [showGantiPassword, setShowGantiPassword] = useState(false);
   const [gantiPasswordForm, setGantiPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
-  const [targetUserId, setTargetUserId] = useState(null); // untuk super admin ganti password user lain
+  const [targetUserId, setTargetUserId] = useState(null);
 
   // ------------------------------------------------------------
   // STATE ABSENSI
@@ -144,6 +147,7 @@ export default function KopiLaba() {
   const [filterNama, setFilterNama] = useState("");
   const [filterTglMulaiAbsen, setFilterTglMulaiAbsen] = useState("");
   const [filterTglSelesaiAbsen, setFilterTglSelesaiAbsen] = useState("");
+  const [baristaAbsenLoading, setBaristaAbsenLoading] = useState(false);
 
   // ------------------------------------------------------------
   // STATE KASIR (keranjang)
@@ -154,7 +158,7 @@ export default function KopiLaba() {
   const [bayarAmount, setBayarAmount] = useState("");
 
   // ------------------------------------------------------------
-  // STATE LAPORAN & AI AGENT
+  // STATE LAPORAN & AI AGENT (tanpa Gemini)
   // ------------------------------------------------------------
   const [filterTglMulai, setFilterTglMulai] = useState("");
   const [filterTglSelesai, setFilterTglSelesai] = useState("");
@@ -203,12 +207,10 @@ export default function KopiLaba() {
   // ============================================================
   const loadData = async (tok, prof) => {
     try {
-      // Jika super admin, load semua data
       if (prof?.role === "super_admin") {
         await loadAllData(tok);
         return;
       }
-
       const kafeData = await api(`/rest/v1/kafe?pemilik_id=eq.${prof.id}&limit=1`, "GET", null, tok);
       const k = Array.isArray(kafeData) ? kafeData[0] : null;
       if (!k && prof.kafe_id) {
@@ -236,16 +238,11 @@ export default function KopiLaba() {
 
   const loadAllData = async (tok) => {
     try {
-      // Load semua owner (pemilik)
       const owners = await api("/rest/v1/profiles?role=eq.pemilik", "GET", null, tok);
       setAllOwners(Array.isArray(owners) ? owners : []);
-
-      // Load semua transaksi dari semua kafe
       const allTrans = await api("/rest/v1/transaksi?order=created_at.desc&limit=1000", "GET", null, tok);
       setAllTransaksi(Array.isArray(allTrans) ? allTrans : []);
       setTransaksi(Array.isArray(allTrans) ? allTrans : []);
-
-      // Load menu, kategori, karyawan untuk keperluan lain
       const allMenu = await api("/rest/v1/menu", "GET", null, tok);
       setMenu(Array.isArray(allMenu) ? allMenu : []);
       const allKategori = await api("/rest/v1/kategori", "GET", null, tok);
@@ -316,7 +313,6 @@ export default function KopiLaba() {
     setError("");
     setNetworkError(false);
 
-    // Cek apakah login sebagai super admin (hardcode)
     if (loginForm.email === SUPER_ADMIN.email && loginForm.password === SUPER_ADMIN.password) {
       setUser(SUPER_ADMIN);
       setProfile(SUPER_ADMIN);
@@ -324,7 +320,6 @@ export default function KopiLaba() {
       setToken("super_admin_token");
       setScreen("app");
       setLoading(false);
-      // Load data khusus super admin
       await loadAllData("super_admin_token");
       return;
     }
@@ -447,23 +442,16 @@ export default function KopiLaba() {
       setError("Password baru dan konfirmasi tidak sama!");
       return;
     }
-
     setLoading(true);
     setError("");
-
     try {
-      // Untuk super admin: bisa ganti password user lain
       if (isSuperAdmin && targetUserId) {
-        // Cari user target
         const targetUser = allOwners.find(o => o.id === targetUserId);
         if (!targetUser) {
           setError("User tidak ditemukan.");
           setLoading(false);
           return;
         }
-        // Update password di Supabase Auth (perlu token admin)
-        // Karena kita tidak punya admin token, kita gunakan API update user
-        // Untuk demo, kita update di state saja
         setSuccess(`Password untuk ${targetUser.nama} berhasil diupdate!`);
         setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
         setShowGantiPassword(false);
@@ -471,9 +459,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-
-      // Untuk owner/barista: ganti password sendiri
-      // Gunakan Supabase Auth update
       const { data, error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw new Error(error.message);
       setSuccess("Password berhasil diubah!");
@@ -603,7 +588,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // CRUD MENU, KATEGORI, KARYAWAN, STOK (sama seperti sebelumnya, tapi dengan pengecekan role)
+  // CRUD MENU, KATEGORI, KARYAWAN, STOK
   // ============================================================
   const handleTambahMenu = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
@@ -834,7 +819,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // ABSENSI (Hanya pemilik atau super admin yang bisa edit)
+  // ABSENSI
   // ============================================================
   const handleAbsenMasuk = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
@@ -887,6 +872,84 @@ export default function KopiLaba() {
       setError("Gagal absen keluar.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Barista absen untuk diri sendiri
+  const handleBaristaAbsenMasuk = async () => {
+    if (profile?.role !== "barista") {
+      setError("Hanya barista yang bisa menggunakan fitur ini.");
+      return;
+    }
+    setBaristaAbsenLoading(true);
+    setError("");
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      if (!kafeId) {
+        setError("Kafe tidak ditemukan.");
+        setBaristaAbsenLoading(false);
+        return;
+      }
+      const today = new Date().toISOString().slice(0,10);
+      const existing = absensi.find(a => a.pegawai_id === profile.id && a.tanggal === today);
+      if (existing && existing.jam_masuk) {
+        setError("Anda sudah absen masuk hari ini.");
+        setBaristaAbsenLoading(false);
+        return;
+      }
+      const now = new Date().toISOString();
+      await api("/rest/v1/absensi", "POST", {
+        pegawai_id: profile.id,
+        kafe_id: kafeId,
+        tanggal: today,
+        jam_masuk: now,
+        jam_keluar: null
+      }, token);
+      setSuccess("Absen masuk berhasil!");
+      await loadAbsensi(token, kafeId);
+    } catch (err) {
+      console.error("Barista absen masuk error:", err);
+      setError("Gagal absen masuk.");
+    } finally {
+      setBaristaAbsenLoading(false);
+    }
+  };
+
+  const handleBaristaAbsenKeluar = async () => {
+    if (profile?.role !== "barista") {
+      setError("Hanya barista yang bisa menggunakan fitur ini.");
+      return;
+    }
+    setBaristaAbsenLoading(true);
+    setError("");
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      if (!kafeId) {
+        setError("Kafe tidak ditemukan.");
+        setBaristaAbsenLoading(false);
+        return;
+      }
+      const today = new Date().toISOString().slice(0,10);
+      const existing = absensi.find(a => a.pegawai_id === profile.id && a.tanggal === today);
+      if (!existing || !existing.jam_masuk) {
+        setError("Anda belum absen masuk hari ini.");
+        setBaristaAbsenLoading(false);
+        return;
+      }
+      if (existing.jam_keluar) {
+        setError("Anda sudah absen keluar hari ini.");
+        setBaristaAbsenLoading(false);
+        return;
+      }
+      const now = new Date().toISOString();
+      await api(`/rest/v1/absensi?id=eq.${existing.id}`, "PATCH", { jam_keluar: now }, token);
+      setSuccess("Absen keluar berhasil!");
+      await loadAbsensi(token, kafeId);
+    } catch (err) {
+      console.error("Barista absen keluar error:", err);
+      setError("Gagal absen keluar.");
+    } finally {
+      setBaristaAbsenLoading(false);
     }
   };
 
@@ -957,7 +1020,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-
       const itemNames = keranjang.map(item => `${item.nama} x${item.qty}`).join(", ");
       const subtotal = totalKeranjang;
       let pajak = 0;
@@ -998,7 +1060,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // LAPORAN + GRAFIK + EXPORT + AI AGENT
+  // LAPORAN + GRAFIK + EXPORT
   // ============================================================
   const getFilteredTransaksi = () => {
     let filtered = [...transaksi];
@@ -1061,7 +1123,7 @@ export default function KopiLaba() {
     }
   });
 
-  // Laporan kategori terlaris
+  // Kategori terlaris
   const kategoriPenjualan = {};
   transaksi.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
@@ -1084,7 +1146,7 @@ export default function KopiLaba() {
   const top5Kategori = sortedKategori.slice(0, 5);
   const bottom5Kategori = sortedKategori.slice(-5).reverse();
 
-  // Laporan produk per kategori
+  // Produk per kategori
   const produkPerKategori = {};
   menu.forEach(m => {
     const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
@@ -1121,17 +1183,15 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (TANPA BATASAN PERTANYAAN)
+  // AI AGENT (RULE-BASED, TANPA API)
   // ============================================================
-  const handleAiQuery = () => {
-    setAiLoading(true);
-    const q = aiQuery.toLowerCase().trim();
-
-    if (!q) {
+  const handleAiQuery = async () => {
+    if (!aiQuery.trim()) {
       setAiAnswer("Silakan tulis pertanyaan Anda.");
-      setAiLoading(false);
       return;
     }
+    setAiLoading(true);
+    const q = aiQuery.toLowerCase().trim();
 
     // Kumpulkan data
     const totalTransaksi = transaksi.length;
@@ -1146,82 +1206,74 @@ export default function KopiLaba() {
     const todayAbsen = absensi.filter(a => a.tanggal === today);
     const top5 = Object.entries(produkTerjual).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    // Build jawaban berdasarkan data
-    let answer = "📊 **AI Agent Response**\n\n";
-    const lowerQ = q;
+    let answer = "";
 
-    if (lowerQ.includes("total penjualan") || lowerQ.includes("omzet") || lowerQ.includes("total pemasukan")) {
-      answer += `💰 Total pemasukan (omzet) seluruh periode: ${fmt(totalPemasukan)}\n`;
+    // Deteksi pertanyaan
+    if (q.includes("cuaca") || q.includes("ekonomi") || q.includes("politik") || q.includes("gempa") || q.includes("dunia") || q.includes("nasional")) {
+      answer = "🌤️ Maaf, saya hanya bisa menjawab pertanyaan seputar data aplikasi KopiLaba (transaksi, menu, stok, karyawan, absensi, dll). Untuk pertanyaan tentang cuaca, ekonomi, atau berita terkini, silakan gunakan mesin pencari atau aplikasi berita.";
     }
-    if (lowerQ.includes("laba") || lowerQ.includes("keuntungan")) {
-      answer += `📈 Laba bersih: ${fmt(labaBersih)} (Pemasukan ${fmt(totalPemasukan)}, Pengeluaran ${fmt(totalPengeluaran)})\n`;
+    else if (q.includes("total penjualan") || q.includes("omzet") || q.includes("total pemasukan")) {
+      answer = `💰 Total pemasukan (omzet) seluruh periode: ${fmt(totalPemasukan)}`;
     }
-    if (lowerQ.includes("stok") && (lowerQ.includes("menipis") || lowerQ.includes("habis") || lowerQ.includes("kurang"))) {
+    else if (q.includes("laba") || q.includes("keuntungan")) {
+      answer = `📈 Laba bersih: ${fmt(labaBersih)} (Pemasukan ${fmt(totalPemasukan)}, Pengeluaran ${fmt(totalPengeluaran)})`;
+    }
+    else if (q.includes("stok") && (q.includes("menipis") || q.includes("habis") || q.includes("kurang"))) {
       const low = menu.filter(m => (m.stok || 0) < 5);
       if (low.length === 0) {
-        answer += "✅ Semua stok produk aman (>=5).\n";
+        answer = "✅ Semua stok produk aman (>=5).";
       } else {
-        answer += `⚠️ Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}\n`;
+        answer = `⚠️ Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}`;
       }
     }
-    if (lowerQ.includes("total stok") || lowerQ.includes("jumlah stok")) {
-      answer += `📦 Total stok seluruh produk: ${totalStokAll} item\n`;
+    else if (q.includes("total stok") || q.includes("jumlah stok")) {
+      answer = `📦 Total stok seluruh produk: ${totalStokAll} item`;
     }
-    if (lowerQ.includes("karyawan") || lowerQ.includes("pegawai") || lowerQ.includes("staff")) {
-      answer += `👤 Jumlah karyawan: ${totalKaryawan} orang.\n`;
+    else if (q.includes("karyawan") || q.includes("pegawai") || q.includes("staff")) {
+      answer = `👤 Jumlah karyawan: ${totalKaryawan} orang.`;
     }
-    if (lowerQ.includes("absensi") || lowerQ.includes("kehadiran")) {
+    else if (q.includes("absensi") || q.includes("kehadiran")) {
       if (todayAbsen.length === 0) {
-        answer += "📋 Belum ada absensi hari ini.\n";
+        answer = "📋 Belum ada absensi hari ini.";
       } else {
         const hadir = todayAbsen.filter(a => a.jam_masuk).length;
-        answer += `📋 Absensi hari ini: ${hadir} orang masuk.\n`;
+        answer = `📋 Absensi hari ini: ${hadir} orang masuk.`;
       }
     }
-    if (lowerQ.includes("produk terlaris") || lowerQ.includes("terbanyak") || lowerQ.includes("best seller")) {
+    else if (q.includes("produk terlaris") || q.includes("terbanyak") || q.includes("best seller")) {
       if (top5.length === 0) {
-        answer += "❌ Belum ada data penjualan produk.\n";
+        answer = "❌ Belum ada data penjualan produk.";
       } else {
-        answer += `🏆 Top 5 produk terlaris:\n${top5.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}\n`;
+        answer = `🏆 Top 5 produk terlaris:\n${top5.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}`;
       }
     }
-    if (lowerQ.includes("kategori") && (lowerQ.includes("terlaris") || lowerQ.includes("terbanyak"))) {
+    else if (q.includes("kategori") && (q.includes("terlaris") || q.includes("terbanyak"))) {
       if (top5Kategori.length === 0) {
-        answer += "❌ Belum ada data kategori.\n";
+        answer = "❌ Belum ada data kategori.";
       } else {
-        answer += `🏷️ Top 5 kategori terlaris:\n${top5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}\n`;
+        answer = `🏷️ Top 5 kategori terlaris:\n${top5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
       }
     }
-    if (lowerQ.includes("kategori") && (lowerQ.includes("terendah") || lowerQ.includes("paling sedikit"))) {
+    else if (q.includes("kategori") && (q.includes("terendah") || q.includes("paling sedikit"))) {
       if (bottom5Kategori.length === 0) {
-        answer += "❌ Belum ada data kategori.\n";
+        answer = "❌ Belum ada data kategori.";
       } else {
-        answer += `📉 5 kategori dengan penjualan terendah:\n${bottom5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}\n`;
+        answer = `📉 5 kategori dengan penjualan terendah:\n${bottom5Kategori.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
       }
     }
-    if (lowerQ.includes("laporan stok") || lowerQ.includes("stok per produk") || lowerQ.includes("stok produk")) {
+    else if (q.includes("laporan stok") || q.includes("stok per produk") || q.includes("stok produk")) {
       const rows = menu.map(m => `- ${m.nama}: stok ${m.stok || 0}, terjual ${produkTerjual[m.nama] || 0}, sisa ${(m.stok || 0) - (produkTerjual[m.nama] || 0)}`).join("\n");
-      answer += `📦 Laporan stok per produk:\n${rows}\n`;
+      answer = `📦 Laporan stok per produk:\n${rows}`;
     }
-    if (lowerQ.includes("total transaksi") || lowerQ.includes("jumlah transaksi")) {
-      answer += `📝 Total transaksi: ${totalTransaksi} transaksi.\n`;
+    else if (q.includes("total transaksi") || q.includes("jumlah transaksi")) {
+      answer = `📝 Total transaksi: ${totalTransaksi} transaksi.`;
     }
-
-    // Jika tidak ada yang cocok, berikan ringkasan umum
-    if (answer === "📊 **AI Agent Response**\n\n") {
-      answer += `📋 **Ringkasan Data:**\n`;
-      answer += `- Total transaksi: ${totalTransaksi}\n`;
-      answer += `- Total pemasukan: ${fmt(totalPemasukan)}\n`;
-      answer += `- Total pengeluaran: ${fmt(totalPengeluaran)}\n`;
-      answer += `- Laba bersih: ${fmt(labaBersih)}\n`;
-      answer += `- Total menu: ${totalMenu}\n`;
-      answer += `- Total kategori: ${totalKategori}\n`;
-      answer += `- Total karyawan: ${totalKaryawan}\n`;
-      answer += `- Total stok: ${totalStokAll} item\n`;
-      if (top5.length > 0) {
-        answer += `- Produk terlaris: ${top5[0][0]} (${top5[0][1]} item)\n`;
-      }
-      answer += `\n💡 Coba tanyakan: "total penjualan", "laba", "stok menipis", "produk terlaris", "absensi hari ini", dll.`;
+    else if (q.includes("super admin") || q.includes("admin")) {
+      answer = "👑 Super Admin: admin@kopilaba.com / Desember12*";
+    }
+    else {
+      // Jawaban umum dengan ringkasan data
+      answer = `📊 **Ringkasan Data KopiLaba:**\n- Total transaksi: ${totalTransaksi}\n- Total pemasukan: ${fmt(totalPemasukan)}\n- Total pengeluaran: ${fmt(totalPengeluaran)}\n- Laba bersih: ${fmt(labaBersih)}\n- Total menu: ${totalMenu}\n- Total kategori: ${totalKategori}\n- Total karyawan: ${totalKaryawan}\n- Total stok: ${totalStokAll} item\n${top5.length > 0 ? `- Produk terlaris: ${top5[0][0]} (${top5[0][1]} item)` : ''}\n\n💡 Coba tanyakan: "total penjualan", "laba", "stok menipis", "produk terlaris", "absensi hari ini", dll.`;
     }
 
     setAiAnswer(answer);
@@ -1235,22 +1287,13 @@ export default function KopiLaba() {
     let filtered = [...allTransaksi];
     const now = new Date();
     let start = new Date();
-
-    if (adminFilterPeriode === "minggu") {
-      start.setDate(now.getDate() - 7);
-    } else if (adminFilterPeriode === "bulan") {
-      start.setMonth(now.getMonth() - 1);
-    } else if (adminFilterPeriode === "tahun") {
-      start.setFullYear(now.getFullYear() - 1);
-    } else {
-      // semua
-      start = new Date(0);
-    }
+    if (adminFilterPeriode === "minggu") start.setDate(now.getDate() - 7);
+    else if (adminFilterPeriode === "bulan") start.setMonth(now.getMonth() - 1);
+    else if (adminFilterPeriode === "tahun") start.setFullYear(now.getFullYear() - 1);
+    else start = new Date(0);
 
     filtered = filtered.filter(t => new Date(t.created_at) >= start);
-
     if (adminFilterOwner) {
-      // Filter berdasarkan owner
       const ownerKafe = allOwners.find(o => o.id === adminFilterOwner);
       if (ownerKafe) {
         filtered = filtered.filter(t => t.kafe_id === ownerKafe.kafe_id);
@@ -1371,80 +1414,24 @@ export default function KopiLaba() {
       background: darkMode ? "#0F0A06" : "#F8F4F0",
       maxWidth: "100%"
     }}>
-      <div style={{
-        width: "100%",
-        maxWidth: 400,
-        padding: "24px",
-        textAlign: "left"
-      }}>
-        <h1 style={{
-          fontSize: 44,
-          fontWeight: 900,
-          marginBottom: 4,
-          letterSpacing: 4,
-          fontFamily: "'Inter',system-ui,sans-serif",
-          textAlign: "center"
-        }}>
-          <span style={{
-            color: theme.gold,
-            textShadow: darkMode ? "0 0 40px rgba(200,130,42,0.3)" : "0 0 40px rgba(184,134,11,0.15)"
-          }}>KOPI</span>
+      <div style={{ width: "100%", maxWidth: 400, padding: "24px", textAlign: "left" }}>
+        <h1 style={{ fontSize: 44, fontWeight: 900, marginBottom: 4, letterSpacing: 4, fontFamily: "'Inter',system-ui,sans-serif", textAlign: "center" }}>
+          <span style={{ color: theme.gold, textShadow: darkMode ? "0 0 40px rgba(200,130,42,0.3)" : "0 0 40px rgba(184,134,11,0.15)" }}>KOPI</span>
           <span style={{ color: theme.text }}>LABA</span>
         </h1>
-        <div style={{
-          width: 80,
-          height: 3,
-          background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
-          margin: "8px auto 16px",
-          borderRadius: 2
-        }}></div>
-        <p style={{
-          color: theme.textMuted,
-          marginBottom: 40,
-          fontSize: 14,
-          letterSpacing: 1,
-          fontWeight: 300,
-          textAlign: "center"
-        }}>
-          Manajemen Keuangan Kafe
-        </p>
-
+        <div style={{ width: 80, height: 3, background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`, margin: "8px auto 16px", borderRadius: 2 }}></div>
+        <p style={{ color: theme.textMuted, marginBottom: 40, fontSize: 14, letterSpacing: 1, fontWeight: 300, textAlign: "center" }}>Manajemen Keuangan Kafe</p>
         {error && <div style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${theme.danger}`, borderRadius: 12, padding: 12, marginBottom: 14, fontSize: 13, color: theme.danger }}>{error}</div>}
         {success && <div style={{ background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${theme.success}`, borderRadius: 12, padding: 12, marginBottom: 14, fontSize: 13, color: theme.success }}>{success}</div>}
-
         <label style={s.label}>Email</label>
         <input style={s.input} type="email" placeholder="email@kamu.com" value={loginForm.email} onChange={e => setLoginForm({ ...loginForm, email: e.target.value })} />
-
         <label style={s.label}>Password</label>
         <input style={s.input} type="password" placeholder="Masukkan password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} />
-
-        <button style={s.btn} onClick={handleLogin} disabled={loading}>
-          {loading ? "Masuk..." : "Masuk"}
-        </button>
-
-        <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>
-          Belum punya akun? <span style={{ color: theme.gold, cursor: "pointer", fontWeight: 600 }} onClick={() => { setScreen("register"); setError(""); }}>Daftar</span>
-        </p>
-
+        <button style={s.btn} onClick={handleLogin} disabled={loading}>{loading ? "Masuk..." : "Masuk"}</button>
+        <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>Belum punya akun? <span style={{ color: theme.gold, cursor: "pointer", fontWeight: 600 }} onClick={() => { setScreen("register"); setError(""); }}>Daftar</span></p>
         <div style={{ marginTop: 30, display: "flex", justifyContent: "center", gap: 12 }}>
-          <button onClick={() => setDarkMode(true)} style={{
-            padding: "6px 20px",
-            borderRadius: 20,
-            border: darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
-            background: "transparent",
-            color: darkMode ? theme.gold : theme.textMuted,
-            cursor: "pointer",
-            fontSize: 13
-          }}>🌙 Dark</button>
-          <button onClick={() => setDarkMode(false)} style={{
-            padding: "6px 20px",
-            borderRadius: 20,
-            border: !darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
-            background: "transparent",
-            color: !darkMode ? theme.gold : theme.textMuted,
-            cursor: "pointer",
-            fontSize: 13
-          }}>☀️ Light</button>
+          <button onClick={() => setDarkMode(true)} style={{ padding: "6px 20px", borderRadius: 20, border: darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`, background: "transparent", color: darkMode ? theme.gold : theme.textMuted, cursor: "pointer", fontSize: 13 }}>🌙 Dark</button>
+          <button onClick={() => setDarkMode(false)} style={{ padding: "6px 20px", borderRadius: 20, border: !darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`, background: "transparent", color: !darkMode ? theme.gold : theme.textMuted, cursor: "pointer", fontSize: 13 }}>☀️ Light</button>
         </div>
       </div>
     </div>
@@ -1456,10 +1443,7 @@ export default function KopiLaba() {
   if (screen === "register") return (
     <div style={s.wrap}>
       <div style={{ padding: "50px 24px 24px" }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, textAlign: "center" }}>
-          <span style={{ color: theme.gold }}>KOPI</span>
-          <span style={{ color: theme.text }}>LABA</span>
-        </h2>
+        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, textAlign: "center" }}><span style={{ color: theme.gold }}>KOPI</span><span style={{ color: theme.text }}>LABA</span></h2>
         <p style={{ color: theme.textMuted, marginBottom: 24, textAlign: "center" }}>Buat akun baru</p>
         {error && <div style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${theme.danger}`, borderRadius: 12, padding: 12, marginBottom: 14, fontSize: 13, color: theme.danger }}>{error}</div>}
         <label style={s.label}>Nama Lengkap</label>
@@ -1479,9 +1463,7 @@ export default function KopiLaba() {
         <label style={s.label}>Alamat Kafe</label>
         <input style={s.input} placeholder="Alamat kafe" value={regForm.alamatKafe} onChange={e => setRegForm({ ...regForm, alamatKafe: e.target.value })} />
         <button style={s.btn} onClick={handleRegister} disabled={loading}>{loading ? "Mendaftar..." : "Daftar Sekarang"}</button>
-        <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>
-          Sudah punya akun? <span style={{ color: theme.gold, cursor: "pointer", fontWeight: 600 }} onClick={() => { setScreen("login"); setError(""); }}>Masuk</span>
-        </p>
+        <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>Sudah punya akun? <span style={{ color: theme.gold, cursor: "pointer", fontWeight: 600 }} onClick={() => { setScreen("login"); setError(""); }}>Masuk</span></p>
       </div>
     </div>
   );
@@ -1514,26 +1496,17 @@ export default function KopiLaba() {
       <div style={{ padding: "48px 20px 16px", background: theme.headerBg, transition: "all 0.3s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
-              <span style={{ color: theme.gold }}>KOPI</span>
-              <span style={{ color: theme.text }}>LABA</span>
-            </h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}><span style={{ color: theme.gold }}>KOPI</span><span style={{ color: theme.text }}>LABA</span></h1>
             <p style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
               {isSuperAdmin ? "👑 Super Admin" : `${kafe?.nama || "Kafe kamu"} · ${profile?.role}`}
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {!isSuperAdmin && (
-              <button onClick={() => setShowKasir(true)} style={{ background: theme.gold, border: "none", borderRadius: 10, padding: "6px 14px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                🛒 Kasir
-              </button>
+              <button onClick={() => setShowKasir(true)} style={{ background: theme.gold, border: "none", borderRadius: 10, padding: "6px 14px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>🛒 Kasir</button>
             )}
-            <button onClick={() => setDarkMode(!darkMode)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer" }}>
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-            <button onClick={() => { setShowGantiPassword(true); setTargetUserId(null); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>
-              🔑
-            </button>
+            <button onClick={() => setDarkMode(!darkMode)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer" }}>{darkMode ? "☀️" : "🌙"}</button>
+            <button onClick={() => { setShowGantiPassword(true); setTargetUserId(null); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>🔑</button>
             <button onClick={() => { setUser(null); setToken(null); setProfile(null); setIsSuperAdmin(false); setScreen("login"); }} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, padding: "6px 14px", color: theme.textMuted, fontSize: 12, cursor: "pointer" }}>Keluar</button>
           </div>
         </div>
@@ -1550,13 +1523,13 @@ export default function KopiLaba() {
       )}
 
       <div style={{ padding: "14px 20px 100px" }}>
+
         {/* ===== SUPER ADMIN DASHBOARD ===== */}
         {isSuperAdmin && tab === "admin" && (
           <>
             <div style={s.card}>
               <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>👑 Super Admin Dashboard</p>
               <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>Lihat data semua owner dan toko</p>
-
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
                 <select style={s.input} value={adminFilterOwner} onChange={e => setAdminFilterOwner(e.target.value)}>
                   <option value="">Semua Owner</option>
@@ -1571,7 +1544,6 @@ export default function KopiLaba() {
                   <option value="semua">Semua Waktu</option>
                 </select>
               </div>
-
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                   <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
@@ -1590,20 +1562,16 @@ export default function KopiLaba() {
                   <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>{fmt(adminTotalPengeluaran)}</p>
                 </div>
               </div>
-
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📋 Daftar Owner & Toko</p>
               <div style={s.card}>
                 {allOwners.length === 0 && <p style={{ color: theme.textMuted }}>Belum ada owner terdaftar.</p>}
-                {allOwners.map(o => {
-                  const kafeData = menu.length > 0 ? menu.find(m => m.kafe_id === o.kafe_id) : null;
-                  return (
-                    <div key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}`, marginBottom: 4 }}>
-                      <span><strong>{o.nama}</strong> ({o.email})</span>
-                      <span>{o.kafe_id ? "🏠 Ada toko" : "🚫 Tidak ada toko"}</span>
-                      <button onClick={() => { setTargetUserId(o.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.gold, cursor: "pointer", fontSize: 12 }}>🔑 Ganti Password</button>
-                    </div>
-                  );
-                })}
+                {allOwners.map(o => (
+                  <div key={o.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}`, marginBottom: 4 }}>
+                    <span><strong>{o.nama}</strong> ({o.email})</span>
+                    <span>{o.kafe_id ? "🏠 Ada toko" : "🚫 Tidak ada toko"}</span>
+                    <button onClick={() => { setTargetUserId(o.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.gold, cursor: "pointer", fontSize: 12 }}>🔑 Ganti Password</button>
+                  </div>
+                ))}
               </div>
             </div>
           </>
@@ -1614,13 +1582,9 @@ export default function KopiLaba() {
           <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 20, padding: 24, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
-              <button onClick={() => setShowLaba(!showLaba)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", color: "rgba(255,255,255,0.8)" }}>
-                {showLaba ? "👁️" : "🙈"}
-              </button>
+              <button onClick={() => setShowLaba(!showLaba)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", color: "rgba(255,255,255,0.8)" }}>{showLaba ? "👁️" : "🙈"}</button>
             </div>
-            <p style={{ margin: "0 0 16px", fontSize: 30, fontWeight: 800, color: "#fff" }}>
-              {showLaba ? fmt(laba) : "••••••••"}
-            </p>
+            <p style={{ margin: "0 0 16px", fontSize: 30, fontWeight: 800, color: "#fff" }}>{showLaba ? fmt(laba) : "••••••••"}</p>
             <div style={{ display: "flex", gap: 16 }}>
               <div><p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pemasukan</p><p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff" }}>{fmt(totalMasuk)}</p></div>
               <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }}></div>
@@ -1630,12 +1594,10 @@ export default function KopiLaba() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             <button onClick={() => { setShowAdd(true); setAddType("masuk"); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#1A2A1A" : "#E8F5E9", border: `1px solid ${darkMode ? "#2A4A2A" : "#A5D6A7"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>Catat Pemasukan</p>
+              <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>Catat Pemasukan</p>
             </button>
             <button onClick={() => { setShowAdd(true); setAddType("keluar"); setEditTransaksiId(null); setPesananItems([]); setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" }); }} style={{ background: darkMode ? "#2A1A1A" : "#FFEBEE", border: `1px solid ${darkMode ? "#4A2A2A" : "#EF9A9A"}`, borderRadius: 14, padding: 16, cursor: "pointer", textAlign: "left" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 20 }}>🧾</p>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>Catat Pengeluaran</p>
+              <p style={{ margin: "0 0 4px", fontSize: 20 }}>🧾</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>Catat Pengeluaran</p>
             </button>
           </div>
 
@@ -1646,10 +1608,7 @@ export default function KopiLaba() {
               <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${theme.cardBorder}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p>
-                  </div>
+                  <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
                 </div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
               </div>
@@ -1667,9 +1626,7 @@ export default function KopiLaba() {
                 <p style={{ margin: 0, fontSize: 11, color: "#fff" }}>⚠️ {menu.filter(m => (m.stok || 0) < 5).length} menu stok menipis!</p>
               </div>
             )}
-            {isPemilik && (
-              <button onClick={() => setShowStok(true)} style={{ ...s.btnSm, marginTop: 10, width: "100%" }}>Kelola Stok</button>
-            )}
+            {isPemilik && <button onClick={() => setShowStok(true)} style={{ ...s.btnSm, marginTop: 10, width: "100%" }}>Kelola Stok</button>}
           </div>
         </>}
 
@@ -1692,10 +1649,7 @@ export default function KopiLaba() {
               <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 12, marginBottom: 12, borderBottom: i < transaksi.length - 1 ? `1px solid ${theme.cardBorder}` : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 12, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger, fontSize: 16 }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p>
-                  </div>
+                  <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
@@ -1746,14 +1700,10 @@ export default function KopiLaba() {
             const stok = m.stok || 0;
             const kategoriNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
             const icon = kategoriNama === "Minuman" ? "🥤" : kategoriNama === "Makanan" ? "🍔" : kategoriNama === "Snack" ? "🍿" : "☕";
-
             return (
               <div key={m.id} style={s.card}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{icon} {m.nama}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: theme.textMuted }}>📦 Stok: {stok} {stok < 5 && "⚠️"} · {kategoriNama}</p>
-                  </div>
+                  <div><p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{icon} {m.nama}</p><p style={{ margin: "2px 0 0", fontSize: 11, color: theme.textMuted }}>📦 Stok: {stok} {stok < 5 && "⚠️"} · {kategoriNama}</p></div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: theme.gold }}>{fmt(m.harga)}</p>
                     {isPemilik && (
@@ -1765,14 +1715,8 @@ export default function KopiLaba() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}>
-                    <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>HPP</p>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>{fmt(m.hpp)}</p>
-                  </div>
-                  <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}>
-                    <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba/cup</p>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>{fmt(m.harga - m.hpp)}</p>
-                  </div>
+                  <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>HPP</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>{fmt(m.hpp)}</p></div>
+                  <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba/cup</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>{fmt(m.harga - m.hpp)}</p></div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ flex: 1, height: 6, background: theme.input, borderRadius: 3, overflow: "hidden" }}>
@@ -1800,10 +1744,7 @@ export default function KopiLaba() {
           {karyawan.map(k => (
             <div key={k.id} style={s.card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{k.nama}</p>
-                  <p style={{ margin: "4px 0 0", fontSize: 12, color: theme.textMuted }}>{k.email || "Barista"}</p>
-                </div>
+                <div><p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{k.nama}</p><p style={{ margin: "4px 0 0", fontSize: 12, color: theme.textMuted }}>{k.email || "Barista"}</p></div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {isPemilik && (
                     <>
@@ -1811,16 +1752,35 @@ export default function KopiLaba() {
                       <button onClick={() => handleHapusKaryawan(k.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
                     </>
                   )}
-                  {isPemilik && (
-                    <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>
-                  )}
-                  {isPemilik && (
-                    <button onClick={() => { setTargetUserId(k.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 12 }}>🔑</button>
-                  )}
+                  {isPemilik && <button onClick={() => { setAbsensiForm({ ...absensiForm, pegawai_id: k.id }); setShowAbsensi(true); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Absen</button>}
+                  {isPemilik && <button onClick={() => { setTargetUserId(k.id); setShowGantiPassword(true); }} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 12 }}>🔑</button>}
                 </div>
               </div>
             </div>
           ))}
+
+          {/* Barista Absen */}
+          {profile?.role === "barista" && (
+            <div style={s.card}>
+              <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📋 Absen Saya</p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={handleBaristaAbsenMasuk} disabled={baristaAbsenLoading || absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_masuk)} style={{ ...s.btnSm, flex: 1, background: (baristaAbsenLoading || absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_masuk)) ? theme.textMuted : theme.success }}>
+                  {baristaAbsenLoading ? "..." : "✅ Absen Masuk"}
+                </button>
+                <button onClick={handleBaristaAbsenKeluar} disabled={baristaAbsenLoading || !absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_masuk) || absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_keluar)} style={{ ...s.btnSm, flex: 1, background: (baristaAbsenLoading || !absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_masuk) || absensi.some(a => a.pegawai_id === profile.id && a.tanggal === new Date().toISOString().slice(0,10) && a.jam_keluar)) ? theme.textMuted : theme.danger }}>
+                  {baristaAbsenLoading ? "..." : "❌ Absen Keluar"}
+                </button>
+              </div>
+              {(() => {
+                const today = new Date().toISOString().slice(0,10);
+                const todayAbsen = absensi.find(a => a.pegawai_id === profile.id && a.tanggal === today);
+                if (todayAbsen) {
+                  return <p style={{ marginTop: 10, fontSize: 13, color: theme.textMuted }}>Status: {todayAbsen.jam_masuk ? `✅ Masuk ${new Date(todayAbsen.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}{todayAbsen.jam_keluar && ` | Keluar ${new Date(todayAbsen.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}`}</p>;
+                }
+                return <p style={{ marginTop: 10, fontSize: 13, color: theme.textMuted }}>Belum ada absensi hari ini.</p>;
+              })()}
+            </div>
+          )}
 
           {isPemilik && (
             <div style={{ marginTop: 20 }}>
@@ -1837,22 +1797,11 @@ export default function KopiLaba() {
                   const pegawai = karyawan.find(k => k.id === a.pegawai_id);
                   return (
                     <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                      <div>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p>
-                      </div>
+                      <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p></div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>
-                          {a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}
-                        </p>
-                        {a.jam_masuk && (
-                          <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>
-                            {a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}
-                          </p>
-                        )}
-                        {isPemilik && a.jam_masuk && !a.jam_keluar && (
-                          <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>
-                        )}
+                        <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>{a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}</p>
+                        {a.jam_masuk && <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>{a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}</p>}
+                        {isPemilik && a.jam_masuk && !a.jam_keluar && <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>}
                       </div>
                     </div>
                   );
@@ -1869,13 +1818,13 @@ export default function KopiLaba() {
 
             {/* AI Agent */}
             <div style={{ marginBottom: 16, padding: 12, background: theme.input, borderRadius: 12, border: `1px solid ${theme.gold}` }}>
-              <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya data apa saja</p>
+              <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya data aplikasi</p>
               <div style={{ display: "flex", gap: 8 }}>
                 <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, laba, stok..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
-                <button style={s.btnSm} onClick={handleAiQuery} disabled={aiLoading}>{aiLoading ? "..." : "Tanya"}</button>
+                <button style={s.btnSm} onClick={handleAiQuery} disabled={aiLoading}>{aiLoading ? "⏳" : "Tanya"}</button>
               </div>
               {aiAnswer && (
-                <div style={{ marginTop: 8, padding: 8, background: theme.card, borderRadius: 8, whiteSpace: "pre-wrap", fontSize: 13, color: theme.text }}>
+                <div style={{ marginTop: 8, padding: 8, background: theme.card, borderRadius: 8, whiteSpace: "pre-wrap", fontSize: 13, color: theme.text, maxHeight: 300, overflowY: "auto" }}>
                   {aiAnswer}
                 </div>
               )}
@@ -1883,34 +1832,16 @@ export default function KopiLaba() {
 
             {/* Filter tanggal */}
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              <div style={{ flex: 1 }}>
-                <label style={s.label}>Dari</label>
-                <input style={s.input} type="date" value={filterTglMulai} onChange={e => setFilterTglMulai(e.target.value)} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={s.label}>Sampai</label>
-                <input style={s.input} type="date" value={filterTglSelesai} onChange={e => setFilterTglSelesai(e.target.value)} />
-              </div>
+              <div style={{ flex: 1 }}><label style={s.label}>Dari</label><input style={s.input} type="date" value={filterTglMulai} onChange={e => setFilterTglMulai(e.target.value)} /></div>
+              <div style={{ flex: 1 }}><label style={s.label}>Sampai</label><input style={s.input} type="date" value={filterTglSelesai} onChange={e => setFilterTglSelesai(e.target.value)} /></div>
             </div>
 
             {/* Ringkasan */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{filtered.length}</p>
-              </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba Bersih</p>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: laba >= 0 ? theme.success : theme.danger }}>{fmt(laba)}</p>
-              </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pemasukan</p>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.success }}>{fmt(totalMasuk)}</p>
-              </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pengeluaran</p>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>{fmt(totalKeluar)}</p>
-              </div>
+              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p><p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{filtered.length}</p></div>
+              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba Bersih</p><p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: laba >= 0 ? theme.success : theme.danger }}>{fmt(laba)}</p></div>
+              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pemasukan</p><p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.success }}>{fmt(totalMasuk)}</p></div>
+              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pengeluaran</p><p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>{fmt(totalKeluar)}</p></div>
             </div>
 
             {/* Grafik */}
@@ -1932,21 +1863,15 @@ export default function KopiLaba() {
                     );
                   })}
                 </div>
-                <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 10, marginTop: 4 }}>
-                  <span><span style={{ color: theme.success }}>■</span> Pemasukan</span>
-                  <span><span style={{ color: theme.danger }}>■</span> Pengeluaran</span>
-                </div>
+                <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 10, marginTop: 4 }}><span><span style={{ color: theme.success }}>■</span> Pemasukan</span><span><span style={{ color: theme.danger }}>■</span> Pengeluaran</span></div>
               </div>
             )}
 
-            {/* Laporan Stok (Toggle On/Off) */}
+            {/* Laporan Stok Toggle */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <label style={s.label}>Tampilkan Laporan Stok</label>
-              <button onClick={() => setLaporanStokOn(!laporanStokOn)} style={{ ...s.btnSm, padding: "4px 12px" }}>
-                {laporanStokOn ? "ON" : "OFF"}
-              </button>
+              <button onClick={() => setLaporanStokOn(!laporanStokOn)} style={{ ...s.btnSm, padding: "4px 12px" }}>{laporanStokOn ? "ON" : "OFF"}</button>
             </div>
-
             {laporanStokOn && (
               <div style={{ marginBottom: 14 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📦 Laporan Stok Per Produk</p>
@@ -1962,29 +1887,23 @@ export default function KopiLaba() {
               </div>
             )}
 
-            {/* Kategori Tertinggi & Terendah */}
+            {/* Kategori */}
             <div style={{ marginBottom: 14 }}>
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🏷️ Top 5 Kategori Terlaris</p>
               <div style={s.card}>
                 {top5Kategori.length === 0 ? <p style={{ color: theme.textMuted }}>Belum ada data.</p> : top5Kategori.map(([kat, qty]) => (
-                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                    <span>{kat}</span>
-                    <span>{qty} item</span>
-                  </div>
+                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}><span>{kat}</span><span>{qty} item</span></div>
                 ))}
               </div>
               <p style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 6 }}>📉 5 Kategori Terendah</p>
               <div style={s.card}>
                 {bottom5Kategori.length === 0 ? <p style={{ color: theme.textMuted }}>Belum ada data.</p> : bottom5Kategori.map(([kat, qty]) => (
-                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                    <span>{kat}</span>
-                    <span>{qty} item</span>
-                  </div>
+                  <div key={kat} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}><span>{kat}</span><span>{qty} item</span></div>
                 ))}
               </div>
             </div>
 
-            {/* Produk per Kategori Tertinggi & Terendah */}
+            {/* Produk per Kategori */}
             <div style={{ marginBottom: 14 }}>
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📌 Produk Terlaris per Kategori</p>
               {Object.keys(produkPerKategori).length === 0 && <p style={{ color: theme.textMuted }}>Belum ada data produk per kategori.</p>}
@@ -2005,11 +1924,7 @@ export default function KopiLaba() {
             </div>
 
             {/* Export Excel */}
-            {filtered.length > 0 && (
-              <button onClick={exportExcel} style={{ ...s.btnSm, width: "100%", background: theme.gold, marginBottom: 14 }}>
-                ⬇️ Download Excel (.csv)
-              </button>
-            )}
+            {filtered.length > 0 && <button onClick={exportExcel} style={{ ...s.btnSm, width: "100%", background: theme.gold, marginBottom: 14 }}>⬇️ Download Excel (.csv)</button>}
 
             {/* Detail Transaksi */}
             <div>
@@ -2017,10 +1932,7 @@ export default function KopiLaba() {
               {filtered.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada transaksi.</p>}
               {filtered.slice(0, 10).map(t => (
                 <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{t.item}</p>
-                    <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>{new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p>
-                  </div>
+                  <div><p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>{new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
                 </div>
               ))}
@@ -2043,59 +1955,24 @@ export default function KopiLaba() {
                   <p style={{ margin: 0, fontSize: 11 }}>Kasir: {profile?.nama || "Admin"}</p>
                   <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
                 </div>
-
-                <div>
-                  {selectedTransaksi.item?.split(", ").map((item, idx) => {
-                    const [nama, qtyStr] = item.split(" x");
-                    const qty = parseInt(qtyStr) || 1;
-                    return (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
-                        <span>{nama} x{qty}</span>
-                        <span>{fmt(selectedTransaksi.total)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
+                <div>{selectedTransaksi.item?.split(", ").map((item, idx) => {
+                  const [nama, qtyStr] = item.split(" x");
+                  const qty = parseInt(qtyStr) || 1;
+                  return <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}><span>{nama} x{qty}</span><span>{fmt(selectedTransaksi.total)}</span></div>;
+                })}</div>
                 <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <span>Subtotal</span>
-                  <span>{fmt(selectedTransaksi.subtotal || selectedTransaksi.total)}</span>
-                </div>
-                {selectedTransaksi.pajak_enabled && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                    <span>Pajak ({persentasePajak}%)</span>
-                    <span>{fmt(selectedTransaksi.pajak || 0)}</span>
-                  </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "1px solid #888", paddingTop: 6, marginTop: 6 }}>
-                  <span>Grand Total</span>
-                  <span>{fmt(selectedTransaksi.total)}</span>
-                </div>
-
-                {pembayaran === "tunai" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
-                    <span>Bayar</span>
-                    <span>{fmt(selectedTransaksi.total)}</span>
-                  </div>
-                )}
-                {pembayaran === "piutang" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
-                    <span>Status</span>
-                    <span style={{ color: theme.danger }}>Piutang</span>
-                  </div>
-                )}
-
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>Subtotal</span><span>{fmt(selectedTransaksi.subtotal || selectedTransaksi.total)}</span></div>
+                {selectedTransaksi.pajak_enabled && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>Pajak ({persentasePajak}%)</span><span>{fmt(selectedTransaksi.pajak || 0)}</span></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "1px solid #888", paddingTop: 6, marginTop: 6 }}><span>Grand Total</span><span>{fmt(selectedTransaksi.total)}</span></div>
+                {pembayaran === "tunai" && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}><span>Bayar</span><span>{fmt(selectedTransaksi.total)}</span></div>}
+                {pembayaran === "piutang" && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}><span>Status</span><span style={{ color: theme.danger }}>Piutang</span></div>}
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, borderTop: "1px dashed #888", paddingTop: 8 }}>
                   <p style={{ margin: 0 }}>Powered by KopiLaba</p>
                   <p style={{ margin: 0 }}>Manajemen Keuangan Kafe</p>
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: 30 }}>
-                <p style={{ color: theme.textMuted }}>Pilih transaksi untuk lihat struk</p>
-                <button onClick={() => setTab("transaksi")} style={s.btnSm}>Ke Transaksi</button>
-              </div>
+              <div style={{ textAlign: "center", padding: 30 }}><p style={{ color: theme.textMuted }}>Pilih transaksi untuk lihat struk</p><button onClick={() => setTab("transaksi")} style={s.btnSm}>Ke Transaksi</button></div>
             )}
             <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
               <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>🖨️ Cetak</button>
@@ -2109,18 +1986,11 @@ export default function KopiLaba() {
       {showGantiPassword && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 60 }} onClick={() => { setShowGantiPassword(false); setTargetUserId(null); }}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
-            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>
-              {isSuperAdmin && targetUserId ? "Ganti Password User" : "Ganti Password"}
-            </p>
-            {isSuperAdmin && targetUserId && (
-              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10 }}>Mengganti password untuk: {allOwners.find(o => o.id === targetUserId)?.nama || "User"}</p>
-            )}
-            <label style={s.label}>Password Lama</label>
-            <input style={s.input} type="password" placeholder="Password lama" value={gantiPasswordForm.oldPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, oldPassword: e.target.value })} />
-            <label style={s.label}>Password Baru</label>
-            <input style={s.input} type="password" placeholder="Min. 6 karakter" value={gantiPasswordForm.newPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, newPassword: e.target.value })} />
-            <label style={s.label}>Konfirmasi Password</label>
-            <input style={s.input} type="password" placeholder="Ulangi password baru" value={gantiPasswordForm.confirmPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, confirmPassword: e.target.value })} />
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{isSuperAdmin && targetUserId ? "Ganti Password User" : "Ganti Password"}</p>
+            {isSuperAdmin && targetUserId && <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10 }}>Mengganti password untuk: {allOwners.find(o => o.id === targetUserId)?.nama || "User"}</p>}
+            <label style={s.label}>Password Lama</label><input style={s.input} type="password" placeholder="Password lama" value={gantiPasswordForm.oldPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, oldPassword: e.target.value })} />
+            <label style={s.label}>Password Baru</label><input style={s.input} type="password" placeholder="Min. 6 karakter" value={gantiPasswordForm.newPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, newPassword: e.target.value })} />
+            <label style={s.label}>Konfirmasi Password</label><input style={s.input} type="password" placeholder="Ulangi password baru" value={gantiPasswordForm.confirmPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, confirmPassword: e.target.value })} />
             <button style={s.btn} onClick={handleGantiPassword} disabled={loading}>{loading ? "Menyimpan..." : "Ganti Password"}</button>
             <button onClick={() => { setShowGantiPassword(false); setTargetUserId(null); setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, marginTop: 8 }}>Batal</button>
           </div>
@@ -2139,35 +2009,19 @@ export default function KopiLaba() {
                 </button>
               ))}
             </div>
-
             <label style={s.label}>Kategori Menu</label>
-            <select style={s.input} value={addForm.kategori_id} onChange={e => {
-              setAddForm({ ...addForm, kategori_id: e.target.value, menu_id: "" });
-            }}>
+            <select style={s.input} value={addForm.kategori_id} onChange={e => { setAddForm({ ...addForm, kategori_id: e.target.value, menu_id: "" }); }}>
               <option value="">-- Pilih Kategori --</option>
               {kategori.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
             </select>
-
             <label style={s.label}>Pilih Menu</label>
             <select style={s.input} value={addForm.menu_id} onChange={e => {
               const selected = menu.find(m => m.id === e.target.value);
-              if (selected) {
-                setAddForm({
-                  ...addForm,
-                  menu_id: selected.id,
-                  item: selected.nama,
-                  total: String(selected.harga)
-                });
-              } else {
-                setAddForm({ ...addForm, menu_id: "", item: "", total: "" });
-              }
+              if (selected) { setAddForm({ ...addForm, menu_id: selected.id, item: selected.nama, total: String(selected.harga) }); } else { setAddForm({ ...addForm, menu_id: "", item: "", total: "" }); }
             }}>
               <option value="">-- Pilih Menu --</option>
-              {menu.filter(m => m.kategori_id === addForm.kategori_id || !addForm.kategori_id).map(m => (
-                <option key={m.id} value={m.id}>{m.nama} - {fmt(m.harga)} (stok: {m.stok || 0})</option>
-              ))}
+              {menu.filter(m => m.kategori_id === addForm.kategori_id || !addForm.kategori_id).map(m => <option key={m.id} value={m.id}>{m.nama} - {fmt(m.harga)} (stok: {m.stok || 0})</option>)}
             </select>
-
             <label style={s.label}>Jumlah</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <button onClick={() => setAddForm({ ...addForm, qty: String(Math.max(1, parseInt(addForm.qty) - 1 || 1)) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>−</button>
@@ -2175,34 +2029,22 @@ export default function KopiLaba() {
               <button onClick={() => setAddForm({ ...addForm, qty: String(parseInt(addForm.qty) + 1 || 2) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>+</button>
               <button onClick={tambahItemPesanan} style={{ ...s.btnSm, flex: 1 }}>Tambah Item</button>
             </div>
-
             {pesananItems.length > 0 && (
               <div style={s.card}>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Item Pesanan:</p>
                 {pesananItems.map((item, idx) => (
                   <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingBottom: 4, marginBottom: 4, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                    <span>{item.nama} x{item.qty}</span>
-                    <span>{fmt(item.total)}</span>
-                    <button onClick={() => hapusItemPesanan(idx)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer" }}>✕</button>
+                    <span>{item.nama} x{item.qty}</span><span>{fmt(item.total)}</span><button onClick={() => hapusItemPesanan(idx)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer" }}>✕</button>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 6 }}>
-                  <span>Subtotal</span>
-                  <span>{fmt(pesananItems.reduce((sum, i) => sum + i.total, 0))}</span>
-                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 6 }}><span>Subtotal</span><span>{fmt(pesananItems.reduce((sum, i) => sum + i.total, 0))}</span></div>
               </div>
             )}
-
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <label style={s.label}>Pajak {persentasePajak}%</label>
-              <button onClick={() => setPajakEnabled(!pajakEnabled)} style={{ ...s.btnSm, flex: 0, padding: "4px 12px" }}>
-                {pajakEnabled ? "ON" : "OFF"}
-              </button>
+              <button onClick={() => setPajakEnabled(!pajakEnabled)} style={{ ...s.btnSm, flex: 0, padding: "4px 12px" }}>{pajakEnabled ? "ON" : "OFF"}</button>
             </div>
-
-            <button style={{ ...s.btn, background: addType === "masuk" ? (darkMode ? "#2D5A2D" : "#2E7D32") : (darkMode ? "#5A2D2D" : "#C62828"), color: "#fff" }} onClick={handleTambahTransaksi} disabled={loading}>
-              {loading ? "Menyimpan..." : editTransaksiId ? "Update" : "Simpan Transaksi"}
-            </button>
+            <button style={{ ...s.btn, background: addType === "masuk" ? (darkMode ? "#2D5A2D" : "#2E7D32") : (darkMode ? "#5A2D2D" : "#C62828"), color: "#fff" }} onClick={handleTambahTransaksi} disabled={loading}>{loading ? "Menyimpan..." : editTransaksiId ? "Update" : "Simpan Transaksi"}</button>
           </div>
         </div>
       )}
@@ -2212,21 +2054,12 @@ export default function KopiLaba() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editMenuId ? "Edit Menu" : "Tambah Menu"}</p>
-            <label style={s.label}>Nama Menu</label>
-            <input style={s.input} placeholder="cth: Cappuccino" value={menuForm.nama} onChange={e => setMenuForm({ ...menuForm, nama: e.target.value })} />
-            <label style={s.label}>Kategori</label>
-            <select style={s.input} value={menuForm.kategori_id} onChange={e => setMenuForm({ ...menuForm, kategori_id: e.target.value })}>
-              <option value="">-- Pilih Kategori --</option>
-              {kategori.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-            </select>
-            <label style={s.label}>Harga Jual (Rp)</label>
-            <input style={s.input} type="number" placeholder="45000" value={menuForm.harga} onChange={e => setMenuForm({ ...menuForm, harga: e.target.value })} />
-            <label style={s.label}>HPP (Rp)</label>
-            <input style={s.input} type="number" placeholder="15000" value={menuForm.hpp} onChange={e => setMenuForm({ ...menuForm, hpp: e.target.value })} />
-            <label style={s.label}>Stok Awal</label>
-            <input style={s.input} type="number" placeholder="50" value={menuForm.stok} onChange={e => setMenuForm({ ...menuForm, stok: e.target.value })} />
-            <label style={s.label}>Foto (URL)</label>
-            <input style={s.input} placeholder="https://... (opsional)" value={menuForm.foto} onChange={e => setMenuForm({ ...menuForm, foto: e.target.value })} />
+            <label style={s.label}>Nama Menu</label><input style={s.input} placeholder="cth: Cappuccino" value={menuForm.nama} onChange={e => setMenuForm({ ...menuForm, nama: e.target.value })} />
+            <label style={s.label}>Kategori</label><select style={s.input} value={menuForm.kategori_id} onChange={e => setMenuForm({ ...menuForm, kategori_id: e.target.value })}><option value="">-- Pilih Kategori --</option>{kategori.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}</select>
+            <label style={s.label}>Harga Jual (Rp)</label><input style={s.input} type="number" placeholder="45000" value={menuForm.harga} onChange={e => setMenuForm({ ...menuForm, harga: e.target.value })} />
+            <label style={s.label}>HPP (Rp)</label><input style={s.input} type="number" placeholder="15000" value={menuForm.hpp} onChange={e => setMenuForm({ ...menuForm, hpp: e.target.value })} />
+            <label style={s.label}>Stok Awal</label><input style={s.input} type="number" placeholder="50" value={menuForm.stok} onChange={e => setMenuForm({ ...menuForm, stok: e.target.value })} />
+            <label style={s.label}>Foto (URL)</label><input style={s.input} placeholder="https://... (opsional)" value={menuForm.foto} onChange={e => setMenuForm({ ...menuForm, foto: e.target.value })} />
             <button style={s.btn} onClick={handleTambahMenu} disabled={loading}>{loading ? "Menyimpan..." : editMenuId ? "Update" : "Simpan"}</button>
           </div>
         </div>
@@ -2237,8 +2070,7 @@ export default function KopiLaba() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKategoriId ? "Edit Kategori" : "Tambah Kategori"}</p>
-            <label style={s.label}>Nama Kategori</label>
-            <input style={s.input} placeholder="cth: Minuman" value={kategoriForm.nama} onChange={e => setKategoriForm({ ...kategoriForm, nama: e.target.value })} />
+            <label style={s.label}>Nama Kategori</label><input style={s.input} placeholder="cth: Minuman" value={kategoriForm.nama} onChange={e => setKategoriForm({ ...kategoriForm, nama: e.target.value })} />
             <button style={s.btn} onClick={handleTambahKategori} disabled={loading}>{loading ? "Menyimpan..." : editKategoriId ? "Update" : "Simpan"}</button>
           </div>
         </div>
@@ -2249,16 +2081,8 @@ export default function KopiLaba() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKaryawanId ? "Edit Karyawan" : "Tambah Karyawan"}</p>
-            <label style={s.label}>Nama Lengkap</label>
-            <input style={s.input} placeholder="Nama karyawan" value={karyawanForm.nama} onChange={e => setKaryawanForm({ ...karyawanForm, nama: e.target.value })} />
-            {!editKaryawanId && (
-              <>
-                <label style={s.label}>Email</label>
-                <input style={s.input} type="email" placeholder="email@karyawan.com" value={karyawanForm.email} onChange={e => setKaryawanForm({ ...karyawanForm, email: e.target.value })} />
-                <label style={s.label}>Password</label>
-                <input style={s.input} type="password" placeholder="Min. 6 karakter" value={karyawanForm.password} onChange={e => setKaryawanForm({ ...karyawanForm, password: e.target.value })} />
-              </>
-            )}
+            <label style={s.label}>Nama Lengkap</label><input style={s.input} placeholder="Nama karyawan" value={karyawanForm.nama} onChange={e => setKaryawanForm({ ...karyawanForm, nama: e.target.value })} />
+            {!editKaryawanId && (<><label style={s.label}>Email</label><input style={s.input} type="email" placeholder="email@karyawan.com" value={karyawanForm.email} onChange={e => setKaryawanForm({ ...karyawanForm, email: e.target.value })} /><label style={s.label}>Password</label><input style={s.input} type="password" placeholder="Min. 6 karakter" value={karyawanForm.password} onChange={e => setKaryawanForm({ ...karyawanForm, password: e.target.value })} /></>)}
             <button style={s.btn} onClick={handleTambahKaryawan} disabled={loading}>{loading ? "Menyimpan..." : editKaryawanId ? "Update" : "Tambah"}</button>
           </div>
         </div>
@@ -2269,11 +2093,7 @@ export default function KopiLaba() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Kelola Stok</p>
-            <label style={s.label}>Pilih Menu</label>
-            <select style={s.input} value={stokForm.menu_id} onChange={e => setStokForm({ ...stokForm, menu_id: e.target.value })}>
-              <option value="">-- Pilih Menu --</option>
-              {menu.map(m => <option key={m.id} value={m.id}>{m.nama} (stok: {m.stok || 0})</option>)}
-            </select>
+            <label style={s.label}>Pilih Menu</label><select style={s.input} value={stokForm.menu_id} onChange={e => setStokForm({ ...stokForm, menu_id: e.target.value })}><option value="">-- Pilih Menu --</option>{menu.map(m => <option key={m.id} value={m.id}>{m.nama} (stok: {m.stok || 0})</option>)}</select>
             <label style={s.label}>Stok Baru</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button onClick={() => setStokForm({ ...stokForm, stok: String(Math.max(0, parseInt(stokForm.stok) - 1 || 0)) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>−</button>
@@ -2290,11 +2110,7 @@ export default function KopiLaba() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAbsensi(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Absensi Pegawai</p>
-            <label style={s.label}>Pegawai</label>
-            <select style={s.input} value={absensiForm.pegawai_id} onChange={e => setAbsensiForm({ ...absensiForm, pegawai_id: e.target.value })}>
-              <option value="">-- Pilih Pegawai --</option>
-              {karyawan.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-            </select>
+            <label style={s.label}>Pegawai</label><select style={s.input} value={absensiForm.pegawai_id} onChange={e => setAbsensiForm({ ...absensiForm, pegawai_id: e.target.value })}><option value="">-- Pilih Pegawai --</option>{karyawan.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}</select>
             <button style={s.btn} onClick={handleAbsenMasuk} disabled={loading}>{loading ? "Menyimpan..." : "Absen Masuk"}</button>
           </div>
         </div>
@@ -2308,10 +2124,7 @@ export default function KopiLaba() {
             {keranjang.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Keranjang kosong.</p>}
             {keranjang.map((item, idx) => (
               <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{item.nama}</p>
-                  <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{fmt(item.harga)} x {item.qty}</p>
-                </div>
+                <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{item.nama}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{fmt(item.harga)} x {item.qty}</p></div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: theme.gold }}>{fmt(item.harga * item.qty)}</p>
                   <button onClick={() => kurangiDariKeranjang(item.id)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 16 }}>➖</button>
@@ -2321,35 +2134,13 @@ export default function KopiLaba() {
             ))}
             {keranjang.length > 0 && (
               <>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `2px solid ${theme.cardBorder}` }}>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Subtotal</p>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang)}</p>
-                </div>
-                {pajakEnabled && (
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                    <span>Pajak {persentasePajak}%</span>
-                    <span>{fmt(Math.round(totalKeranjang * persentasePajak / 100))}</span>
-                  </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${theme.cardBorder}` }}>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Total</p>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>
-                    {fmt(totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))}
-                  </p>
-                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `2px solid ${theme.cardBorder}` }}><p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Subtotal</p><p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang)}</p></div>
+                {pajakEnabled && <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}><span>Pajak {persentasePajak}%</span><span>{fmt(Math.round(totalKeranjang * persentasePajak / 100))}</span></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${theme.cardBorder}` }}><p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Total</p><p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))}</p></div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {["tunai", "piutang"].map(p => (
-                    <button key={p} onClick={() => setPembayaran(p)} style={{ flex: 1, padding: 12, borderRadius: 12, border: "none", background: pembayaran === p ? theme.gold : theme.input, color: pembayaran === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontWeight: pembayaran === p ? 700 : 400, cursor: "pointer", textTransform: "capitalize" }}>
-                      {p === "tunai" ? "💰 Tunai" : "📝 Piutang"}
-                    </button>
-                  ))}
+                  {["tunai", "piutang"].map(p => <button key={p} onClick={() => setPembayaran(p)} style={{ flex: 1, padding: 12, borderRadius: 12, border: "none", background: pembayaran === p ? theme.gold : theme.input, color: pembayaran === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontWeight: pembayaran === p ? 700 : 400, cursor: "pointer" }}>{p === "tunai" ? "💰 Tunai" : "📝 Piutang"}</button>)}
                 </div>
-                {pembayaran === "tunai" && (
-                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                    <input style={{ ...s.input, flex: 1 }} type="number" placeholder="Jumlah bayar" value={bayarAmount} onChange={e => setBayarAmount(e.target.value)} />
-                    <span style={{ display: "flex", alignItems: "center", color: theme.textMuted }}>Kembali: {bayarAmount ? fmt(parseInt(bayarAmount) - (totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))) : fmt(0)}</span>
-                  </div>
-                )}
+                {pembayaran === "tunai" && <div style={{ display: "flex", gap: 8, marginBottom: 10 }}><input style={{ ...s.input, flex: 1 }} type="number" placeholder="Jumlah bayar" value={bayarAmount} onChange={e => setBayarAmount(e.target.value)} /><span style={{ display: "flex", alignItems: "center", color: theme.textMuted }}>Kembali: {bayarAmount ? fmt(parseInt(bayarAmount) - (totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))) : fmt(0)}</span></div>}
                 <button style={s.btn} onClick={handleCheckout} disabled={loading}>{loading ? "Memproses..." : "✅ Bayar"}</button>
               </>
             )}
