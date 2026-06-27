@@ -17,20 +17,31 @@ const SUPER_ADMIN = {
 };
 
 // ============================================================
-// GEMINI (API Key yang benar)
+// GEMINI
 // ============================================================
-const GEMINI_API_KEY = "AQ.Ab8RN6LK1Niwso9ZOOr8GrIU9iabBj5S06PrGnU3MsLV-q70Qw";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+let genAI = null;
+try {
+  if (GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  }
+} catch (e) {
+  console.warn("Gemini init error:", e);
+}
 
 const tanyaGemini = async (prompt) => {
+  if (!genAI) throw new Error("API_KEY_MISSING");
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
     console.error("Gemini error:", error);
-    throw error;
+    if (error.message.includes("API key")) throw new Error("API_KEY_INVALID");
+    if (error.message.includes("quota")) throw new Error("QUOTA_EXCEEDED");
+    if (error.message.includes("fetch") || error.message.includes("network")) throw new Error("NETWORK_ERROR");
+    throw new Error("UNKNOWN_ERROR");
   }
 };
 
@@ -291,7 +302,7 @@ export default function KopiLaba() {
   }, [addForm.qty, addForm.menu_id, menu]);
 
   // ============================================================
-  // LOAD DATA (singkat karena sudah ada)
+  // LOAD DATA
   // ============================================================
   const loadData = async (tok, prof) => {
     try {
@@ -1146,7 +1157,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // LAPORAN + GRAFIK + EXPORT + AI
+  // LAPORAN + GRAFIK + EXPORT
   // ============================================================
   const getFilteredTransaksi = () => {
     if (profile?.role === "barista") {
@@ -1268,7 +1279,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (Gemini - dengan API Key yang benar)
+  // AI AGENT (Gemini)
   // ============================================================
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) {
@@ -1279,6 +1290,11 @@ export default function KopiLaba() {
     setAiAnswer("⏳ Menghubungi Gemini...");
 
     try {
+      if (!genAI) {
+        setAiAnswer("⚠️ API Key Gemini tidak ditemukan. Pastikan VITE_GEMINI_API_KEY sudah diatur di Netlify.");
+        setAiLoading(false);
+        return;
+      }
       const geminiAnswer = await tanyaGemini(aiQuery);
       if (geminiAnswer) {
         setAiAnswer(geminiAnswer);
@@ -1288,14 +1304,16 @@ export default function KopiLaba() {
     } catch (err) {
       console.error("AI error:", err);
       let errorMsg = "⚠️ Gagal menghubungi Gemini. ";
-      if (err.message.includes("API key")) {
-        errorMsg += "API Key tidak valid. Periksa kembali.";
-      } else if (err.message.includes("quota")) {
-        errorMsg += "Kuota API habis. Coba besok.";
-      } else if (err.message.includes("fetch") || err.message.includes("network")) {
+      if (err.message === "API_KEY_MISSING") {
+        errorMsg += "API Key tidak ditemukan. Tambahkan VITE_GEMINI_API_KEY di environment variables.";
+      } else if (err.message === "API_KEY_INVALID") {
+        errorMsg += "API Key tidak valid. Periksa kembali API Key Anda.";
+      } else if (err.message === "QUOTA_EXCEEDED") {
+        errorMsg += "Kuota API habis. Coba besok atau upgrade paket.";
+      } else if (err.message === "NETWORK_ERROR") {
         errorMsg += "Periksa koneksi internet Anda.";
       } else {
-        errorMsg += "Coba lagi nanti.";
+        errorMsg += "Terjadi kesalahan tak terduga. Coba lagi nanti.";
       }
       setAiAnswer(errorMsg);
     } finally {
@@ -1519,7 +1537,7 @@ export default function KopiLaba() {
   );
 
   // ============================================================
-  // MAIN APP (dengan Sidebar & Bottom Nav)
+  // MAIN APP
   // ============================================================
   const tabs = isSuperAdmin ? [
     { id: "admin", icon: "👑", label: "Admin" },
@@ -2158,6 +2176,8 @@ export default function KopiLaba() {
               <>
                 <label style={s.label}>Nama Barang</label>
                 <input style={s.input} placeholder="cth: Gula, Kopi, Susu..." value={addForm.item} onChange={e => setAddForm({ ...addForm, item: e.target.value })} />
+                <label style={s.label}>Total (Rp)</label>
+                <input style={s.input} type="number" placeholder="100000" value={addForm.total} onChange={e => setAddForm({ ...addForm, total: e.target.value })} />
               </>
             )}
 
