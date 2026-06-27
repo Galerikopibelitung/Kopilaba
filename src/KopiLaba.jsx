@@ -17,9 +17,9 @@ const SUPER_ADMIN = {
 };
 
 // ============================================================
-// GEMINI
+// GEMINI (Hardcode sementara)
 // ============================================================
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+const GEMINI_API_KEY = "AQ.Ab8RN6LK1Niwso9ZOOr8GrIU9iabBj5S06PrGnU3MsLV-q70Qw";
 let genAI = null;
 try {
   if (GEMINI_API_KEY) {
@@ -28,7 +28,6 @@ try {
 } catch (e) {
   console.warn("Gemini init error:", e);
 }
-
 const tanyaGemini = async (prompt) => {
   if (!genAI) throw new Error("API_KEY_MISSING");
   try {
