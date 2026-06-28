@@ -578,8 +578,7 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw new Error(error.message);
+      // Untuk user biasa, kita skip karena tidak ada supabase client
       setSuccess("Password berhasil diubah!");
       setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setShowGantiPassword(false);
@@ -787,11 +786,10 @@ export default function KopiLaba() {
     }
     setEditTransaksiId(t.id);
     setAddType(t.tipe);
-    // load items dari t.items jika ada
     if (t.items && Array.isArray(t.items)) {
       setPesananItems(t.items.map(item => ({
         ...item,
-        menu_id: null // karena kita tidak simpan menu_id di items
+        menu_id: null
       })));
     } else {
       setPesananItems([]);
@@ -1218,10 +1216,8 @@ export default function KopiLaba() {
   // KASIR
   // ============================================================
   const handleJumlah = (id, newVal) => {
-    const stokItem = menu.find(m => m.id === id)?.stok || 999;
     let val = parseInt(newVal) || 1;
     if (val < 1) val = 1;
-    // Batas maksimal tidak perlu karena stok bisa diabaikan
     setJumlahMap(prev => ({ ...prev, [id]: val }));
   };
 
@@ -1238,7 +1234,6 @@ export default function KopiLaba() {
       return [...prev, { ...item, qty: qty }];
     });
     setSuccess(`${item.nama} x${qty} ditambahkan ke keranjang!`);
-    // Reset jumlah untuk item ini ke 1
     setJumlahMap(prev => ({ ...prev, [item.id]: 1 }));
   };
 
@@ -1313,7 +1308,7 @@ export default function KopiLaba() {
       await loadMenu(token, kafeId);
     } catch (err) {
       console.error("Checkout error:", err);
-      setError("Gagal checkout.");
+      setError("Gagal checkout: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -1780,12 +1775,11 @@ export default function KopiLaba() {
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
   const isBarista = profile?.role === "barista";
 
-  // Filter menu berdasarkan kategori
   const filteredMenu = selectedKategori ? menu.filter(m => m.kategori_id === selectedKategori) : menu;
 
   return (
     <div style={s.wrap}>
-      {/* HEADER dengan badge keranjang */}
+      {/* HEADER */}
       <div style={{ padding: "16px 20px", background: theme.headerBg, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, transition: "all 0.3s ease", width: "100%", boxSizing: "border-box", position: "sticky", top: 0, zIndex: 20, borderBottom: `1px solid ${theme.cardBorder}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2054,7 +2048,7 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* MENU - dengan filter kategori, hapus kategori, upload foto, dan kontrol jumlah */}
+        {/* MENU */}
         {tab === "menu" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -2069,7 +2063,6 @@ export default function KopiLaba() {
               </div>
             </div>
 
-            {/* Filter Kategori + Daftar kategori dengan hapus */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
               <button
                 onClick={() => setSelectedKategori("")}
@@ -2451,7 +2444,6 @@ export default function KopiLaba() {
                       </div>
                     ))
                   ) : (
-                    // fallback untuk transaksi lama
                     selectedTransaksi.item?.split(", ").map((item, idx) => {
                       const [nama, qtyStr] = item.split(" x");
                       const qty = parseInt(qtyStr) || 1;
@@ -2643,7 +2635,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* Modal Menu - dengan upload foto */}
+      {/* Modal Menu */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
