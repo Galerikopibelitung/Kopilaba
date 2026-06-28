@@ -120,7 +120,6 @@ export default function KopiLaba() {
     }
   }, [profile, token, user, isSuperAdmin]);
 
-  // Reset body style
   useEffect(() => {
     document.body.style.margin = "0";
     document.body.style.padding = "0";
@@ -134,7 +133,6 @@ export default function KopiLaba() {
     };
   }, [darkMode]);
 
-  // Gesture untuk sidebar
   useEffect(() => {
     const handleTouchStart = (e) => {
       const touch = e.touches[0];
@@ -177,6 +175,13 @@ export default function KopiLaba() {
   const [absensi, setAbsensi] = useState([]);
   const [allOwners, setAllOwners] = useState([]);
   const [allTransaksi, setAllTransaksi] = useState([]);
+
+  // ------------------------------------------------------------
+  // STATE QRIS
+  // ------------------------------------------------------------
+  const [qrisUrl, setQrisUrl] = useState("");
+  const [uploadingQris, setUploadingQris] = useState(false);
+  const fileInputRef = useRef(null);
 
   // ------------------------------------------------------------
   // STATE MODAL TRANSAKSI
@@ -297,6 +302,7 @@ export default function KopiLaba() {
       if (!k && prof.kafe_id) {
         const k2 = await api(`/rest/v1/kafe?id=eq.${prof.kafe_id}&limit=1`, "GET", null, tok);
         setKafe(Array.isArray(k2) ? k2[0] : null);
+        if (k2) setQrisUrl(k2.qris_url || "");
         await loadTransaksi(tok, prof.kafe_id);
         await loadMenu(tok, prof.kafe_id);
         await loadKategori(tok);
@@ -304,6 +310,7 @@ export default function KopiLaba() {
         await loadAbsensi(tok, prof.kafe_id);
       } else if (k) {
         setKafe(k);
+        setQrisUrl(k.qris_url || "");
         await loadTransaksi(tok, k.id);
         await loadMenu(tok, k.id);
         await loadKategori(tok);
@@ -449,7 +456,8 @@ export default function KopiLaba() {
             nama: regForm.namaKafe,
             alamat: regForm.alamatKafe,
             pemilik_id: u.id,
-            telepon: regForm.telepon || ""
+            telepon: regForm.telepon || "",
+            qris_url: ""
           }, tok);
           kafeId = Array.isArray(k) ? k[0]?.id : k?.id;
         } catch (kafeErr) {
@@ -534,6 +542,60 @@ export default function KopiLaba() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ============================================================
+  // QRIS UPLOAD
+  // ============================================================
+  const handleQrisUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik yang bisa upload QRIS.");
+      return;
+    }
+    setUploadingQris(true);
+    setError("");
+
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      if (!kafeId) {
+        setError("Kafe tidak ditemukan.");
+        setUploadingQris(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/qris/${kafeId}/${file.name}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+        },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        throw new Error(`Upload gagal: ${errText}`);
+      }
+
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/qris/${kafeId}/${file.name}`;
+
+      await api(`/rest/v1/kafe?id=eq.${kafeId}`, "PATCH", { qris_url: publicUrl }, token);
+      setQrisUrl(publicUrl);
+      setSuccess("QRIS berhasil diupload!");
+    } catch (err) {
+      console.error("QRIS upload error:", err);
+      setError("Gagal upload QRIS. Coba lagi.");
+    } finally {
+      setUploadingQris(false);
+    }
+  };
+
+  const triggerQrisUpload = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
   };
 
   // ============================================================
@@ -1080,6 +1142,7 @@ export default function KopiLaba() {
       }
       return [...prev, { ...item, qty: 1 }];
     });
+    setSuccess(`${item.nama} ditambahkan ke keranjang!`);
   };
 
   const kurangiDariKeranjang = (id) => {
@@ -1184,7 +1247,6 @@ export default function KopiLaba() {
   const laba = totalMasuk - totalKeluar;
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
-  // Chart data
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -1197,7 +1259,6 @@ export default function KopiLaba() {
   const chartKeluar = chartLabels.map(d => chartData[d].keluar);
   const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
 
-  // Laporan Stok (menggunakan filtered)
   const laporanStokData = menu.map(m => ({...m, terjual: 0, sisa: m.stok || 0}));
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
@@ -1215,7 +1276,6 @@ export default function KopiLaba() {
     }
   });
 
-  // Kategori Terlaris (menggunakan filtered)
   const kategoriPenjualan = {};
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
@@ -1238,7 +1298,12 @@ export default function KopiLaba() {
   const top5Kategori = sortedKategori.slice(0, 5);
   const bottom5Kategori = sortedKategori.slice(-5).reverse();
 
-  // Produk Terjual (menggunakan filtered)
+  const produkPerKategori = {};
+  menu.forEach(m => {
+    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
+    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
+    produkPerKategori[katNama].push(m);
+  });
   const produkTerjual = {};
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
@@ -1251,14 +1316,6 @@ export default function KopiLaba() {
         produkTerjual[nama] += qty;
       });
     }
-  });
-
-  // Produk per kategori
-  const produkPerKategori = {};
-  menu.forEach(m => {
-    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
-    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
-    produkPerKategori[katNama].push(m);
   });
 
   const exportExcel = () => {
@@ -1276,7 +1333,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (STABIL - INTERNAL)
+  // AI AGENT (INTERNAL)
   // ============================================================
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) {
@@ -1602,6 +1659,7 @@ export default function KopiLaba() {
     { id: "karyawan", icon: "👤", label: "Karyawan" },
     { id: "laporan", icon: "📊", label: "Laporan" },
     { id: "struk", icon: "🧾", label: "Struk" },
+    { id: "qris", icon: "📱", label: "QRIS" },
   ] : [
     { id: "dashboard", icon: "⊞", label: "Ringkasan" },
     { id: "transaksi", icon: "↕", label: "Transaksi" },
@@ -1609,6 +1667,7 @@ export default function KopiLaba() {
     { id: "karyawan", icon: "👤", label: "Karyawan" },
     { id: "laporan", icon: "📊", label: "Laporan" },
     { id: "struk", icon: "🧾", label: "Struk" },
+    { id: "qris", icon: "📱", label: "QRIS" },
   ];
 
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
@@ -2039,7 +2098,7 @@ export default function KopiLaba() {
               )}
             </div>
 
-            {/* Filter tanggal - hanya untuk pemilik & super admin */}
+            {/* Filter tanggal */}
             {!isBarista && (
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1 }}><label style={s.label}>Dari</label><input style={s.input} type="date" value={filterTglMulai} onChange={e => setFilterTglMulai(e.target.value)} /></div>
@@ -2196,9 +2255,65 @@ export default function KopiLaba() {
             </div>
           </div>
         )}
+
+        {/* QRIS */}
+        {tab === "qris" && (
+          <div style={s.card}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>📱 QRIS Pembayaran</p>
+            <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>
+              {isPemilik ? "Upload QRIS untuk pembayaran non-tunai. Pelanggan bisa scan QRIS ini." : "Scan QRIS di bawah untuk melakukan pembayaran."}
+            </p>
+
+            {qrisUrl ? (
+              <div style={{ textAlign: "center", marginBottom: 14 }}>
+                <img src={qrisUrl} alt="QRIS" style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 12, border: `1px solid ${theme.cardBorder}` }} />
+                <p style={{ fontSize: 11, color: theme.textMuted, marginTop: 8 }}>Scan QRIS untuk bayar</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: 30, background: theme.input, borderRadius: 12, border: `1px dashed ${theme.cardBorder}` }}>
+                <p style={{ fontSize: 14, color: theme.textMuted }}>Belum ada QRIS diupload</p>
+                {isPemilik && <p style={{ fontSize: 12, color: theme.textMuted }}>Upload gambar QRIS di bawah</p>}
+              </div>
+            )}
+
+            {isPemilik && (
+              <div style={{ marginTop: 10 }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleQrisUpload}
+                  style={{ display: "none" }}
+                />
+                <button
+                  onClick={triggerQrisUpload}
+                  disabled={uploadingQris}
+                  style={{ ...s.btnSm, width: "100%", background: theme.gold }}
+                >
+                  {uploadingQris ? "Uploading..." : "📤 Upload QRIS"}
+                </button>
+                {qrisUrl && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Hapus QRIS ini?")) {
+                        setQrisUrl("");
+                        api(`/rest/v1/kafe?id=eq.${kafe?.id}`, "PATCH", { qris_url: "" }, token);
+                        setSuccess("QRIS dihapus!");
+                      }
+                    }}
+                    style={{ ...s.btnSm, width: "100%", background: theme.danger, marginTop: 8 }}
+                  >
+                    🗑️ Hapus QRIS
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ===== MODAL TRANSAKSI ===== */}
+      {/* MODAL-MODAL */}
+      {/* Modal Transaksi */}
       {showAdd && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2275,7 +2390,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL MENU ===== */}
+      {/* Modal Menu */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2300,7 +2415,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL KATEGORI ===== */}
+      {/* Modal Kategori */}
       {showAddKategori && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2312,7 +2427,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL KARYAWAN ===== */}
+      {/* Modal Karyawan */}
       {showAddKaryawan && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2332,7 +2447,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL STOK ===== */}
+      {/* Modal Stok */}
       {showStok && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2353,7 +2468,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL GANTI PASSWORD ===== */}
+      {/* Modal Ganti Password */}
       {showGantiPassword && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 60 }} onClick={() => { setShowGantiPassword(false); setTargetUserId(null); }}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2371,7 +2486,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL ABSENSI ===== */}
+      {/* Modal Absensi */}
       {showAbsensi && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAbsensi(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2386,7 +2501,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL KASIR ===== */}
+      {/* Modal Kasir */}
       {showKasir && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2419,7 +2534,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== BOTTOM NAV ===== */}
+      {/* BOTTOM NAV */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", maxWidth: "100%", background: theme.headerBg, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderTop: `1px solid ${theme.cardBorder}`, display: "flex", padding: "8px 0 20px", transition: "all 0.3s ease", zIndex: 10 }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0" }}>
