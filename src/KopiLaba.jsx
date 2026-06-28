@@ -177,9 +177,9 @@ export default function KopiLaba() {
   const [allTransaksi, setAllTransaksi] = useState([]);
 
   // ------------------------------------------------------------
-  // STATE PERIODE FILTER (BARU)
+  // STATE PERIODE FILTER
   // ------------------------------------------------------------
-  const [periodeFilter, setPeriodeFilter] = useState("hari"); // hari, minggu, bulan, tahun, semua
+  const [periodeFilter, setPeriodeFilter] = useState("hari");
 
   // ------------------------------------------------------------
   // STATE QRIS
@@ -210,7 +210,7 @@ export default function KopiLaba() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" });
   const [editMenuId, setEditMenuId] = useState(null);
-  const [menuFile, setMenuFile] = useState(null); // file untuk upload
+  const [menuFile, setMenuFile] = useState(null);
 
   // ------------------------------------------------------------
   // STATE MODAL KATEGORI
@@ -250,12 +250,13 @@ export default function KopiLaba() {
   const [baristaAbsenLoading, setBaristaAbsenLoading] = useState(false);
 
   // ------------------------------------------------------------
-  // STATE KASIR
+  // STATE KASIR & JUMLAH MAP
   // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
   const [bayarAmount, setBayarAmount] = useState("");
+  const [jumlahMap, setJumlahMap] = useState({});
 
   // ------------------------------------------------------------
   // STATE LAPORAN & AI
@@ -642,7 +643,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // UPLOAD FOTO MENU (BARU)
+  // UPLOAD FOTO MENU
   // ============================================================
   const uploadMenuFoto = async (file, kafeId) => {
     const fileName = `${Date.now()}_${file.name}`;
@@ -729,6 +730,13 @@ export default function KopiLaba() {
       }
       const grandTotal = subtotal + pajak;
 
+      const itemsDetail = pesananItems.map(p => ({
+        nama: p.nama,
+        qty: p.qty,
+        harga: p.harga,
+        total: p.total
+      }));
+
       const payload = {
         kafe_id: kafeId,
         item: itemNames,
@@ -738,7 +746,8 @@ export default function KopiLaba() {
         status: "lunas",
         subtotal: subtotal,
         pajak: pajak,
-        pajak_enabled: pajakEnabled && addType === "masuk"
+        pajak_enabled: pajakEnabled && addType === "masuk",
+        items: itemsDetail
       };
       if (editTransaksiId) {
         await api(`/rest/v1/transaksi?id=eq.${editTransaksiId}`, "PATCH", payload, token);
@@ -754,7 +763,7 @@ export default function KopiLaba() {
             const selectedMenu = menu.find(m => m.id === item.menu_id);
             if (selectedMenu) {
               const newStok = (selectedMenu.stok || 0) - item.qty;
-              await api(`/rest/v1/menu?id=eq.${item.menu_id}`, "PATCH", { stok: newStok }, token);
+              await api(`/rest/v1/menu?id=eq.${item.menu_id}`, "PATCH", { stok: Math.max(0, newStok) }, token);
             }
           }
         }
@@ -778,7 +787,15 @@ export default function KopiLaba() {
     }
     setEditTransaksiId(t.id);
     setAddType(t.tipe);
-    setPesananItems([]);
+    // load items dari t.items jika ada
+    if (t.items && Array.isArray(t.items)) {
+      setPesananItems(t.items.map(item => ({
+        ...item,
+        menu_id: null // karena kita tidak simpan menu_id di items
+      })));
+    } else {
+      setPesananItems([]);
+    }
     setShowAdd(true);
   };
 
@@ -1200,23 +1217,29 @@ export default function KopiLaba() {
   // ============================================================
   // KASIR
   // ============================================================
-  const tambahKeKeranjang = (item) => {
+  const handleJumlah = (id, newVal) => {
+    const stokItem = menu.find(m => m.id === id)?.stok || 999;
+    let val = parseInt(newVal) || 1;
+    if (val < 1) val = 1;
+    // Batas maksimal tidak perlu karena stok bisa diabaikan
+    setJumlahMap(prev => ({ ...prev, [id]: val }));
+  };
+
+  const tambahKeKeranjang = (item, qty = 1) => {
+    // Tetap boleh menambah meskipun stok 0, hanya beri peringatan
     if (item.stok !== undefined && item.stok <= 0) {
-      setError(`Stok ${item.nama} habis!`);
-      return;
+      setError(`⚠️ Stok ${item.nama} sedang 0, tetapi tetap bisa dipesan.`);
     }
     setKeranjang(prev => {
       const existing = prev.find(p => p.id === item.id);
       if (existing) {
-        if (existing.qty >= (item.stok || 999)) {
-          setError(`Stok ${item.nama} tidak mencukupi!`);
-          return prev;
-        }
-        return prev.map(p => p.id === item.id ? { ...p, qty: p.qty + 1 } : p);
+        return prev.map(p => p.id === item.id ? { ...p, qty: p.qty + qty } : p);
       }
-      return [...prev, { ...item, qty: 1 }];
+      return [...prev, { ...item, qty: qty }];
     });
-    setSuccess(`${item.nama} ditambahkan ke keranjang!`);
+    setSuccess(`${item.nama} x${qty} ditambahkan ke keranjang!`);
+    // Reset jumlah untuk item ini ke 1
+    setJumlahMap(prev => ({ ...prev, [item.id]: 1 }));
   };
 
   const kurangiDariKeranjang = (id) => {
@@ -1257,6 +1280,13 @@ export default function KopiLaba() {
       }
       const grandTotal = subtotal + pajak;
 
+      const itemsDetail = keranjang.map(item => ({
+        nama: item.nama,
+        qty: item.qty,
+        harga: item.harga,
+        total: item.harga * item.qty
+      }));
+
       await api("/rest/v1/transaksi", "POST", {
         kafe_id: kafeId,
         item: itemNames,
@@ -1266,12 +1296,13 @@ export default function KopiLaba() {
         status: pembayaran === "tunai" ? "lunas" : "belum_lunas",
         subtotal: subtotal,
         pajak: pajak,
-        pajak_enabled: pajakEnabled
+        pajak_enabled: pajakEnabled,
+        items: itemsDetail
       }, token);
 
       for (const item of keranjang) {
         const newStok = (item.stok || 0) - item.qty;
-        await api(`/rest/v1/menu?id=eq.${item.id}`, "PATCH", { stok: newStok }, token);
+        await api(`/rest/v1/menu?id=eq.${item.id}`, "PATCH", { stok: Math.max(0, newStok) }, token);
       }
 
       setKeranjang([]);
@@ -1289,16 +1320,14 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // LAPORAN + GRAFIK + EXPORT (dengan periode)
+  // LAPORAN + GRAFIK + EXPORT
   // ============================================================
   const getFilteredTransaksi = () => {
-    // Jika barista, hanya hari ini
     if (profile?.role === "barista") {
       const today = new Date().toISOString().slice(0,10);
       return transaksi.filter(t => new Date(t.created_at).toISOString().slice(0,10) === today);
     }
     let filtered = [...transaksi];
-    // Filter tanggal manual (jika ada)
     if (filterTglMulai) {
       const start = new Date(filterTglMulai);
       start.setHours(0, 0, 0, 0);
@@ -1309,7 +1338,6 @@ export default function KopiLaba() {
       end.setHours(23, 59, 59, 999);
       filtered = filtered.filter(t => new Date(t.created_at) <= end);
     }
-    // Jika tidak ada filter tanggal manual, gunakan periodeFilter
     if (!filterTglMulai && !filterTglSelesai) {
       filtered = filterTransaksiByPeriode(filtered, periodeFilter);
     }
@@ -1321,7 +1349,6 @@ export default function KopiLaba() {
     return filtered;
   };
 
-  // Data untuk dashboard (pakai periode)
   const getDashboardData = () => {
     const data = filterTransaksiByPeriode(transaksi, periodeFilter);
     const masuk = data.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
@@ -1422,7 +1449,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (INTERNAL)
+  // AI AGENT
   // ============================================================
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) {
@@ -1652,7 +1679,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // RENDER LOGIN & REGISTER (sama)
+  // RENDER LOGIN & REGISTER
   // ============================================================
   if (screen === "login") return (
     <div style={{
@@ -1913,7 +1940,6 @@ export default function KopiLaba() {
         {/* DASHBOARD */}
         {!isSuperAdmin && tab === "dashboard" && (
           <>
-            {/* Filter periode untuk pemilik */}
             {!isBarista && (
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {["hari", "minggu", "bulan", "tahun", "semua"].map(p => (
@@ -2028,7 +2054,7 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* MENU - dengan filter kategori, hapus kategori, dan upload foto */}
+        {/* MENU - dengan filter kategori, hapus kategori, upload foto, dan kontrol jumlah */}
         {tab === "menu" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -2126,10 +2152,47 @@ export default function KopiLaba() {
                     </div>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: margin > 65 ? theme.success : theme.gold }}>{margin}%</p>
                   </div>
+
+                  {/* Kontrol jumlah & Tambah ke keranjang */}
                   {!isSuperAdmin && (
-                    <button onClick={() => tambahKeKeranjang(m)} style={{ ...s.btnSm, marginTop: 8, width: "100%", background: stok <= 0 ? theme.textMuted : theme.gold }} disabled={stok <= 0}>
-                      {stok <= 0 ? "Stok Habis" : "🛒 +"}
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <button
+                        onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) - 1)}
+                        style={{ ...s.btnSm, padding: "4px 10px", minWidth: 36 }}
+                        disabled={(jumlahMap[m.id] || 1) <= 1}
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        value={jumlahMap[m.id] || 1}
+                        onChange={e => handleJumlah(m.id, e.target.value)}
+                        style={{
+                          width: 50,
+                          textAlign: "center",
+                          background: theme.input,
+                          border: `1px solid ${theme.inputBorder}`,
+                          borderRadius: 8,
+                          padding: "4px 0",
+                          color: theme.text,
+                          fontSize: 14,
+                          fontWeight: 600,
+                        }}
+                        min="1"
+                      />
+                      <button
+                        onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) + 1)}
+                        style={{ ...s.btnSm, padding: "4px 10px", minWidth: 36 }}
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => tambahKeKeranjang(m, jumlahMap[m.id] || 1)}
+                        style={{ ...s.btnSm, flex: 1, background: theme.gold }}
+                      >
+                        Tambah
+                      </button>
+                    </div>
                   )}
                 </div>
               );
@@ -2215,12 +2278,11 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* LAPORAN dengan periode */}
+        {/* LAPORAN */}
         {tab === "laporan" && (
           <div style={s.card}>
             <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>📊 Laporan Keuangan</p>
 
-            {/* Filter periode untuk pemilik & super admin */}
             {!isBarista && (
               <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {["hari", "minggu", "bulan", "tahun", "semua"].map(p => (
@@ -2250,7 +2312,7 @@ export default function KopiLaba() {
               )}
             </div>
 
-            {/* Filter tanggal manual (opsional) */}
+            {/* Filter tanggal manual */}
             {!isBarista && (
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                 <div style={{ flex: 1 }}><label style={s.label}>Dari</label><input style={s.input} type="date" value={filterTglMulai} onChange={e => setFilterTglMulai(e.target.value)} /></div>
@@ -2363,7 +2425,7 @@ export default function KopiLaba() {
           </div>
         )}
 
-        {/* STRUK */}
+        {/* STRUK - dengan harga per item */}
         {tab === "struk" && (
           <div style={s.card}>
             {selectedTransaksi ? (
@@ -2378,24 +2440,67 @@ export default function KopiLaba() {
                   <p style={{ margin: 0, fontSize: 11 }}>Kasir: {profile?.nama || "Admin"}</p>
                   <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
                 </div>
-                <div>{selectedTransaksi.item?.split(", ").map((item, idx) => {
-                  const [nama, qtyStr] = item.split(" x");
-                  const qty = parseInt(qtyStr) || 1;
-                  return <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}><span>{nama} x{qty}</span><span>{fmt(selectedTransaksi.total)}</span></div>;
-                })}</div>
+
+                {/* Daftar item dengan harga per item */}
+                <div>
+                  {selectedTransaksi.items && Array.isArray(selectedTransaksi.items) ? (
+                    selectedTransaksi.items.map((item, idx) => (
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                        <span>{item.nama} x{item.qty}</span>
+                        <span>{fmt(item.total)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    // fallback untuk transaksi lama
+                    selectedTransaksi.item?.split(", ").map((item, idx) => {
+                      const [nama, qtyStr] = item.split(" x");
+                      const qty = parseInt(qtyStr) || 1;
+                      return (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                          <span>{nama} x{qty}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
                 <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>Subtotal</span><span>{fmt(selectedTransaksi.subtotal || selectedTransaksi.total)}</span></div>
-                {selectedTransaksi.pajak_enabled && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>Pajak ({persentasePajak}%)</span><span>{fmt(selectedTransaksi.pajak || 0)}</span></div>}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "1px solid #888", paddingTop: 6, marginTop: 6 }}><span>Grand Total</span><span>{fmt(selectedTransaksi.total)}</span></div>
-                {pembayaran === "tunai" && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}><span>Bayar</span><span>{fmt(selectedTransaksi.total)}</span></div>}
-                {pembayaran === "piutang" && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}><span>Status</span><span style={{ color: theme.danger }}>Piutang</span></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span>Subtotal</span>
+                  <span>{fmt(selectedTransaksi.subtotal || selectedTransaksi.total)}</span>
+                </div>
+                {selectedTransaksi.pajak_enabled && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                    <span>Pajak ({persentasePajak}%)</span>
+                    <span>{fmt(selectedTransaksi.pajak || 0)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, borderTop: "1px solid #888", paddingTop: 6, marginTop: 6 }}>
+                  <span>Grand Total</span>
+                  <span>{fmt(selectedTransaksi.total)}</span>
+                </div>
+                {selectedTransaksi.status === "lunas" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+                    <span>Bayar</span>
+                    <span>{fmt(selectedTransaksi.total)}</span>
+                  </div>
+                )}
+                {selectedTransaksi.status === "belum_lunas" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+                    <span>Status</span>
+                    <span style={{ color: theme.danger }}>Piutang</span>
+                  </div>
+                )}
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, borderTop: "1px dashed #888", paddingTop: 8 }}>
                   <p style={{ margin: 0 }}>Powered by KopiLaba</p>
                   <p style={{ margin: 0 }}>Manajemen Keuangan Kafe</p>
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: 30 }}><p style={{ color: theme.textMuted }}>Pilih transaksi untuk lihat struk</p><button onClick={() => setTab("transaksi")} style={s.btnSm}>Ke Transaksi</button></div>
+              <div style={{ textAlign: "center", padding: 30 }}>
+                <p style={{ color: theme.textMuted }}>Pilih transaksi untuk lihat struk</p>
+                <button onClick={() => setTab("transaksi")} style={s.btnSm}>Ke Transaksi</button>
+              </div>
             )}
             <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
               <button onClick={() => window.print()} style={{ ...s.btn, flex: 1 }}>🖨️ Cetak</button>
