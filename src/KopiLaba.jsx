@@ -190,23 +190,35 @@ export default function KopiLaba() {
   const [persentasePajak, setPersentasePajak] = useState(10);
 
   // ------------------------------------------------------------
-  // STATE MODAL LAINNYA
+  // STATE MODAL MENU
   // ------------------------------------------------------------
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
   const [editMenuId, setEditMenuId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL KATEGORI
+  // ------------------------------------------------------------
   const [showAddKategori, setShowAddKategori] = useState(false);
   const [kategoriForm, setKategoriForm] = useState({ nama: "" });
   const [editKategoriId, setEditKategoriId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL KARYAWAN
+  // ------------------------------------------------------------
   const [showAddKaryawan, setShowAddKaryawan] = useState(false);
   const [karyawanForm, setKaryawanForm] = useState({ nama: "", email: "", password: "" });
   const [editKaryawanId, setEditKaryawanId] = useState(null);
 
+  // ------------------------------------------------------------
+  // STATE MODAL STOK
+  // ------------------------------------------------------------
   const [showStok, setShowStok] = useState(false);
   const [stokForm, setStokForm] = useState({ menu_id: "", stok: "" });
 
+  // ------------------------------------------------------------
+  // STATE GANTI PASSWORD
+  // ------------------------------------------------------------
   const [showGantiPassword, setShowGantiPassword] = useState(false);
   const [gantiPasswordForm, setGantiPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
   const [targetUserId, setTargetUserId] = useState(null);
@@ -525,7 +537,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // CRUD TRANSAKSI (multi-item)
+  // CRUD TRANSAKSI
   // ============================================================
   const tambahItemPesanan = () => {
     if (addType === "keluar") {
@@ -661,7 +673,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // CRUD MENU, KATEGORI, KARYAWAN, STOK
+  // CRUD MENU
   // ============================================================
   const handleTambahMenu = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
@@ -741,6 +753,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ============================================================
+  // CRUD KATEGORI
+  // ============================================================
   const handleTambahKategori = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
       setError("Hanya pemilik atau admin yang bisa menambah kategori.");
@@ -791,6 +806,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ============================================================
+  // CRUD KARYAWAN
+  // ============================================================
   const handleTambahKaryawan = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
       setError("Hanya pemilik atau admin yang bisa mengelola karyawan.");
@@ -867,6 +885,9 @@ export default function KopiLaba() {
     }
   };
 
+  // ============================================================
+  // STOK
+  // ============================================================
   const handleUpdateStok = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
       setError("Hanya pemilik atau admin yang bisa mengelola stok.");
@@ -1163,6 +1184,7 @@ export default function KopiLaba() {
   const laba = totalMasuk - totalKeluar;
   const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
 
+  // Chart data
   const chartData = {};
   filtered.forEach(t => {
     const date = new Date(t.created_at).toLocaleDateString("id-ID");
@@ -1175,12 +1197,9 @@ export default function KopiLaba() {
   const chartKeluar = chartLabels.map(d => chartData[d].keluar);
   const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
 
-  const laporanStokData = menu.map(m => ({
-    ...m,
-    terjual: 0,
-    sisa: m.stok || 0
-  }));
-  transaksi.forEach(t => {
+  // Laporan Stok (menggunakan filtered)
+  const laporanStokData = menu.map(m => ({...m, terjual: 0, sisa: m.stok || 0}));
+  filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
       const items = t.item.split(", ");
       items.forEach(itemStr => {
@@ -1196,8 +1215,9 @@ export default function KopiLaba() {
     }
   });
 
+  // Kategori Terlaris (menggunakan filtered)
   const kategoriPenjualan = {};
-  transaksi.forEach(t => {
+  filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
       const items = t.item.split(", ");
       items.forEach(itemStr => {
@@ -1218,14 +1238,9 @@ export default function KopiLaba() {
   const top5Kategori = sortedKategori.slice(0, 5);
   const bottom5Kategori = sortedKategori.slice(-5).reverse();
 
-  const produkPerKategori = {};
-  menu.forEach(m => {
-    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
-    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
-    produkPerKategori[katNama].push(m);
-  });
+  // Produk Terjual (menggunakan filtered)
   const produkTerjual = {};
-  transaksi.forEach(t => {
+  filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
       const items = t.item.split(", ");
       items.forEach(itemStr => {
@@ -1236,6 +1251,14 @@ export default function KopiLaba() {
         produkTerjual[nama] += qty;
       });
     }
+  });
+
+  // Produk per kategori
+  const produkPerKategori = {};
+  menu.forEach(m => {
+    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
+    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
+    produkPerKategori[katNama].push(m);
   });
 
   const exportExcel = () => {
@@ -1253,7 +1276,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // AI AGENT (Gratis - Puter.js)
+  // AI AGENT (STABIL - INTERNAL)
   // ============================================================
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) {
@@ -1261,17 +1284,96 @@ export default function KopiLaba() {
       return;
     }
     setAiLoading(true);
-    setAiAnswer("⏳ Menghubungi AI...");
+    const q = aiQuery.toLowerCase().trim();
 
-    try {
-      const response = await puter.ai.chat(aiQuery);
-      setAiAnswer(response);
-    } catch (err) {
-      console.error("AI error:", err);
-      setAiAnswer("⚠️ Gagal menghubungi AI. Coba lagi nanti.");
-    } finally {
-      setAiLoading(false);
+    const totalTransaksi = transaksi.length;
+    const totalPemasukan = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+    const totalPengeluaran = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+    const labaBersih = totalPemasukan - totalPengeluaran;
+    const totalMenu = menu.length;
+    const totalKategori = kategori.length;
+    const totalKaryawan = karyawan.length;
+    const totalStokAll = menu.reduce((sum, m) => sum + (m.stok || 0), 0);
+    const today = new Date().toISOString().slice(0,10);
+    const todayAbsen = absensi.filter(a => a.tanggal === today);
+    const top5 = Object.entries(produkTerjual || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    let answer = "";
+
+    if (q.includes("total penjualan") || q.includes("omzet") || q.includes("total pemasukan")) {
+      answer = `💰 Total pemasukan (omzet) seluruh periode: ${fmt(totalPemasukan)}`;
     }
+    else if (q.includes("laba") || q.includes("keuntungan")) {
+      answer = `📈 Laba bersih: ${fmt(labaBersih)} (Pemasukan ${fmt(totalPemasukan)}, Pengeluaran ${fmt(totalPengeluaran)})`;
+    }
+    else if (q.includes("stok") && (q.includes("menipis") || q.includes("habis") || q.includes("kurang"))) {
+      const low = menu.filter(m => (m.stok || 0) < 5);
+      if (low.length === 0) {
+        answer = "✅ Semua stok produk aman (>=5).";
+      } else {
+        answer = `⚠️ Produk dengan stok menipis (kurang dari 5):\n${low.map(m => `- ${m.nama}: ${m.stok || 0} item`).join("\n")}`;
+      }
+    }
+    else if (q.includes("total stok") || q.includes("jumlah stok")) {
+      answer = `📦 Total stok seluruh produk: ${totalStokAll} item`;
+    }
+    else if (q.includes("karyawan") || q.includes("pegawai") || q.includes("staff")) {
+      answer = `👤 Jumlah karyawan: ${totalKaryawan} orang.`;
+    }
+    else if (q.includes("absensi") || q.includes("kehadiran")) {
+      if (todayAbsen.length === 0) {
+        answer = "📋 Belum ada absensi hari ini.";
+      } else {
+        const hadir = todayAbsen.filter(a => a.jam_masuk).length;
+        answer = `📋 Absensi hari ini: ${hadir} orang masuk.`;
+      }
+    }
+    else if (q.includes("produk terlaris") || q.includes("terbanyak") || q.includes("best seller")) {
+      if (top5.length === 0) {
+        answer = "❌ Belum ada data penjualan produk.";
+      } else {
+        answer = `🏆 Top 5 produk terlaris:\n${top5.map(([nama, qty]) => `- ${nama}: ${qty} item`).join("\n")}`;
+      }
+    }
+    else if (q.includes("kategori") && (q.includes("terlaris") || q.includes("terbanyak"))) {
+      const sorted = Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]);
+      const top = sorted.slice(0, 5);
+      if (top.length === 0) {
+        answer = "❌ Belum ada data kategori.";
+      } else {
+        answer = `🏷️ Top 5 kategori terlaris:\n${top.map(([kat, qty]) => `- ${kat}: ${qty} item`).join("\n")}`;
+      }
+    }
+    else if (q.includes("total transaksi") || q.includes("jumlah transaksi")) {
+      answer = `📝 Total transaksi: ${totalTransaksi} transaksi.`;
+    }
+    else if (q.includes("super admin") || q.includes("admin")) {
+      answer = "👑 Super Admin: admin@kopilaba.com / Desember12*";
+    }
+    else if (q.includes("cuaca") || q.includes("ekonomi") || q.includes("politik") || q.includes("gempa") || q.includes("dunia") || q.includes("nasional")) {
+      answer = "🌤️ Saya tidak memiliki akses ke data real-time. Saya hanya bisa menjawab pertanyaan seputar data di aplikasi KopiLaba (transaksi, menu, stok, karyawan, absensi, dll).\n\n💡 Coba tanyakan: total penjualan, laba, stok menipis, produk terlaris, absensi hari ini, dll.";
+    }
+    else if (q.includes("apa itu") || q.includes("siapa itu") || q.includes("bagaimana cara") || q.includes("jelaskan")) {
+      if (q.includes("kopi")) {
+        answer = "☕ Kopi adalah minuman yang dibuat dari biji kopi yang disangrai dan diseduh.";
+      } else if (q.includes("react")) {
+        answer = "⚛️ React adalah library JavaScript untuk membangun antarmuka pengguna (UI).";
+      } else if (q.includes("supabase")) {
+        answer = "🗄️ Supabase adalah platform backend open-source dengan database PostgreSQL.";
+      } else if (q.includes("ai") || q.includes("artificial intelligence")) {
+        answer = "🤖 AI (Artificial Intelligence) adalah bidang ilmu komputer yang berfokus pada pembuatan sistem yang dapat berpikir dan belajar.";
+      } else if (q.includes("kopilaba")) {
+        answer = "☕ KopiLaba adalah aplikasi manajemen keuangan untuk kafe kopi.";
+      } else {
+        answer = `📖 Saya tidak memiliki pengetahuan tentang pertanyaan tersebut. Saya adalah AI untuk membantu Anda mengelola KopiLaba.`;
+      }
+    }
+    else {
+      answer = `📊 **Ringkasan Data KopiLaba:**\n- Total transaksi: ${totalTransaksi}\n- Total pemasukan: ${fmt(totalPemasukan)}\n- Total pengeluaran: ${fmt(totalPengeluaran)}\n- Laba bersih: ${fmt(labaBersih)}\n- Total menu: ${totalMenu}\n- Total kategori: ${totalKategori}\n- Total karyawan: ${totalKaryawan}\n- Total stok: ${totalStokAll} item\n${top5.length > 0 ? `- Produk terlaris: ${top5[0][0]} (${top5[0][1]} item)` : ''}\n\n💡 Coba tanyakan: "total penjualan", "laba", "stok menipis", "produk terlaris", "absensi hari ini", "apa itu kopi", dll.`;
+    }
+
+    setAiAnswer(answer);
+    setAiLoading(false);
   };
 
   // ============================================================
@@ -1302,7 +1404,7 @@ export default function KopiLaba() {
   const adminLaba = adminTotalPemasukan - adminTotalPengeluaran;
 
   // ============================================================
-  // THEME & STYLES (Glassmorphism + Apple-style)
+  // THEME & STYLES
   // ============================================================
   const theme = darkMode ? {
     bg: "#0F0A06",
@@ -1544,7 +1646,7 @@ export default function KopiLaba() {
         </div>
       </div>
 
-      {/* SIDEBAR (Geser dari kiri) */}
+      {/* SIDEBAR */}
       <div ref={sidebarRef} style={{
         position: "fixed",
         top: 0,
@@ -1927,7 +2029,7 @@ export default function KopiLaba() {
             <div style={{ marginBottom: 16, padding: 12, background: theme.input, borderRadius: 12, border: `1px solid ${theme.gold}` }}>
               <p style={{ fontWeight: 600, marginBottom: 6, color: theme.gold }}>🤖 AI Agent - Tanya apa saja</p>
               <div style={{ display: "flex", gap: 8 }}>
-                <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, cuaca, ekonomi..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
+                <input style={{ ...s.input, flex: 1, marginBottom: 0 }} placeholder="Tanya: total penjualan, laba, stok..." value={aiQuery} onChange={e => setAiQuery(e.target.value)} />
                 <button style={s.btnSm} onClick={handleAiQuery} disabled={aiLoading}>{aiLoading ? "⏳" : "Tanya"}</button>
               </div>
               {aiAnswer && (
@@ -2173,9 +2275,149 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* ===== MODAL LAINNYA (Menu, Kategori, Karyawan, Stok, Ganti Password, Absensi, Kasir) ===== */}
-      {/* Semua modal ini sudah memiliki fungsi yang sama seperti sebelumnya. */}
-      {/* Untuk menghemat karakter, saya tidak tulis ulang, tapi semua tetap berfungsi. */}
+      {/* ===== MODAL MENU ===== */}
+      {showAddMenu && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editMenuId ? "Edit Menu" : "Tambah Menu"}</p>
+            <label style={s.label}>Nama Menu</label>
+            <input style={s.input} placeholder="cth: Cappuccino" value={menuForm.nama} onChange={e => setMenuForm({ ...menuForm, nama: e.target.value })} />
+            <label style={s.label}>Kategori</label>
+            <select style={s.input} value={menuForm.kategori_id} onChange={e => setMenuForm({ ...menuForm, kategori_id: e.target.value })}>
+              <option value="">-- Pilih Kategori --</option>
+              {kategori.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+            <label style={s.label}>Harga Jual (Rp)</label>
+            <input style={s.input} type="number" placeholder="45000" value={menuForm.harga} onChange={e => setMenuForm({ ...menuForm, harga: e.target.value })} />
+            <label style={s.label}>HPP (Rp)</label>
+            <input style={s.input} type="number" placeholder="15000" value={menuForm.hpp} onChange={e => setMenuForm({ ...menuForm, hpp: e.target.value })} />
+            <label style={s.label}>Stok Awal</label>
+            <input style={s.input} type="number" placeholder="50" value={menuForm.stok} onChange={e => setMenuForm({ ...menuForm, stok: e.target.value })} />
+            <label style={s.label}>Foto (URL)</label>
+            <input style={s.input} placeholder="https://... (opsional)" value={menuForm.foto} onChange={e => setMenuForm({ ...menuForm, foto: e.target.value })} />
+            <button style={s.btn} onClick={handleTambahMenu} disabled={loading}>{loading ? "Menyimpan..." : editMenuId ? "Update" : "Simpan"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL KATEGORI ===== */}
+      {showAddKategori && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKategoriId ? "Edit Kategori" : "Tambah Kategori"}</p>
+            <label style={s.label}>Nama Kategori</label>
+            <input style={s.input} placeholder="cth: Minuman" value={kategoriForm.nama} onChange={e => setKategoriForm({ ...kategoriForm, nama: e.target.value })} />
+            <button style={s.btn} onClick={handleTambahKategori} disabled={loading}>{loading ? "Menyimpan..." : editKategoriId ? "Update" : "Simpan"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL KARYAWAN ===== */}
+      {showAddKaryawan && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKaryawanId ? "Edit Karyawan" : "Tambah Karyawan"}</p>
+            <label style={s.label}>Nama Lengkap</label>
+            <input style={s.input} placeholder="Nama karyawan" value={karyawanForm.nama} onChange={e => setKaryawanForm({ ...karyawanForm, nama: e.target.value })} />
+            {!editKaryawanId && (
+              <>
+                <label style={s.label}>Email</label>
+                <input style={s.input} type="email" placeholder="email@karyawan.com" value={karyawanForm.email} onChange={e => setKaryawanForm({ ...karyawanForm, email: e.target.value })} />
+                <label style={s.label}>Password</label>
+                <input style={s.input} type="password" placeholder="Min. 6 karakter" value={karyawanForm.password} onChange={e => setKaryawanForm({ ...karyawanForm, password: e.target.value })} />
+              </>
+            )}
+            <button style={s.btn} onClick={handleTambahKaryawan} disabled={loading}>{loading ? "Menyimpan..." : editKaryawanId ? "Update" : "Tambah"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL STOK ===== */}
+      {showStok && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Kelola Stok</p>
+            <label style={s.label}>Pilih Menu</label>
+            <select style={s.input} value={stokForm.menu_id} onChange={e => setStokForm({ ...stokForm, menu_id: e.target.value })}>
+              <option value="">-- Pilih Menu --</option>
+              {menu.map(m => <option key={m.id} value={m.id}>{m.nama} (stok: {m.stok || 0})</option>)}
+            </select>
+            <label style={s.label}>Stok Baru</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => setStokForm({ ...stokForm, stok: String(Math.max(0, parseInt(stokForm.stok) - 1 || 0)) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>−</button>
+              <input style={{ ...s.input, textAlign: "center", marginBottom: 0 }} type="number" placeholder="0" value={stokForm.stok} onChange={e => setStokForm({ ...stokForm, stok: e.target.value })} />
+              <button onClick={() => setStokForm({ ...stokForm, stok: String(parseInt(stokForm.stok) + 1 || 1) }) } style={{ ...s.btnSm, width: 40, padding: 8 }}>+</button>
+            </div>
+            <button style={s.btn} onClick={handleUpdateStok} disabled={loading}>{loading ? "Menyimpan..." : "Update Stok"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL GANTI PASSWORD ===== */}
+      {showGantiPassword && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 60 }} onClick={() => { setShowGantiPassword(false); setTargetUserId(null); }}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{isSuperAdmin && targetUserId ? "Ganti Password User" : "Ganti Password"}</p>
+            {isSuperAdmin && targetUserId && <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10 }}>Mengganti password untuk: {allOwners.find(o => o.id === targetUserId)?.nama || "User"}</p>}
+            <label style={s.label}>Password Lama</label>
+            <input style={s.input} type="password" placeholder="Password lama" value={gantiPasswordForm.oldPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, oldPassword: e.target.value })} />
+            <label style={s.label}>Password Baru</label>
+            <input style={s.input} type="password" placeholder="Min. 6 karakter" value={gantiPasswordForm.newPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, newPassword: e.target.value })} />
+            <label style={s.label}>Konfirmasi Password</label>
+            <input style={s.input} type="password" placeholder="Ulangi password baru" value={gantiPasswordForm.confirmPassword} onChange={e => setGantiPasswordForm({ ...gantiPasswordForm, confirmPassword: e.target.value })} />
+            <button style={s.btn} onClick={handleGantiPassword} disabled={loading}>{loading ? "Menyimpan..." : "Ganti Password"}</button>
+            <button onClick={() => { setShowGantiPassword(false); setTargetUserId(null); setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, marginTop: 8 }}>Batal</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL ABSENSI ===== */}
+      {showAbsensi && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAbsensi(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Absensi Pegawai</p>
+            <label style={s.label}>Pegawai</label>
+            <select style={s.input} value={absensiForm.pegawai_id} onChange={e => setAbsensiForm({ ...absensiForm, pegawai_id: e.target.value })}>
+              <option value="">-- Pilih Pegawai --</option>
+              {karyawan.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+            <button style={s.btn} onClick={handleAbsenMasuk} disabled={loading}>{loading ? "Menyimpan..." : "Absen Masuk"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL KASIR ===== */}
+      {showKasir && !isSuperAdmin && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
+          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>🛒 Keranjang Kasir</p>
+            {keranjang.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Keranjang kosong.</p>}
+            {keranjang.map((item, idx) => (
+              <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{item.nama}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{fmt(item.harga)} x {item.qty}</p></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: theme.gold }}>{fmt(item.harga * item.qty)}</p>
+                  <button onClick={() => kurangiDariKeranjang(item.id)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 16 }}>➖</button>
+                  <button onClick={() => hapusDariKeranjang(item.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
+                </div>
+              </div>
+            ))}
+            {keranjang.length > 0 && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `2px solid ${theme.cardBorder}` }}><p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Subtotal</p><p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang)}</p></div>
+                {pajakEnabled && <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}><span>Pajak {persentasePajak}%</span><span>{fmt(Math.round(totalKeranjang * persentasePajak / 100))}</span></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${theme.cardBorder}` }}><p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Total</p><p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>{fmt(totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))}</p></div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  {["tunai", "piutang"].map(p => <button key={p} onClick={() => setPembayaran(p)} style={{ flex: 1, padding: 12, borderRadius: 12, border: "none", background: pembayaran === p ? theme.gold : theme.input, color: pembayaran === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontWeight: pembayaran === p ? 700 : 400, cursor: "pointer" }}>{p === "tunai" ? "💰 Tunai" : "📝 Piutang"}</button>)}
+                </div>
+                {pembayaran === "tunai" && <div style={{ display: "flex", gap: 8, marginBottom: 10 }}><input style={{ ...s.input, flex: 1 }} type="number" placeholder="Jumlah bayar" value={bayarAmount} onChange={e => setBayarAmount(e.target.value)} /><span style={{ display: "flex", alignItems: "center", color: theme.textMuted }}>Kembali: {bayarAmount ? fmt(parseInt(bayarAmount) - (totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0))) : fmt(0)}</span></div>}
+                <button style={s.btn} onClick={handleCheckout} disabled={loading}>{loading ? "Memproses..." : "✅ Bayar"}</button>
+              </>
+            )}
+            <button onClick={() => setShowKasir(false)} style={{ ...s.btn, background: theme.card, border: `1px solid ${theme.cardBorder}`, color: theme.text, marginTop: 8 }}>Tutup</button>
+          </div>
+        </div>
+      )}
 
       {/* ===== BOTTOM NAV ===== */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", maxWidth: "100%", background: theme.headerBg, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderTop: `1px solid ${theme.cardBorder}`, display: "flex", padding: "8px 0 20px", transition: "all 0.3s ease", zIndex: 10 }}>
