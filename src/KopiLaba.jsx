@@ -578,7 +578,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-      // Untuk user biasa, kita skip karena tidak ada supabase client
       setSuccess("Password berhasil diubah!");
       setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setShowGantiPassword(false);
@@ -729,24 +728,25 @@ export default function KopiLaba() {
       }
       const grandTotal = subtotal + pajak;
 
-      const itemsDetail = pesananItems.map(p => ({
+      // Simpan detail item sebagai JSON string di kolom 'item'
+      const itemDetail = pesananItems.map(p => ({
         nama: p.nama,
         qty: p.qty,
         harga: p.harga,
         total: p.total
       }));
+      const itemStr = JSON.stringify(itemDetail);
 
       const payload = {
         kafe_id: kafeId,
-        item: itemNames,
+        item: itemStr, // JSON string
         qty: totalQty,
         total: grandTotal,
         tipe: addType,
         status: "lunas",
         subtotal: subtotal,
         pajak: pajak,
-        pajak_enabled: pajakEnabled && addType === "masuk",
-        items: itemsDetail
+        pajak_enabled: pajakEnabled && addType === "masuk"
       };
       if (editTransaksiId) {
         await api(`/rest/v1/transaksi?id=eq.${editTransaksiId}`, "PATCH", payload, token);
@@ -786,12 +786,19 @@ export default function KopiLaba() {
     }
     setEditTransaksiId(t.id);
     setAddType(t.tipe);
-    if (t.items && Array.isArray(t.items)) {
-      setPesananItems(t.items.map(item => ({
-        ...item,
-        menu_id: null
-      })));
-    } else {
+    // Coba parse JSON dari kolom 'item'
+    try {
+      const items = JSON.parse(t.item);
+      if (Array.isArray(items)) {
+        setPesananItems(items.map(item => ({
+          ...item,
+          menu_id: null
+        })));
+      } else {
+        setPesananItems([]);
+      }
+    } catch (e) {
+      // Jika bukan JSON, kosongkan
       setPesananItems([]);
     }
     setShowAdd(true);
@@ -1222,7 +1229,6 @@ export default function KopiLaba() {
   };
 
   const tambahKeKeranjang = (item, qty = 1) => {
-    // Tetap boleh menambah meskipun stok 0, hanya beri peringatan
     if (item.stok !== undefined && item.stok <= 0) {
       setError(`⚠️ Stok ${item.nama} sedang 0, tetapi tetap bisa dipesan.`);
     }
@@ -1267,7 +1273,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-      const itemNames = keranjang.map(item => `${item.nama} x${item.qty}`).join(", ");
       const subtotal = totalKeranjang;
       let pajak = 0;
       if (pajakEnabled) {
@@ -1281,18 +1286,18 @@ export default function KopiLaba() {
         harga: item.harga,
         total: item.harga * item.qty
       }));
+      const itemStr = JSON.stringify(itemsDetail);
 
       await api("/rest/v1/transaksi", "POST", {
         kafe_id: kafeId,
-        item: itemNames,
+        item: itemStr, // JSON string
         qty: keranjang.reduce((sum, item) => sum + item.qty, 0),
         total: grandTotal,
         tipe: "masuk",
         status: pembayaran === "tunai" ? "lunas" : "belum_lunas",
         subtotal: subtotal,
         pajak: pajak,
-        pajak_enabled: pajakEnabled,
-        items: itemsDetail
+        pajak_enabled: pajakEnabled
       }, token);
 
       for (const item of keranjang) {
@@ -1373,36 +1378,64 @@ export default function KopiLaba() {
   const laporanStokData = menu.map(m => ({...m, terjual: 0, sisa: m.stok || 0}));
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        const found = laporanStokData.find(m => m.nama === nama);
-        if (found) {
-          found.terjual = (found.terjual || 0) + qty;
-          found.sisa = (found.stok || 0) - found.terjual;
+      try {
+        const items = JSON.parse(t.item);
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            const found = laporanStokData.find(m => m.nama === item.nama);
+            if (found) {
+              found.terjual = (found.terjual || 0) + item.qty;
+              found.sisa = (found.stok || 0) - found.terjual;
+            }
+          });
         }
-      });
+      } catch (e) {
+        // fallback: parsing string biasa
+        const parts = t.item.split(", ");
+        parts.forEach(itemStr => {
+          const [nama, qtyStr] = itemStr.split(" x");
+          const qty = parseInt(qtyStr) || 1;
+          const found = laporanStokData.find(m => m.nama === nama);
+          if (found) {
+            found.terjual = (found.terjual || 0) + qty;
+            found.sisa = (found.stok || 0) - found.terjual;
+          }
+        });
+      }
     }
   });
 
   const kategoriPenjualan = {};
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        const menuItem = menu.find(m => m.nama === nama);
-        if (menuItem) {
-          const kat = menuItem.kategori_id || "umum";
-          const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
-          if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
-          kategoriPenjualan[katNama] += qty;
+      try {
+        const items = JSON.parse(t.item);
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            const menuItem = menu.find(m => m.nama === item.nama);
+            if (menuItem) {
+              const kat = menuItem.kategori_id || "umum";
+              const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
+              if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
+              kategoriPenjualan[katNama] += item.qty;
+            }
+          });
         }
-      });
+      } catch (e) {
+        // fallback
+        const parts = t.item.split(", ");
+        parts.forEach(itemStr => {
+          const [nama, qtyStr] = itemStr.split(" x");
+          const qty = parseInt(qtyStr) || 1;
+          const menuItem = menu.find(m => m.nama === nama);
+          if (menuItem) {
+            const kat = menuItem.kategori_id || "umum";
+            const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
+            if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
+            kategoriPenjualan[katNama] += qty;
+          }
+        });
+      }
     }
   });
   const sortedKategori = Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]);
@@ -1418,22 +1451,38 @@ export default function KopiLaba() {
   const produkTerjual = {};
   filtered.forEach(t => {
     if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        if (!produkTerjual[nama]) produkTerjual[nama] = 0;
-        produkTerjual[nama] += qty;
-      });
+      try {
+        const items = JSON.parse(t.item);
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            if (!produkTerjual[item.nama]) produkTerjual[item.nama] = 0;
+            produkTerjual[item.nama] += item.qty;
+          });
+        }
+      } catch (e) {
+        const parts = t.item.split(", ");
+        parts.forEach(itemStr => {
+          const [nama, qtyStr] = itemStr.split(" x");
+          const qty = parseInt(qtyStr) || 1;
+          if (!produkTerjual[nama]) produkTerjual[nama] = 0;
+          produkTerjual[nama] += qty;
+        });
+      }
     }
   });
 
   const exportExcel = () => {
     const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
-    const rows = filtered.map(t =>
-      `${new Date(t.created_at).toLocaleDateString("id-ID")},${t.item},${t.qty},${t.total},${t.tipe},${t.status || "lunas"}`
-    ).join("\n");
+    const rows = filtered.map(t => {
+      let itemDisplay = t.item;
+      try {
+        const items = JSON.parse(t.item);
+        if (Array.isArray(items)) {
+          itemDisplay = items.map(i => `${i.nama} x${i.qty}`).join(", ");
+        }
+      } catch (e) {}
+      return `${new Date(t.created_at).toLocaleDateString("id-ID")},${itemDisplay},${t.qty},${t.total},${t.tipe},${t.status || "lunas"}`;
+    }).join("\n");
     const csv = header + rows;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -1983,15 +2032,24 @@ export default function KopiLaba() {
             <div style={s.card}>
               <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600 }}>Transaksi Terbaru</p>
               {transaksi.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada transaksi.</p>}
-              {transaksi.slice(0, 5).map(t => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
-                    <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
+              {transaksi.slice(0, 5).map(t => {
+                let display = t.item;
+                try {
+                  const items = JSON.parse(t.item);
+                  if (Array.isArray(items)) {
+                    display = items.map(i => `${i.nama} x${i.qty}`).join(", ");
+                  }
+                } catch (e) {}
+                return (
+                  <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
+                      <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{display}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
                   </div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={s.card}>
@@ -2026,24 +2084,33 @@ export default function KopiLaba() {
             </div>
             <div style={s.card}>
               {transaksi.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada transaksi.</p>}
-              {transaksi.map((t, i) => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 12, marginBottom: 12, borderBottom: i < transaksi.length - 1 ? `1px solid ${theme.cardBorder}` : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 12, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger, fontSize: 16 }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
-                    <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
+              {transaksi.map((t, i) => {
+                let display = t.item;
+                try {
+                  const items = JSON.parse(t.item);
+                  if (Array.isArray(items)) {
+                    display = items.map(i => `${i.nama} x${i.qty}`).join(", ");
+                  }
+                } catch (e) {}
+                return (
+                  <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 12, marginBottom: 12, borderBottom: i < transaksi.length - 1 ? `1px solid ${theme.cardBorder}` : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 12, background: t.tipe === "masuk" ? (darkMode ? "#1A2A1A" : "#E8F5E9") : (darkMode ? "#2A1A1A" : "#FFEBEE"), display: "flex", alignItems: "center", justifyContent: "center", color: t.tipe === "masuk" ? theme.success : theme.danger, fontSize: 16 }}>{t.tipe === "masuk" ? "↑" : "↓"}</div>
+                      <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{display}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>Qty {t.qty} · {new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
+                      {isPemilik && (
+                        <>
+                          <button onClick={() => handleEditTransaksi(t)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 14 }}>✏️</button>
+                          <button onClick={() => handleHapusTransaksi(t.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
+                        </>
+                      )}
+                      <button onClick={() => { setSelectedTransaksi(t); setTab("struk"); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, cursor: "pointer" }}>🧾</button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
-                    {isPemilik && (
-                      <>
-                        <button onClick={() => handleEditTransaksi(t)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 14 }}>✏️</button>
-                        <button onClick={() => handleHapusTransaksi(t.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 14 }}>🗑️</button>
-                      </>
-                    )}
-                    <button onClick={() => { setSelectedTransaksi(t); setTab("struk"); }} style={{ background: theme.gold, border: "none", borderRadius: 6, padding: "4px 8px", color: "#fff", fontSize: 10, cursor: "pointer" }}>🧾</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
@@ -2408,12 +2475,21 @@ export default function KopiLaba() {
             <div>
               <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Detail Transaksi</p>
               {filtered.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada transaksi.</p>}
-              {filtered.slice(0, 10).map(t => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                  <div><p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{t.item}</p><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>{new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
-                </div>
-              ))}
+              {filtered.slice(0, 10).map(t => {
+                let display = t.item;
+                try {
+                  const items = JSON.parse(t.item);
+                  if (Array.isArray(items)) {
+                    display = items.map(i => `${i.nama} x${i.qty}`).join(", ");
+                  }
+                } catch (e) {}
+                return (
+                  <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <div><p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{display}</p><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>{new Date(t.created_at).toLocaleDateString("id-ID")} · {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}</p></div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.tipe === "masuk" ? theme.success : theme.danger }}>{t.tipe === "masuk" ? "+" : "-"}{fmt(t.total)}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -2436,15 +2512,20 @@ export default function KopiLaba() {
 
                 {/* Daftar item dengan harga per item */}
                 <div>
-                  {selectedTransaksi.items && Array.isArray(selectedTransaksi.items) ? (
-                    selectedTransaksi.items.map((item, idx) => (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
-                        <span>{item.nama} x{item.qty}</span>
-                        <span>{fmt(item.total)}</span>
-                      </div>
-                    ))
-                  ) : (
-                    selectedTransaksi.item?.split(", ").map((item, idx) => {
+                  {(() => {
+                    try {
+                      const items = JSON.parse(selectedTransaksi.item);
+                      if (Array.isArray(items)) {
+                        return items.map((item, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
+                            <span>{item.nama} x{item.qty}</span>
+                            <span>{fmt(item.total)}</span>
+                          </div>
+                        ));
+                      }
+                    } catch (e) {}
+                    // fallback: parsing string biasa
+                    return selectedTransaksi.item?.split(", ").map((item, idx) => {
                       const [nama, qtyStr] = item.split(" x");
                       const qty = parseInt(qtyStr) || 1;
                       return (
@@ -2452,8 +2533,8 @@ export default function KopiLaba() {
                           <span>{nama} x{qty}</span>
                         </div>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </div>
 
                 <div style={{ borderTop: "1px dashed #888", margin: "8px 0" }}></div>
