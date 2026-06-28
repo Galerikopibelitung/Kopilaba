@@ -184,6 +184,11 @@ export default function KopiLaba() {
   const fileInputRef = useRef(null);
 
   // ------------------------------------------------------------
+  // STATE FILTER KATEGORI DI MENU
+  // ------------------------------------------------------------
+  const [selectedKategori, setSelectedKategori] = useState("");
+
+  // ------------------------------------------------------------
   // STATE MODAL TRANSAKSI
   // ------------------------------------------------------------
   const [showAdd, setShowAdd] = useState(false);
@@ -198,7 +203,7 @@ export default function KopiLaba() {
   // STATE MODAL MENU
   // ------------------------------------------------------------
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
+  const [menuForm, setMenuForm] = useState({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" });
   const [editMenuId, setEditMenuId] = useState(null);
 
   // ------------------------------------------------------------
@@ -565,9 +570,6 @@ export default function KopiLaba() {
         return;
       }
 
-      const formData = new FormData();
-      formData.append("file", file);
-
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/qris/${kafeId}/${file.name}`, {
         method: "POST",
         headers: {
@@ -735,7 +737,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // CRUD MENU
+  // CRUD MENU (dengan qty)
   // ============================================================
   const handleTambahMenu = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
@@ -755,12 +757,15 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
+      const stokValue = parseInt(menuForm.stok) || 0;
+      const qtyValue = parseInt(menuForm.qty) || 0;
+
       const payload = {
         kafe_id: kafeId,
         nama: menuForm.nama,
         harga: parseInt(menuForm.harga),
         hpp: parseInt(menuForm.hpp),
-        stok: parseInt(menuForm.stok) || 0,
+        stok: stokValue + qtyValue,
         kategori_id: menuForm.kategori_id || null,
         foto: menuForm.foto || ""
       };
@@ -772,7 +777,7 @@ export default function KopiLaba() {
         await api("/rest/v1/menu", "POST", payload, token);
         setSuccess("Menu ditambahkan!");
       }
-      setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" });
+      setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" });
       setShowAddMenu(false);
       await loadMenu(token, kafeId);
     } catch (err) {
@@ -795,7 +800,8 @@ export default function KopiLaba() {
       hpp: String(m.hpp),
       stok: String(m.stok || 0),
       kategori_id: m.kategori_id || "",
-      foto: m.foto || ""
+      foto: m.foto || "",
+      qty: ""
     });
     setShowAddMenu(true);
   };
@@ -1408,7 +1414,7 @@ export default function KopiLaba() {
       answer = "👑 Super Admin: admin@kopilaba.com / Desember12*";
     }
     else if (q.includes("cuaca") || q.includes("ekonomi") || q.includes("politik") || q.includes("gempa") || q.includes("dunia") || q.includes("nasional")) {
-      answer = "🌤️ Saya tidak memiliki akses ke data real-time. Saya hanya bisa menjawab pertanyaan seputar data di aplikasi KopiLaba (transaksi, menu, stok, karyawan, absensi, dll).\n\n💡 Coba tanyakan: total penjualan, laba, stok menipis, produk terlaris, absensi hari ini, dll.";
+      answer = "🌤️ Saya tidak memiliki akses ke data real-time. Saya hanya bisa menjawab pertanyaan seputar data di aplikasi KopiLaba.\n\n💡 Coba tanyakan: total penjualan, laba, stok menipis, produk terlaris, absensi hari ini, dll.";
     }
     else if (q.includes("apa itu") || q.includes("siapa itu") || q.includes("bagaimana cara") || q.includes("jelaskan")) {
       if (q.includes("kopi")) {
@@ -1569,7 +1575,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // RENDER LOGIN
+  // RENDER LOGIN & REGISTER (sama seperti sebelumnya)
   // ============================================================
   if (screen === "login") return (
     <div style={{
@@ -1617,9 +1623,6 @@ export default function KopiLaba() {
     </div>
   );
 
-  // ============================================================
-  // RENDER REGISTER
-  // ============================================================
   if (screen === "register") return (
     <div style={{ ...s.wrap, padding: "20px" }}>
       <div style={{ width: "100%", maxWidth: 400, margin: "0 auto", padding: "24px", background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: 32, border: `1px solid ${theme.cardBorder}`, boxShadow: theme.shadow }}>
@@ -1677,6 +1680,9 @@ export default function KopiLaba() {
   const totalMasukAll = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
   const totalKeluarAll = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
   const labaAll = totalMasukAll - totalKeluarAll;
+
+  // Filter menu berdasarkan kategori
+  const filteredMenu = selectedKategori ? menu.filter(m => m.kategori_id === selectedKategori) : menu;
 
   return (
     <div style={s.wrap}>
@@ -1931,7 +1937,7 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* MENU */}
+        {/* MENU - DENGAN FILTER KATEGORI */}
         {tab === "menu" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -1940,28 +1946,51 @@ export default function KopiLaba() {
                 {isPemilik && (
                   <>
                     <button style={s.btnSm} onClick={() => { setEditKategoriId(null); setKategoriForm({ nama: "" }); setShowAddKategori(true); }}>🏷️</button>
-                    <button style={s.btnSm} onClick={() => { setEditMenuId(null); setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "" }); setShowAddMenu(true); }}>+ Tambah</button>
+                    <button style={s.btnSm} onClick={() => { setEditMenuId(null); setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" }); setShowAddMenu(true); }}>+ Tambah</button>
                   </>
                 )}
               </div>
             </div>
 
+            {/* Filter Kategori */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              <button
+                onClick={() => setSelectedKategori("")}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 20,
+                  border: "none",
+                  background: selectedKategori === "" ? theme.gold : theme.input,
+                  color: selectedKategori === "" ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                  fontWeight: selectedKategori === "" ? 700 : 400,
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                Semua
+              </button>
               {kategori.map(k => (
-                <div key={k.id} style={{ background: theme.input, borderRadius: 20, padding: "4px 14px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 13, color: theme.text }}>{k.nama}</span>
-                  {isPemilik && (
-                    <>
-                      <button onClick={() => handleEditKategori(k)} style={{ background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer", fontSize: 12 }}>✏️</button>
-                      <button onClick={() => handleHapusKategori(k.id)} style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", fontSize: 12 }}>🗑️</button>
-                    </>
-                  )}
-                </div>
+                <button
+                  key={k.id}
+                  onClick={() => setSelectedKategori(selectedKategori === k.id ? "" : k.id)}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: 20,
+                    border: "none",
+                    background: selectedKategori === k.id ? theme.gold : theme.input,
+                    color: selectedKategori === k.id ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                    fontWeight: selectedKategori === k.id ? 700 : 400,
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  {k.nama}
+                </button>
               ))}
             </div>
 
-            {menu.length === 0 && <div style={s.card}><p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada menu.</p></div>}
-            {menu.map(m => {
+            {filteredMenu.length === 0 && <div style={s.card}><p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada menu di kategori ini.</p></div>}
+            {filteredMenu.map(m => {
               const margin = m.harga ? (((m.harga - m.hpp) / m.harga) * 100).toFixed(1) : 0;
               const stok = m.stok || 0;
               const kategoriNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
@@ -1969,7 +1998,10 @@ export default function KopiLaba() {
               return (
                 <div key={m.id} style={s.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div><p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{icon} {m.nama}</p><p style={{ margin: "2px 0 0", fontSize: 11, color: theme.textMuted }}>📦 Stok: {stok} {stok < 5 && "⚠️"} · {kategoriNama}</p></div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{icon} {m.nama}</p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: theme.textMuted }}>📦 Stok: {stok} {stok < 5 && "⚠️"} · {kategoriNama}</p>
+                    </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: theme.gold }}>{fmt(m.harga)}</p>
                       {isPemilik && (
@@ -1981,8 +2013,14 @@ export default function KopiLaba() {
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                    <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>HPP</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>{fmt(m.hpp)}</p></div>
-                    <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}><p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba/cup</p><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>{fmt(m.harga - m.hpp)}</p></div>
+                    <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}>
+                      <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>HPP</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.danger }}>{fmt(m.hpp)}</p>
+                    </div>
+                    <div style={{ flex: 1, background: theme.input, borderRadius: 10, padding: "8px 12px" }}>
+                      <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Laba/cup</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>{fmt(m.harga - m.hpp)}</p>
+                    </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, height: 6, background: theme.input, borderRadius: 3, overflow: "hidden" }}>
@@ -2312,7 +2350,7 @@ export default function KopiLaba() {
         )}
       </div>
 
-      {/* MODAL-MODAL */}
+      {/* ===== MODAL-MODAL ===== */}
       {/* Modal Transaksi */}
       {showAdd && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
@@ -2390,7 +2428,7 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* Modal Menu */}
+      {/* Modal Menu - dengan input Jumlah */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
           <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
@@ -2408,6 +2446,9 @@ export default function KopiLaba() {
             <input style={s.input} type="number" placeholder="15000" value={menuForm.hpp} onChange={e => setMenuForm({ ...menuForm, hpp: e.target.value })} />
             <label style={s.label}>Stok Awal</label>
             <input style={s.input} type="number" placeholder="50" value={menuForm.stok} onChange={e => setMenuForm({ ...menuForm, stok: e.target.value })} />
+            <label style={s.label}>Jumlah Tambahan</label>
+            <input style={s.input} type="number" placeholder="0" value={menuForm.qty} onChange={e => setMenuForm({ ...menuForm, qty: e.target.value })} />
+            <p style={{ fontSize: 11, color: theme.textMuted, marginTop: -6, marginBottom: 10 }}>Jumlah ini akan ditambahkan ke stok awal</p>
             <label style={s.label}>Foto (URL)</label>
             <input style={s.input} placeholder="https://... (opsional)" value={menuForm.foto} onChange={e => setMenuForm({ ...menuForm, foto: e.target.value })} />
             <button style={s.btn} onClick={handleTambahMenu} disabled={loading}>{loading ? "Menyimpan..." : editMenuId ? "Update" : "Simpan"}</button>
