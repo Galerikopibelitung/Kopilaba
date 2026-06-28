@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 // ============================================================
 // KONFIGURASI
@@ -270,6 +270,11 @@ export default function KopiLaba() {
   const [adminFilterOwner, setAdminFilterOwner] = useState("");
 
   // ------------------------------------------------------------
+  // STATE FILTER PERIODE DASHBOARD (FITUR BARU)
+  // ------------------------------------------------------------
+  const [filterPeriode, setFilterPeriode] = useState("hari"); // 'hari', 'minggu', 'bulan', 'tahun'
+
+  // ------------------------------------------------------------
   // EFFECTS
   // ------------------------------------------------------------
   useEffect(() => {
@@ -296,7 +301,7 @@ export default function KopiLaba() {
   // ============================================================
   // LOAD DATA
   // ============================================================
-  const loadData = async (tok, prof) => {
+  const loadData = useCallback(async (tok, prof) => {
     try {
       if (prof?.role === "super_admin") {
         await loadAllData(tok);
@@ -327,9 +332,9 @@ export default function KopiLaba() {
       setNetworkError(true);
       setError("Gagal memuat data. Periksa koneksi.");
     }
-  };
+  }, []);
 
-  const loadAllData = async (tok) => {
+  const loadAllData = useCallback(async (tok) => {
     try {
       const owners = await api("/rest/v1/profiles?role=eq.pemilik", "GET", null, tok);
       setAllOwners(Array.isArray(owners) ? owners : []);
@@ -346,42 +351,42 @@ export default function KopiLaba() {
       console.error("Load all data error:", err);
       setError("Gagal memuat data super admin.");
     }
-  };
+  }, []);
 
-  const loadTransaksi = async (tok, kafeId) => {
+  const loadTransaksi = useCallback(async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/transaksi?kafe_id=eq.${kafeId}&order=created_at.desc&limit=500`, "GET", null, tok);
       setTransaksi(Array.isArray(data) ? data : []);
     } catch (err) { setTransaksi([]); }
-  };
+  }, []);
 
-  const loadMenu = async (tok, kafeId) => {
+  const loadMenu = useCallback(async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/menu?kafe_id=eq.${kafeId}`, "GET", null, tok);
       setMenu(Array.isArray(data) ? data : []);
     } catch (err) { setMenu([]); }
-  };
+  }, []);
 
-  const loadKategori = async (tok) => {
+  const loadKategori = useCallback(async (tok) => {
     try {
       const data = await api("/rest/v1/kategori?order=nama.asc", "GET", null, tok);
       setKategori(Array.isArray(data) ? data : []);
     } catch (err) { setKategori([]); }
-  };
+  }, []);
 
-  const loadKaryawan = async (tok, kafeId) => {
+  const loadKaryawan = useCallback(async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/profiles?kafe_id=eq.${kafeId}&role=eq.barista`, "GET", null, tok);
       setKaryawan(Array.isArray(data) ? data : []);
     } catch (err) { setKaryawan([]); }
-  };
+  }, []);
 
-  const loadAbsensi = async (tok, kafeId) => {
+  const loadAbsensi = useCallback(async (tok, kafeId) => {
     try {
       const data = await api(`/rest/v1/absensi?kafe_id=eq.${kafeId}&order=tanggal.desc`, "GET", null, tok);
       setAbsensi(Array.isArray(data) ? data : []);
     } catch (err) { setAbsensi([]); }
-  };
+  }, []);
 
   // ============================================================
   // AUTH
@@ -503,7 +508,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // GANTI PASSWORD
+  // GANTI PASSWORD (sederhana)
   // ============================================================
   const handleGantiPassword = async () => {
     const { oldPassword, newPassword, confirmPassword } = gantiPasswordForm;
@@ -536,8 +541,6 @@ export default function KopiLaba() {
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw new Error(error.message);
       setSuccess("Password berhasil diubah!");
       setGantiPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setShowGantiPassword(false);
@@ -737,7 +740,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // CRUD MENU (dengan qty)
+  // CRUD MENU
   // ============================================================
   const handleTambahMenu = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
@@ -863,12 +866,16 @@ export default function KopiLaba() {
   };
 
   const handleHapusKategori = async (id) => {
-    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") return;
+    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+      setError("Hanya pemilik atau admin yang bisa menghapus kategori.");
+      return;
+    }
     if (!confirm("Yakin hapus kategori ini?")) return;
     try {
       await api(`/rest/v1/kategori?id=eq.${id}`, "DELETE", null, token);
       setSuccess("Kategori dihapus!");
       await loadKategori(token);
+      if (selectedKategori === id) setSelectedKategori("");
     } catch (err) {
       setError("Gagal hapus kategori.");
     }
@@ -1114,20 +1121,22 @@ export default function KopiLaba() {
     }
   };
 
-  const filteredAbsensi = absensi.filter(a => {
-    let match = true;
-    if (filterNama) {
-      const pegawai = karyawan.find(k => k.id === a.pegawai_id);
-      match = match && (pegawai?.nama || "").toLowerCase().includes(filterNama.toLowerCase());
-    }
-    if (filterTglMulaiAbsen) {
-      match = match && new Date(a.tanggal) >= new Date(filterTglMulaiAbsen);
-    }
-    if (filterTglSelesaiAbsen) {
-      match = match && new Date(a.tanggal) <= new Date(filterTglSelesaiAbsen);
-    }
-    return match;
-  });
+  const filteredAbsensi = useMemo(() => {
+    return absensi.filter(a => {
+      let match = true;
+      if (filterNama) {
+        const pegawai = karyawan.find(k => k.id === a.pegawai_id);
+        match = match && (pegawai?.nama || "").toLowerCase().includes(filterNama.toLowerCase());
+      }
+      if (filterTglMulaiAbsen) {
+        match = match && new Date(a.tanggal) >= new Date(filterTglMulaiAbsen);
+      }
+      if (filterTglSelesaiAbsen) {
+        match = match && new Date(a.tanggal) <= new Date(filterTglSelesaiAbsen);
+      }
+      return match;
+    });
+  }, [absensi, filterNama, filterTglMulaiAbsen, filterTglSelesaiAbsen, karyawan]);
 
   // ============================================================
   // KASIR
@@ -1165,7 +1174,9 @@ export default function KopiLaba() {
     setKeranjang(prev => prev.filter(p => p.id !== id));
   };
 
-  const totalKeranjang = keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+  const totalKeranjang = useMemo(() => {
+    return keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+  }, [keranjang]);
 
   const handleCheckout = async () => {
     if (keranjang.length === 0) {
@@ -1223,7 +1234,7 @@ export default function KopiLaba() {
   // ============================================================
   // LAPORAN + GRAFIK + EXPORT
   // ============================================================
-  const getFilteredTransaksi = () => {
+  const getFilteredTransaksi = useCallback(() => {
     if (profile?.role === "barista") {
       const today = new Date().toISOString().slice(0,10);
       return transaksi.filter(t => new Date(t.created_at).toISOString().slice(0,10) === today);
@@ -1245,85 +1256,153 @@ export default function KopiLaba() {
       filtered = filtered.filter(t => t.status === "belum_lunas");
     }
     return filtered;
-  };
+  }, [transaksi, filterTglMulai, filterTglSelesai, filterStatus, profile]);
 
-  const filtered = getFilteredTransaksi();
-  const totalMasuk = filtered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-  const totalKeluar = filtered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
-  const laba = totalMasuk - totalKeluar;
-  const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
+  const filtered = useMemo(() => getFilteredTransaksi(), [getFilteredTransaksi]);
 
-  const chartData = {};
-  filtered.forEach(t => {
-    const date = new Date(t.created_at).toLocaleDateString("id-ID");
-    if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
-    if (t.tipe === "masuk") chartData[date].masuk += t.total;
-    else chartData[date].keluar += t.total;
-  });
-  const chartLabels = Object.keys(chartData).slice(-7);
-  const chartMasuk = chartLabels.map(d => chartData[d].masuk);
-  const chartKeluar = chartLabels.map(d => chartData[d].keluar);
-  const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
+  const totalMasuk = useMemo(() => {
+    return filtered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
+  }, [filtered]);
 
-  const laporanStokData = menu.map(m => ({...m, terjual: 0, sisa: m.stok || 0}));
-  filtered.forEach(t => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        const found = laporanStokData.find(m => m.nama === nama);
-        if (found) {
-          found.terjual = (found.terjual || 0) + qty;
-          found.sisa = (found.stok || 0) - found.terjual;
-        }
-      });
+  const totalKeluar = useMemo(() => {
+    return filtered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+  }, [filtered]);
+
+  const laba = useMemo(() => totalMasuk - totalKeluar, [totalMasuk, totalKeluar]);
+
+  const totalStok = useMemo(() => {
+    return menu.reduce((sum, item) => sum + (item.stok || 0), 0);
+  }, [menu]);
+
+  // --- DATA DASHBOARD DENGAN FILTER PERIODE ---
+  const getDashboardData = useCallback(() => {
+    if (profile?.role === "barista") {
+      const today = new Date().toISOString().slice(0,10);
+      const filtered = transaksi.filter(t => new Date(t.created_at).toISOString().slice(0,10) === today);
+      const masuk = filtered.filter(t => t.tipe === "masuk").reduce((a,b) => a + b.total, 0);
+      const keluar = filtered.filter(t => t.tipe === "keluar").reduce((a,b) => a + b.total, 0);
+      return { masuk, keluar, laba: masuk - keluar, count: filtered.length };
     }
-  });
 
-  const kategoriPenjualan = {};
-  filtered.forEach(t => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        const menuItem = menu.find(m => m.nama === nama);
-        if (menuItem) {
-          const kat = menuItem.kategori_id || "umum";
-          const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
-          if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
-          kategoriPenjualan[katNama] += qty;
-        }
-      });
+    const now = new Date();
+    let start = new Date();
+    switch (filterPeriode) {
+      case 'hari':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'minggu':
+        start.setDate(now.getDate() - 7);
+        break;
+      case 'bulan':
+        start.setMonth(now.getMonth() - 1);
+        break;
+      case 'tahun':
+        start.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        start = new Date(0);
     }
-  });
-  const sortedKategori = Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]);
-  const top5Kategori = sortedKategori.slice(0, 5);
-  const bottom5Kategori = sortedKategori.slice(-5).reverse();
+    const filtered = transaksi.filter(t => new Date(t.created_at) >= start);
+    const masuk = filtered.filter(t => t.tipe === "masuk").reduce((a,b) => a + b.total, 0);
+    const keluar = filtered.filter(t => t.tipe === "keluar").reduce((a,b) => a + b.total, 0);
+    return { masuk, keluar, laba: masuk - keluar, count: filtered.length };
+  }, [transaksi, filterPeriode, profile]);
 
-  const produkPerKategori = {};
-  menu.forEach(m => {
-    const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
-    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
-    produkPerKategori[katNama].push(m);
-  });
-  const produkTerjual = {};
-  filtered.forEach(t => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = t.item.split(", ");
-      items.forEach(itemStr => {
-        const parts = itemStr.split(" x");
-        const nama = parts[0]?.trim();
-        const qty = parseInt(parts[1]) || 1;
-        if (!produkTerjual[nama]) produkTerjual[nama] = 0;
-        produkTerjual[nama] += qty;
-      });
-    }
-  });
+  const dashboardData = useMemo(() => getDashboardData(), [getDashboardData]);
 
+  // Chart data
+  const chartData = useMemo(() => {
+    const data = {};
+    filtered.forEach(t => {
+      const date = new Date(t.created_at).toLocaleDateString("id-ID");
+      if (!data[date]) data[date] = { masuk: 0, keluar: 0 };
+      if (t.tipe === "masuk") data[date].masuk += t.total;
+      else data[date].keluar += t.total;
+    });
+    return data;
+  }, [filtered]);
+
+  const chartLabels = useMemo(() => Object.keys(chartData).slice(-7), [chartData]);
+  const chartMasuk = useMemo(() => chartLabels.map(d => chartData[d].masuk), [chartData, chartLabels]);
+  const chartKeluar = useMemo(() => chartLabels.map(d => chartData[d].keluar), [chartData, chartLabels]);
+  const maxChart = useMemo(() => Math.max(1, ...chartMasuk, ...chartKeluar), [chartMasuk, chartKeluar]);
+
+  // Laporan stok
+  const laporanStokData = useMemo(() => {
+    const data = menu.map(m => ({...m, terjual: 0, sisa: m.stok || 0}));
+    filtered.forEach(t => {
+      if (t.tipe === "masuk" && t.item) {
+        const items = t.item.split(", ");
+        items.forEach(itemStr => {
+          const parts = itemStr.split(" x");
+          const nama = parts[0]?.trim();
+          const qty = parseInt(parts[1]) || 1;
+          const found = data.find(m => m.nama === nama);
+          if (found) {
+            found.terjual = (found.terjual || 0) + qty;
+            found.sisa = (found.stok || 0) - found.terjual;
+          }
+        });
+      }
+    });
+    return data;
+  }, [menu, filtered]);
+
+  // Kategori penjualan
+  const kategoriPenjualan = useMemo(() => {
+    const data = {};
+    filtered.forEach(t => {
+      if (t.tipe === "masuk" && t.item) {
+        const items = t.item.split(", ");
+        items.forEach(itemStr => {
+          const parts = itemStr.split(" x");
+          const nama = parts[0]?.trim();
+          const qty = parseInt(parts[1]) || 1;
+          const menuItem = menu.find(m => m.nama === nama);
+          if (menuItem) {
+            const kat = menuItem.kategori_id || "umum";
+            const katNama = kategori.find(k => k.id === kat)?.nama || "Umum";
+            if (!data[katNama]) data[katNama] = 0;
+            data[katNama] += qty;
+          }
+        });
+      }
+    });
+    return data;
+  }, [filtered, menu, kategori]);
+
+  const sortedKategori = useMemo(() => Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]), [kategoriPenjualan]);
+  const top5Kategori = useMemo(() => sortedKategori.slice(0, 5), [sortedKategori]);
+  const bottom5Kategori = useMemo(() => sortedKategori.slice(-5).reverse(), [sortedKategori]);
+
+  const produkPerKategori = useMemo(() => {
+    const data = {};
+    menu.forEach(m => {
+      const katNama = kategori.find(k => k.id === m.kategori_id)?.nama || "Umum";
+      if (!data[katNama]) data[katNama] = [];
+      data[katNama].push(m);
+    });
+    return data;
+  }, [menu, kategori]);
+
+  const produkTerjual = useMemo(() => {
+    const data = {};
+    filtered.forEach(t => {
+      if (t.tipe === "masuk" && t.item) {
+        const items = t.item.split(", ");
+        items.forEach(itemStr => {
+          const parts = itemStr.split(" x");
+          const nama = parts[0]?.trim();
+          const qty = parseInt(parts[1]) || 1;
+          if (!data[nama]) data[nama] = 0;
+          data[nama] += qty;
+        });
+      }
+    });
+    return data;
+  }, [filtered]);
+
+  // Export Excel
   const exportExcel = () => {
     const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
     const rows = filtered.map(t =>
@@ -1341,7 +1420,7 @@ export default function KopiLaba() {
   // ============================================================
   // AI AGENT (INTERNAL)
   // ============================================================
-  const handleAiQuery = async () => {
+  const handleAiQuery = () => {
     if (!aiQuery.trim()) {
       setAiAnswer("Silakan tulis pertanyaan Anda.");
       return;
@@ -1442,7 +1521,7 @@ export default function KopiLaba() {
   // ============================================================
   // SUPER ADMIN DASHBOARD
   // ============================================================
-  const getAdminFilteredTransaksi = () => {
+  const getAdminFilteredTransaksi = useCallback(() => {
     let filtered = [...allTransaksi];
     const now = new Date();
     let start = new Date();
@@ -1459,12 +1538,12 @@ export default function KopiLaba() {
       }
     }
     return filtered;
-  };
+  }, [allTransaksi, adminFilterPeriode, adminFilterOwner, allOwners]);
 
-  const adminFiltered = getAdminFilteredTransaksi();
-  const adminTotalPemasukan = adminFiltered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-  const adminTotalPengeluaran = adminFiltered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
-  const adminLaba = adminTotalPemasukan - adminTotalPengeluaran;
+  const adminFiltered = useMemo(() => getAdminFilteredTransaksi(), [getAdminFilteredTransaksi]);
+  const adminTotalPemasukan = useMemo(() => adminFiltered.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0), [adminFiltered]);
+  const adminTotalPengeluaran = useMemo(() => adminFiltered.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0), [adminFiltered]);
+  const adminLaba = useMemo(() => adminTotalPemasukan - adminTotalPengeluaran, [adminTotalPemasukan, adminTotalPengeluaran]);
 
   // ============================================================
   // THEME & STYLES
@@ -1575,7 +1654,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // RENDER LOGIN & REGISTER (sama seperti sebelumnya)
+  // RENDER LOGIN & REGISTER (sama dengan sebelumnya)
   // ============================================================
   if (screen === "login") return (
     <div style={{
@@ -1676,18 +1755,30 @@ export default function KopiLaba() {
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
   const isBarista = profile?.role === "barista";
 
-  // Data untuk dashboard
-  const totalMasukAll = transaksi.filter(t => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-  const totalKeluarAll = transaksi.filter(t => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
-  const labaAll = totalMasukAll - totalKeluarAll;
-
   // Filter menu berdasarkan kategori
-  const filteredMenu = selectedKategori ? menu.filter(m => m.kategori_id === selectedKategori) : menu;
+  const filteredMenu = useMemo(() => {
+    return selectedKategori ? menu.filter(m => m.kategori_id === selectedKategori) : menu;
+  }, [menu, selectedKategori]);
 
+  // ============================================================
+  // RENDER APP
+  // ============================================================
   return (
     <div style={s.wrap}>
       {/* HEADER */}
-      <div style={{ padding: "16px 20px", background: theme.headerBg, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, transition: "all 0.3s ease", width: "100%", boxSizing: "border-box", position: "sticky", top: 0, zIndex: 20, borderBottom: `1px solid ${theme.cardBorder}` }}>
+      <div style={{ 
+        padding: "16px 20px", 
+        background: theme.headerBg, 
+        backdropFilter: theme.blur, 
+        WebkitBackdropFilter: theme.blur, 
+        transition: "all 0.3s ease", 
+        width: "100%", 
+        boxSizing: "border-box", 
+        position: "sticky", 
+        top: 0, 
+        zIndex: 20, 
+        borderBottom: `1px solid ${theme.cardBorder}` 
+      }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={() => setSidebarOpen(true)} style={{ background: "transparent", border: "none", fontSize: 24, cursor: "pointer", color: theme.text, padding: 4 }}>
@@ -1833,6 +1924,37 @@ export default function KopiLaba() {
         {/* DASHBOARD */}
         {!isSuperAdmin && tab === "dashboard" && (
           <>
+            {/* Filter Periode untuk Pemilik */}
+            {!isBarista && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                {["hari", "minggu", "bulan", "tahun"].map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setFilterPeriode(p)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: filterPeriode === p ? theme.gold : theme.input,
+                      color: filterPeriode === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                      fontWeight: filterPeriode === p ? 700 : 400,
+                      cursor: "pointer",
+                      fontSize: 12,
+                      textTransform: "capitalize"
+                    }}
+                  >
+                    {p === "hari" ? "Hari Ini" : p === "minggu" ? "Minggu" : p === "bulan" ? "Bulan" : "Tahun"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {isBarista && (
+              <div style={{ marginBottom: 14, padding: 10, background: theme.input, borderRadius: 8, textAlign: "center", color: theme.textMuted, fontSize: 13 }}>
+                📅 Menampilkan data hari ini
+              </div>
+            )}
+
             <div style={{ background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#8B5A1A" : "#B8860B"})`, borderRadius: 24, padding: 24, marginBottom: 14, boxShadow: theme.shadow }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
@@ -1841,20 +1963,20 @@ export default function KopiLaba() {
                 </button>
               </div>
               <p style={{ margin: "0 0 16px", fontSize: 30, fontWeight: 800, color: "#fff", filter: showLaba ? "none" : "blur(8px)", transition: "filter 0.3s" }}>
-                {showLaba ? fmt(labaAll) : "••••••••"}
+                {showLaba ? fmt(dashboardData.laba) : "••••••••"}
               </p>
               <div style={{ display: "flex", gap: 16 }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pemasukan</p>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff", filter: showLaba ? "none" : "blur(6px)", transition: "filter 0.3s" }}>
-                    {showLaba ? fmt(totalMasukAll) : "••••••••"}
+                    {showLaba ? fmt(dashboardData.masuk) : "••••••••"}
                   </p>
                 </div>
                 <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }}></div>
                 <div>
                   <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pengeluaran</p>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#fff", filter: showLaba ? "none" : "blur(6px)", transition: "filter 0.3s" }}>
-                    {showLaba ? fmt(totalKeluarAll) : "••••••••"}
+                    {showLaba ? fmt(dashboardData.keluar) : "••••••••"}
                   </p>
                 </div>
               </div>
@@ -1937,7 +2059,7 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* MENU - DENGAN FILTER KATEGORI */}
+        {/* MENU - DENGAN TOMBOL HAPUS KATEGORI */}
         {tab === "menu" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -1945,14 +2067,14 @@ export default function KopiLaba() {
               <div style={{ display: "flex", gap: 8 }}>
                 {isPemilik && (
                   <>
-                    <button style={s.btnSm} onClick={() => { setEditKategoriId(null); setKategoriForm({ nama: "" }); setShowAddKategori(true); }}>🏷️</button>
+                    <button style={s.btnSm} onClick={() => { setEditKategoriId(null); setKategoriForm({ nama: "" }); setShowAddKategori(true); }}>🏷️ + Kategori</button>
                     <button style={s.btnSm} onClick={() => { setEditMenuId(null); setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" }); setShowAddMenu(true); }}>+ Tambah</button>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Filter Kategori */}
+            {/* Filter Kategori dengan Tombol Hapus */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
               <button
                 onClick={() => setSelectedKategori("")}
@@ -1970,22 +2092,40 @@ export default function KopiLaba() {
                 Semua
               </button>
               {kategori.map(k => (
-                <button
-                  key={k.id}
-                  onClick={() => setSelectedKategori(selectedKategori === k.id ? "" : k.id)}
-                  style={{
-                    padding: "6px 16px",
-                    borderRadius: 20,
-                    border: "none",
-                    background: selectedKategori === k.id ? theme.gold : theme.input,
-                    color: selectedKategori === k.id ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
-                    fontWeight: selectedKategori === k.id ? 700 : 400,
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
-                  {k.nama}
-                </button>
+                <div key={k.id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <button
+                    onClick={() => setSelectedKategori(selectedKategori === k.id ? "" : k.id)}
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: 20,
+                      border: "none",
+                      background: selectedKategori === k.id ? theme.gold : theme.input,
+                      color: selectedKategori === k.id ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                      fontWeight: selectedKategori === k.id ? 700 : 400,
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
+                  >
+                    {k.nama}
+                  </button>
+                  {isPemilik && (
+                    <button
+                      onClick={() => handleHapusKategori(k.id)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: theme.danger,
+                        cursor: "pointer",
+                        fontSize: 14,
+                        padding: "4px 6px",
+                        borderRadius: "50%",
+                      }}
+                      title="Hapus kategori"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
 
@@ -2029,7 +2169,11 @@ export default function KopiLaba() {
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: margin > 65 ? theme.success : theme.gold }}>{margin}%</p>
                   </div>
                   {!isSuperAdmin && (
-                    <button onClick={() => tambahKeKeranjang(m)} style={{ ...s.btnSm, marginTop: 8, width: "100%", background: stok <= 0 ? theme.textMuted : theme.gold }} disabled={stok <= 0}>
+                    <button 
+                      onClick={() => tambahKeKeranjang(m)} 
+                      style={{ ...s.btnSm, marginTop: 8, width: "100%", background: stok <= 0 ? theme.textMuted : theme.gold }} 
+                      disabled={stok <= 0}
+                    >
                       {stok <= 0 ? "Stok Habis" : "🛒 +"}
                     </button>
                   )}
@@ -2350,11 +2494,11 @@ export default function KopiLaba() {
         )}
       </div>
 
-      {/* ===== MODAL-MODAL ===== */}
+      {/* ===== MODAL-MODAL (dengan glassmorphism) ===== */}
       {/* Modal Transaksi */}
       {showAdd && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAdd(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editTransaksiId ? "Edit Transaksi" : "Tambah Transaksi"}</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               {["masuk", "keluar"].map(t => (
@@ -2428,10 +2572,10 @@ export default function KopiLaba() {
         </div>
       )}
 
-      {/* Modal Menu - dengan input Jumlah */}
+      {/* Modal Menu */}
       {showAddMenu && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddMenu(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editMenuId ? "Edit Menu" : "Tambah Menu"}</p>
             <label style={s.label}>Nama Menu</label>
             <input style={s.input} placeholder="cth: Cappuccino" value={menuForm.nama} onChange={e => setMenuForm({ ...menuForm, nama: e.target.value })} />
@@ -2459,7 +2603,7 @@ export default function KopiLaba() {
       {/* Modal Kategori */}
       {showAddKategori && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKategori(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKategoriId ? "Edit Kategori" : "Tambah Kategori"}</p>
             <label style={s.label}>Nama Kategori</label>
             <input style={s.input} placeholder="cth: Minuman" value={kategoriForm.nama} onChange={e => setKategoriForm({ ...kategoriForm, nama: e.target.value })} />
@@ -2471,7 +2615,7 @@ export default function KopiLaba() {
       {/* Modal Karyawan */}
       {showAddKaryawan && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAddKaryawan(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{editKaryawanId ? "Edit Karyawan" : "Tambah Karyawan"}</p>
             <label style={s.label}>Nama Lengkap</label>
             <input style={s.input} placeholder="Nama karyawan" value={karyawanForm.nama} onChange={e => setKaryawanForm({ ...karyawanForm, nama: e.target.value })} />
@@ -2491,7 +2635,7 @@ export default function KopiLaba() {
       {/* Modal Stok */}
       {showStok && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowStok(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Kelola Stok</p>
             <label style={s.label}>Pilih Menu</label>
             <select style={s.input} value={stokForm.menu_id} onChange={e => setStokForm({ ...stokForm, menu_id: e.target.value })}>
@@ -2512,7 +2656,7 @@ export default function KopiLaba() {
       {/* Modal Ganti Password */}
       {showGantiPassword && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 60 }} onClick={() => { setShowGantiPassword(false); setTargetUserId(null); }}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>{isSuperAdmin && targetUserId ? "Ganti Password User" : "Ganti Password"}</p>
             {isSuperAdmin && targetUserId && <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10 }}>Mengganti password untuk: {allOwners.find(o => o.id === targetUserId)?.nama || "User"}</p>}
             <label style={s.label}>Password Lama</label>
@@ -2530,7 +2674,7 @@ export default function KopiLaba() {
       {/* Modal Absensi */}
       {showAbsensi && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowAbsensi(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>Absensi Pegawai</p>
             <label style={s.label}>Pegawai</label>
             <select style={s.input} value={absensiForm.pegawai_id} onChange={e => setAbsensiForm({ ...absensiForm, pegawai_id: e.target.value })}>
@@ -2545,7 +2689,7 @@ export default function KopiLaba() {
       {/* Modal Kasir */}
       {showKasir && !isSuperAdmin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 50 }} onClick={() => setShowKasir(false)}>
-          <div style={{ background: theme.card, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: theme.card, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 500, margin: "0 auto", border: `1px solid ${theme.cardBorder}` }} onClick={e => e.stopPropagation()}>
             <p style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: theme.text }}>🛒 Keranjang Kasir</p>
             {keranjang.length === 0 && <p style={{ color: theme.textMuted, fontSize: 13 }}>Keranjang kosong.</p>}
             {keranjang.map((item, idx) => (
@@ -2576,7 +2720,22 @@ export default function KopiLaba() {
       )}
 
       {/* BOTTOM NAV */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, width: "100%", maxWidth: "100%", background: theme.headerBg, backdropFilter: theme.blur, WebkitBackdropFilter: theme.blur, borderTop: `1px solid ${theme.cardBorder}`, display: "flex", padding: "8px 0 20px", transition: "all 0.3s ease", zIndex: 10 }}>
+      <div style={{ 
+        position: "fixed", 
+        bottom: 0, 
+        left: 0, 
+        right: 0, 
+        width: "100%", 
+        maxWidth: "100%", 
+        background: theme.headerBg, 
+        backdropFilter: theme.blur, 
+        WebkitBackdropFilter: theme.blur, 
+        borderTop: `1px solid ${theme.cardBorder}`, 
+        display: "flex", 
+        padding: "8px 0 20px", 
+        transition: "all 0.3s ease", 
+        zIndex: 10 
+      }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0" }}>
             <span style={{ fontSize: 20 }}>{t.icon}</span>
