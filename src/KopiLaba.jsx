@@ -6,15 +6,6 @@ import { useState, useEffect, useRef } from "react";
 const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 
-const SUPER_ADMIN = {
-  id: "super_admin_1",
-  email: "admin@kopilaba.com",
-  password: "Desember12*",
-  nama: "Super Admin",
-  role: "super_admin",
-  kafe_id: null
-};
-
 // ============================================================
 // FUNGSI API
 // ============================================================
@@ -432,16 +423,6 @@ export default function KopiLaba() {
     setLoading(true);
     setError("");
     setNetworkError(false);
-    if (loginForm.email === SUPER_ADMIN.email && loginForm.password === SUPER_ADMIN.password) {
-      setUser(SUPER_ADMIN);
-      setProfile(SUPER_ADMIN);
-      setIsSuperAdmin(true);
-      setToken("super_admin_token");
-      setScreen("app");
-      setLoading(false);
-      await loadAllData("super_admin_token");
-      return;
-    }
     try {
       const data = await authApi("/token?grant_type=password", loginForm);
       if (data.access_token) {
@@ -449,26 +430,46 @@ export default function KopiLaba() {
         const u = data.user;
         setToken(tok);
         setUser(u);
-        const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
-        const p = Array.isArray(prof) ? prof[0] : null;
-        if (p) {
-          setProfile(p);
+
+        // Ambil profile dari database
+        let p = null;
+        try {
+          const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
+          p = Array.isArray(prof) ? prof[0] : null;
+        } catch (profileErr) {
+          console.error("Gagal ambil profile:", profileErr);
+          setError("Gagal memuat profil. Coba lagi.");
+          setLoading(false);
+          return;
+        }
+
+        if (!p) {
+          setError("Profil tidak ditemukan. Silakan hubungi admin.");
+          setLoading(false);
+          return;
+        }
+
+        setProfile(p);
+
+        // Cek role
+        if (p.role === "super_admin") {
+          setIsSuperAdmin(true);
+          await loadAllData(tok);
+        } else {
           setIsSuperAdmin(false);
           await loadData(tok, p);
-          setScreen("app");
-        } else {
-          setError("Profil tidak ditemukan.");
         }
+
+        setScreen("app");
+        setSuccess("Login berhasil!");
       } else {
         setError(data.error_description || "Login gagal. Cek email & password.");
       }
     } catch (err) {
       console.error("Login error:", err);
-      if (err.message.includes("Failed to fetch") || err.message.includes("Network")) {
+      setError("Terjadi kesalahan: " + (err.message || "Coba lagi."));
+      if (err.message?.includes("Failed to fetch") || err.message?.includes("Network")) {
         setNetworkError(true);
-        setError("Koneksi internet bermasalah.");
-      } else {
-        setError("Terjadi kesalahan. Coba lagi.");
       }
     } finally {
       setLoading(false);
@@ -728,18 +729,17 @@ export default function KopiLaba() {
       }
       const grandTotal = subtotal + pajak;
 
-      // Simpan detail item sebagai JSON string di kolom 'item'
-      const itemDetail = pesananItems.map(p => ({
+      const itemsDetail = pesananItems.map(p => ({
         nama: p.nama,
         qty: p.qty,
         harga: p.harga,
         total: p.total
       }));
-      const itemStr = JSON.stringify(itemDetail);
+      const itemStr = JSON.stringify(itemsDetail);
 
       const payload = {
         kafe_id: kafeId,
-        item: itemStr, // JSON string
+        item: itemStr,
         qty: totalQty,
         total: grandTotal,
         tipe: addType,
@@ -786,7 +786,6 @@ export default function KopiLaba() {
     }
     setEditTransaksiId(t.id);
     setAddType(t.tipe);
-    // Coba parse JSON dari kolom 'item'
     try {
       const items = JSON.parse(t.item);
       if (Array.isArray(items)) {
@@ -798,7 +797,6 @@ export default function KopiLaba() {
         setPesananItems([]);
       }
     } catch (e) {
-      // Jika bukan JSON, kosongkan
       setPesananItems([]);
     }
     setShowAdd(true);
@@ -1071,8 +1069,29 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // ABSENSI
+  // ABSENSI (semua jam ditampilkan dalam WIB)
   // ============================================================
+  const formatJamWIB = (isoString) => {
+    if (!isoString) return "-";
+    const date = new Date(isoString);
+    return date.toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatTanggalWIB = (isoString) => {
+    if (!isoString) return "-";
+    const date = new Date(isoString);
+    return date.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
   const handleAbsenMasuk = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
       setError("Hanya pemilik atau admin yang bisa melakukan absensi.");
@@ -1290,7 +1309,7 @@ export default function KopiLaba() {
 
       await api("/rest/v1/transaksi", "POST", {
         kafe_id: kafeId,
-        item: itemStr, // JSON string
+        item: itemStr,
         qty: keranjang.reduce((sum, item) => sum + item.qty, 0),
         total: grandTotal,
         tipe: "masuk",
@@ -1390,7 +1409,6 @@ export default function KopiLaba() {
           });
         }
       } catch (e) {
-        // fallback: parsing string biasa
         const parts = t.item.split(", ");
         parts.forEach(itemStr => {
           const [nama, qtyStr] = itemStr.split(" x");
@@ -1422,7 +1440,6 @@ export default function KopiLaba() {
           });
         }
       } catch (e) {
-        // fallback
         const parts = t.item.split(", ");
         parts.forEach(itemStr => {
           const [nama, qtyStr] = itemStr.split(" x");
@@ -1565,7 +1582,7 @@ export default function KopiLaba() {
       answer = `📝 Total transaksi: ${totalTransaksi} transaksi.`;
     }
     else if (q.includes("super admin") || q.includes("admin")) {
-      answer = "👑 Super Admin: admin@kopilaba.com / Desember12*";
+      answer = "👑 Super Admin: admin@kopilaba.com (login via email)";
     }
     else if (q.includes("cuaca") || q.includes("ekonomi") || q.includes("politik") || q.includes("gempa") || q.includes("dunia") || q.includes("nasional")) {
       answer = "🌤️ Saya tidak memiliki akses ke data real-time. Saya hanya bisa menjawab pertanyaan seputar data di aplikasi KopiLaba.\n\n💡 Coba tanyakan: total penjualan, laba, stok menipis, produk terlaris, absensi hari ini, dll.";
@@ -2301,7 +2318,12 @@ export default function KopiLaba() {
                   const today = new Date().toISOString().slice(0,10);
                   const todayAbsen = absensi.find(a => a.pegawai_id === profile.id && a.tanggal === today);
                   if (todayAbsen) {
-                    return <p style={{ marginTop: 10, fontSize: 13, color: theme.textMuted }}>Status: {todayAbsen.jam_masuk ? `✅ Masuk ${new Date(todayAbsen.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}{todayAbsen.jam_keluar && ` | Keluar ${new Date(todayAbsen.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}`}</p>;
+                    return (
+                      <p style={{ marginTop: 10, fontSize: 13, color: theme.textMuted }}>
+                        Status: {todayAbsen.jam_masuk ? `✅ Masuk ${formatJamWIB(todayAbsen.jam_masuk)}` : "Belum masuk"}
+                        {todayAbsen.jam_keluar && ` | Keluar ${formatJamWIB(todayAbsen.jam_keluar)}`}
+                      </p>
+                    );
                   }
                   return <p style={{ marginTop: 10, fontSize: 13, color: theme.textMuted }}>Belum ada absensi hari ini.</p>;
                 })()}
@@ -2323,10 +2345,16 @@ export default function KopiLaba() {
                     const pegawai = karyawan.find(k => k.id === a.pegawai_id);
                     return (
                       <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 8, borderBottom: `1px solid ${theme.cardBorder}` }}>
-                        <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{new Date(a.tanggal).toLocaleDateString("id-ID")}</p></div>
+                        <div><p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{pegawai?.nama || "Tidak diketahui"}</p><p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>{formatTanggalWIB(a.tanggal)}</p></div>
                         <div style={{ textAlign: "right" }}>
-                          <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>{a.jam_masuk ? `Masuk: ${new Date(a.jam_masuk).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum masuk"}</p>
-                          {a.jam_masuk && <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>{a.jam_keluar ? `Keluar: ${new Date(a.jam_keluar).toLocaleTimeString("id-ID", {hour:'2-digit', minute:'2-digit'})}` : "Belum keluar"}</p>}
+                          <p style={{ margin: 0, fontSize: 12, color: a.jam_masuk ? theme.success : theme.danger }}>
+                            {a.jam_masuk ? `Masuk: ${formatJamWIB(a.jam_masuk)}` : "Belum masuk"}
+                          </p>
+                          {a.jam_masuk && (
+                            <p style={{ margin: 0, fontSize: 12, color: a.jam_keluar ? theme.textMuted : theme.gold }}>
+                              {a.jam_keluar ? `Keluar: ${formatJamWIB(a.jam_keluar)}` : "Belum keluar"}
+                            </p>
+                          )}
                           {isPemilik && a.jam_masuk && !a.jam_keluar && <button onClick={() => handleAbsenKeluar(a.id)} style={{ ...s.btnSm, fontSize: 10, padding: "4px 8px" }}>Absen Keluar</button>}
                         </div>
                       </div>
@@ -2524,7 +2552,6 @@ export default function KopiLaba() {
                         ));
                       }
                     } catch (e) {}
-                    // fallback: parsing string biasa
                     return selectedTransaksi.item?.split(", ").map((item, idx) => {
                       const [nama, qtyStr] = item.split(" x");
                       const qty = parseInt(qtyStr) || 1;
