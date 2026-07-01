@@ -1069,11 +1069,17 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // ABSENSI (semua jam ditampilkan dalam WIB)
+  // FUNGSI FORMAT WIB (PERBAIKAN)
   // ============================================================
   const formatJamWIB = (isoString) => {
     if (!isoString) return "-";
-    const date = new Date(isoString);
+    // Jika string tidak mengandung 'Z' atau offset, anggap sebagai waktu lokal (Indonesia)
+    // Kita parse sebagai UTC dengan menambahkan 'Z' jika belum ada
+    let dateStr = isoString;
+    if (!isoString.endsWith('Z') && !isoString.includes('+')) {
+      dateStr = isoString + 'Z';
+    }
+    const date = new Date(dateStr);
     return date.toLocaleString('id-ID', {
       timeZone: 'Asia/Jakarta',
       hour: '2-digit',
@@ -1083,7 +1089,11 @@ export default function KopiLaba() {
 
   const formatTanggalWIB = (isoString) => {
     if (!isoString) return "-";
-    const date = new Date(isoString);
+    let dateStr = isoString;
+    if (!isoString.endsWith('Z') && !isoString.includes('+')) {
+      dateStr = isoString + 'Z';
+    }
+    const date = new Date(dateStr);
     return date.toLocaleDateString('id-ID', {
       timeZone: 'Asia/Jakarta',
       year: 'numeric',
@@ -1092,6 +1102,9 @@ export default function KopiLaba() {
     });
   };
 
+  // ============================================================
+  // ABSENSI
+  // ============================================================
   const handleAbsenMasuk = async () => {
     if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
       setError("Hanya pemilik atau admin yang bisa melakukan absensi.");
