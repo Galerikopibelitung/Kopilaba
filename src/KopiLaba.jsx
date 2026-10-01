@@ -591,7 +591,7 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // QRIS UPLOAD
+  // QRIS UPLOAD (REVISI: pakai token user + Content-Type)
   // ============================================================
   const handleQrisUpload = async (e) => {
     const file = e.target.files[0];
@@ -611,10 +611,18 @@ export default function KopiLaba() {
         return;
       }
 
+      if (!token) {
+        setError("Sesi login berakhir. Silakan login ulang.");
+        setUploadingQris(false);
+        return;
+      }
+
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/qris/${kafeId}/${file.name}`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": file.type || "image/png",
+          "x-upsert": "true"
         },
         body: file,
       });
@@ -642,15 +650,18 @@ export default function KopiLaba() {
   };
 
   // ============================================================
-  // UPLOAD FOTO MENU
+  // UPLOAD FOTO MENU (REVISI: pakai token user + Content-Type)
   // ============================================================
   const uploadMenuFoto = async (file, kafeId) => {
+    if (!token) throw new Error("Sesi login berakhir.");
     const fileName = `${Date.now()}_${file.name}`;
     const path = `menu/${kafeId}/${fileName}`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/menu/${path}`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": file.type || "image/jpeg",
+        "x-upsert": "true"
       },
       body: file,
     });
@@ -1073,8 +1084,6 @@ export default function KopiLaba() {
   // ============================================================
   const formatJamWIB = (isoString) => {
     if (!isoString) return "-";
-    // Jika string tidak mengandung 'Z' atau offset, anggap sebagai waktu lokal (Indonesia)
-    // Kita parse sebagai UTC dengan menambahkan 'Z' jika belum ada
     let dateStr = isoString;
     if (!isoString.endsWith('Z') && !isoString.includes('+')) {
       dateStr = isoString + 'Z';
