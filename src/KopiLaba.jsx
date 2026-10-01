@@ -340,7 +340,7 @@ export default function KopiLaba() {
       if (!k && prof.kafe_id) {
         const k2 = await api(`/rest/v1/kafe?id=eq.${prof.kafe_id}&limit=1`, "GET", null, tok);
         setKafe(Array.isArray(k2) ? k2[0] : null);
-        if (k2) setQrisUrl(k2.qris_url || "");
+        if (k2 && k2[0]) setQrisUrl(k2[0].qris_url || "");
         await loadTransaksi(tok, prof.kafe_id);
         await loadMenu(tok, prof.kafe_id);
         await loadKategori(tok);
