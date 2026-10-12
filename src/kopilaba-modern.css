@@ -1770,3 +1770,20 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 .kl-content .kl-dashboard-hero [style*="color: red"] { color:#087f78 !important; }
 .kl-content .kl-dashboard-hero [style*="color: rgb(22, 163, 74)"] { color:#087f78 !important; }
 .kl-content .kl-dashboard-hero [style*="color: rgb(220, 38, 38)"] { color:#52736f !important; }
+
+/* Dashboard finance summary: replace the distracting gold/red contrast with calm teal neutrals. */
+#root > div[data-theme] .kl-content .kl-dashboard-hero {
+  background:linear-gradient(135deg,#e8f8f5 0%,#d9f2ed 100%) !important;
+  border:1px solid #cfe8e3 !important;
+  box-shadow:0 10px 28px rgba(8,105,98,.08) !important;
+}
+#root > div[data-theme] .kl-content .kl-dashboard-hero * {
+  color:#123b38 !important;
+}
+#root > div[data-theme] .kl-content .kl-dashboard-hero > div > div[style*="width: 1px"] {
+  background:#cfe8e3 !important;
+}
+#root > div[data-theme] .kl-content .kl-dashboard-hero > div > p,
+#root > div[data-theme] .kl-content .kl-dashboard-hero > div > div > p {
+  color:#52736f !important;
+}
