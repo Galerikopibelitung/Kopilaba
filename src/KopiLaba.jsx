@@ -249,6 +249,30 @@ const authApi = async (endpoint, body) => {
 // ============================================================
 // KOMPONEN UTAMA
 // ============================================================
+
+const AppIcon = ({ name, size = 20, strokeWidth = 1.8 }) => {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true, focusable: "false" };
+  const shapes = {
+    crown: <><path d="m2 7 5 4 5-7 5 7 5-4-2 12H4L2 7Z" /><path d="M4 22h16" /></>,
+    dashboard: <><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="5" rx="2" /><rect x="13" y="10" width="8" height="11" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /></>,
+    receipt: <><path d="M4 3h16v18l-3-2-3 2-3-2-4 2-3-2V3Z" /><path d="M8 8h8M8 12h8M8 16h4" /></>,
+    coffee: <><path d="M5 8h12v7a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V8Z" /><path d="M17 10h1a3 3 0 0 1 0 6h-2M8 3c0 1 2 1 2 3M13 3c0 1 2 1 2 3M4 22h15" /></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    chart: <><path d="M3 3v18h18" /><path d="m7 14 4-4 4 3 6-7" /><path d="M17 6h4v4" /></>,
+    wallet: <><rect x="3" y="5" width="18" height="15" rx="3" /><path d="M3 9h18M16 14h2" /><path d="M6 5V3h12v2" /></>,
+    file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h8" /></>,
+    qr: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v2M17 20h4M20 18v3" /></>,
+    database: <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" /></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></>,
+    moon: <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />,
+    key: <><circle cx="8" cy="15" r="5" /><path d="m11.5 11.5 9-9M17 6l3 3M14 9l3 3" /></>,
+    close: <><path d="m18 6-12 12M6 6l12 12" /></>,
+    cart: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></>
+  };
+  return <svg {...common}>{shapes[name] || shapes.dashboard}</svg>;
+};
+
 export default function KopiLaba() {
   // ------------------------------------------------------------
   // STATE UMUM
@@ -2638,26 +2662,26 @@ export default function KopiLaba() {
   // ============================================================
   const tabs = isSuperAdmin
     ? [
-        { id: "admin", icon: "👑", label: "Admin" },
-        { id: "dashboard", icon: "⊞", label: "Ringkasan" },
-        { id: "transaksi", icon: "↕", label: "Transaksi" },
-        { id: "menu", icon: "☕", label: "Menu" },
-        { id: "karyawan", icon: "👤", label: "Karyawan" },
-        { id: "laporan", icon: "📊", label: "Laporan" },
-        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
-        { id: "struk", icon: "🧾", label: "Struk" },
-        { id: "qris", icon: "📱", label: "QRIS" },
+        { id: "admin", icon: "crown", label: "Admin" },
+        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
+        { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "menu", icon: "coffee", label: "Menu" },
+        { id: "karyawan", icon: "users", label: "Karyawan" },
+        { id: "laporan", icon: "chart", label: "Laporan" },
+        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
+        { id: "struk", icon: "file", label: "Struk" },
+        { id: "qris", icon: "qr", label: "QRIS" },
       ]
     : [
-        { id: "dashboard", icon: "⊞", label: "Ringkasan" },
-        { id: "transaksi", icon: "↕", label: "Transaksi" },
-        { id: "menu", icon: "☕", label: "Menu" },
-        { id: "karyawan", icon: "👤", label: "Karyawan" },
-        { id: "laporan", icon: "📊", label: "Laporan" },
-        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
-        { id: "struk", icon: "🧾", label: "Struk" },
-        { id: "qris", icon: "📱", label: "QRIS" },
-        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "💾", label: "Backup Data" }] : []),
+        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
+        { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "menu", icon: "coffee", label: "Menu" },
+        { id: "karyawan", icon: "users", label: "Karyawan" },
+        { id: "laporan", icon: "chart", label: "Laporan" },
+        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
+        { id: "struk", icon: "file", label: "Struk" },
+        { id: "qris", icon: "qr", label: "QRIS" },
+        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
       ];
 
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
@@ -2733,10 +2757,12 @@ export default function KopiLaba() {
               ☰
             </button>
             <div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
-                <span style={{ color: theme.gold }}>KOPI</span>
-                <span style={{ color: theme.text }}>LABA</span>
-              </h1>
+              <div className="kl-brand-lockup">
+              <span className="kl-brand-mark"><AppIcon name="coffee" size={23} strokeWidth={2} /></span>
+              <div><h1 style={{ margin: 0, fontSize: 22, fontWeight: 850, letterSpacing: "-.9px" }}>
+                <span style={{ color: theme.gold }}>KOPI</span><span style={{ color: theme.text }}>LABA</span>
+              </h1><p className="kl-brand-caption">CAFE MANAGEMENT</p></div>
+              </div>
               <p style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
                 {isSuperAdmin ? "👑 Super Admin" : `${kafe?.nama || "Kafe kamu"} · ${profile?.role}`}
               </p>
@@ -2785,7 +2811,7 @@ export default function KopiLaba() {
               onClick={() => setDarkMode(!darkMode)}
               style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer" }}
             >
-              {darkMode ? "☀️" : "🌙"}
+              <AppIcon name={darkMode ? "sun" : "moon"} size={19} />
             </button>
             <button
               onClick={() => setShowGantiPassword(true)}
@@ -2855,7 +2881,7 @@ export default function KopiLaba() {
             marginBottom: 30,
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>☕ Menu</h2>
+          <h2 className="kl-sidebar-brand" style={{ margin: 0, fontSize: 20, fontWeight: 750 }}><span className="kl-brand-mark"><AppIcon name="coffee" size={20} /></span><span>Menu <small>WORKSPACE</small></span></h2>
           <button
             onClick={() => setSidebarOpen(false)}
             style={{
@@ -2893,7 +2919,7 @@ export default function KopiLaba() {
                 width: "100%",
               }}
             >
-              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span className="kl-nav-icon"><AppIcon name={t.icon} size={19} /></span>
               <span>{t.label}</span>
             </button>
           ))}
@@ -5902,7 +5928,7 @@ export default function KopiLaba() {
               padding: "8px 0",
             }}
           >
-            <span style={{ fontSize: 20 }}>{t.icon}</span>
+            <span className="kl-nav-icon"><AppIcon name={t.icon} size={19} /></span>
             <span
               style={{
                 fontSize: 10,
