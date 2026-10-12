@@ -406,8 +406,19 @@ export default function KopiLaba() {
   });
   const [pesananItems, setPesananItems] = useState([]);
   const [editTransaksiId, setEditTransaksiId] = useState(null);
-  const [pajakEnabled, setPajakEnabled] = useState(true);
-  const [persentasePajak] = useState(10);
+  const [pajakEnabled, setPajakEnabled] = useState(() => localStorage.getItem("kopilaba_pajak_enabled") !== "false");
+  const [persentasePajak, setPersentasePajak] = useState(() => {
+    const saved = Number(localStorage.getItem("kopilaba_pajak_persen"));
+    return Number.isFinite(saved) && saved >= 0 && saved <= 100 ? saved : 10;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("kopilaba_pajak_enabled", String(pajakEnabled));
+  }, [pajakEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("kopilaba_pajak_persen", String(persentasePajak));
+  }, [persentasePajak]);
 
   // ------------------------------------------------------------
   // STATE MODAL MENU
@@ -4860,14 +4871,43 @@ export default function KopiLaba() {
             )}
 
             {addType === "masuk" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <label style={s.label}>Pajak {persentasePajak}%</label>
-                <button
-                  onClick={() => setPajakEnabled(!pajakEnabled)}
-                  style={{ ...s.btnSm, padding: "4px 12px" }}
-                >
-                  {pajakEnabled ? "ON" : "OFF"}
-                </button>
+              <div className="kl-tax-panel" style={{ marginBottom: 14, padding: 14, borderRadius: 16, border: "1px solid " + theme.cardBorder, background: theme.input }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: theme.text }}>Pajak penjualan</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 3 }}>Pengaturan tersimpan di perangkat ini</div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-pressed={pajakEnabled}
+                    onClick={() => setPajakEnabled(!pajakEnabled)}
+                    style={{ ...s.btnSm, minWidth: 96, padding: "9px 14px", background: pajakEnabled ? theme.success : theme.textMuted, color: "#fff" }}
+                  >
+                    {pajakEnabled ? "✓ Aktif" : "Nonaktif"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                  <label htmlFor="kl-tax-rate" style={{ ...s.label, margin: 0, fontSize: 12 }}>Tarif pajak (%)</label>
+                  <input
+                    id="kl-tax-rate"
+                    aria-label="Tarif pajak dalam persen"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={persentasePajak}
+                    onChange={(e) => setPersentasePajak(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                    style={{ ...s.input, width: 100, margin: 0, minHeight: 42, fontWeight: 700 }}
+                  />
+                </div>
+                <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: theme.card, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                  <div style={{ fontSize: 12, color: theme.textMuted }}>Contoh dari subtotal Rp50.000</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 12, color: theme.textMuted }}>Pajak {pajakEnabled ? String(persentasePajak) + "%" : "nonaktif"}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: theme.text }}>{fmt(pajakEnabled ? Math.round(50000 * persentasePajak / 100) : 0)}</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted }}>Total {fmt(50000 + (pajakEnabled ? Math.round(50000 * persentasePajak / 100) : 0))}</div>
+                  </div>
+                </div>
               </div>
             )}
 
