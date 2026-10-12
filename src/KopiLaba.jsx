@@ -1225,6 +1225,7 @@ export default function KopiLaba() {
         subtotal: subtotal,
         pajak: pajak,
         pajak_enabled: pajakEnabled && addType === "masuk",
+        pajak_persen: pajakEnabled && addType === "masuk" ? persentasePajak : 0,
       };
 
       if (editTransaksiId) {
@@ -1907,7 +1908,7 @@ export default function KopiLaba() {
         items: itemsDetail,
         subtotal,
         pajak,
-        pajakPersen: persentasePajak,
+        pajakPersen: selectedTransaksi.pajak_persen ?? persentasePajak,
         total: grandTotal,
         bayar: bayarInt,
         kembalian: kembalianInt,
