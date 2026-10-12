@@ -5511,8 +5511,8 @@ export default function KopiLaba() {
                         )}
                       </p>
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                      {["tunai", "piutang"].map((p) => (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 14 }}>
+                      {["tunai", "qris", "split", "piutang"].map((p) => (
                         <button
                           key={p}
                           onClick={() => setPembayaran(p)}
@@ -5532,10 +5532,19 @@ export default function KopiLaba() {
                             cursor: "pointer",
                           }}
                         >
-                          {p === "tunai" ? "💰 Tunai" : "📝 Piutang"}
+                          {p === "tunai" ? "💵 Tunai" : p === "qris" ? "📱 QRIS" : p === "split" ? "💳 Tunai + QRIS" : "📝 Piutang"}
                         </button>
                       ))}
                     </div>
+                    {pembayaran === "split" && (
+                      <div style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: theme.input, border: "1px solid " + theme.cardBorder }}>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Bagian dibayar tunai</label>
+                        <input style={{ ...s.input, marginBottom: 8 }} type="number" min="1" max={Math.max(1, totalKeranjang - 1)} placeholder="Masukkan nominal tunai" value={splitTunaiAmount} onChange={(e) => setSplitTunaiAmount(e.target.value)} />
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}><span style={{ color: theme.textMuted }}>Sisa dibayar QRIS</span><strong>{fmt(Math.max(0, totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0) - (parseInt(splitTunaiAmount, 10) || 0)))}</strong></div>
+                        <p style={{ margin: "6px 0 0", fontSize: 11, color: theme.textMuted }}>Pastikan pembayaran QRIS sudah diterima sebelum menekan Bayar.</p>
+                      </div>
+                    )}
+                    {pembayaran === "qris" && <div style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: theme.input, fontSize: 12, color: theme.textMuted }}>Konfirmasi bahwa pembayaran QRIS sudah diterima pelanggan. Aplikasi tidak memverifikasi pembayaran otomatis.</div>}
                     {pembayaran === "tunai" && (
                       <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
                         <input
