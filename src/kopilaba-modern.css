@@ -105,3 +105,7 @@ img { max-width: 100%; }
  .kl-owner-row { align-items:flex-start; flex-direction:column; }
  .kl-admin-filter { flex-basis:100%; }
 }
+
+
+.kl-owner-search { border:1px solid #e5d3bf !important; padding:12px 14px !important; }
+.kl-owner-search::placeholder { color:#9a8a7a; }
