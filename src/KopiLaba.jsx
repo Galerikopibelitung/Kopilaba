@@ -611,6 +611,7 @@ export default function KopiLaba() {
   // ------------------------------------------------------------
   const [adminFilterPeriode, setAdminFilterPeriode] = useState("minggu");
   const [adminFilterOwner, setAdminFilterOwner] = useState("");
+  const [adminSearchOwner, setAdminSearchOwner] = useState("");
 
   // ------------------------------------------------------------
   // EFFECTS
@@ -2989,7 +2990,7 @@ export default function KopiLaba() {
                 onChange={(e) => setAdminFilterOwner(e.target.value)}
               >
                 <option value="">Semua Owner</option>
-                {allOwners.map((o) => (
+                {allOwners.filter((o) => [o.nama, o.email, o.kafe_id].some((v) => String(v || "").toLowerCase().includes(adminSearchOwner.toLowerCase()))).map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.nama} - {o.kafe_id || "Tidak ada toko"}
                   </option>
@@ -3045,8 +3046,24 @@ export default function KopiLaba() {
                   {fmt(adminTotalPengeluaran)}
                 </p>
               </div>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Owner</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{allOwners.length}</p>
+              </div>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Owner dengan Kedai</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{allOwners.filter((o) => !!o.kafe_id).length}</p>
+              </div>
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📋 Daftar Owner & Toko</p>
+            <input
+              className="kl-owner-search"
+              aria-label="Cari owner atau kedai"
+              placeholder="Cari nama, email, atau ID kedai…"
+              value={adminSearchOwner}
+              onChange={(e) => setAdminSearchOwner(e.target.value)}
+              style={{ ...s.input, marginBottom: 10, background: theme.card }}
+            />
             <div style={s.card}>
               {allOwners.length === 0 && (
                 <p style={{ color: theme.textMuted }}>Belum ada owner terdaftar.</p>
