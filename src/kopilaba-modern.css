@@ -1562,8 +1562,8 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   .kl-qty-controls { justify-content:space-between !important; gap:8px !important; }
   .kl-qty-controls input { flex:1 1 auto !important; min-width:0 !important; }
   .kl-add-to-cart { min-height:44px !important; }
-  .kl-bottom-nav { left:0 !important; right:0 !important; width:100% !important; max-width:100% !important; overflow:visible !important; }
-  .kl-bottom-nav > button { flex:1 1 20% !important; flex-basis:20% !important; width:20% !important; min-width:0 !important; }
+  .kl-bottom-nav { left:0 !important; right:0 !important; width:100% !important; max-width:100% !important; overflow:hidden !important; }
+  .kl-bottom-nav > button { flex:1 1 0 !important; flex-basis:0 !important; width:auto !important; min-width:0 !important; }
 }
 @media (max-width: 360px) {
   .kl-menu-grid { grid-template-columns:1fr !important; gap:12px !important; }
@@ -1576,25 +1576,32 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
    Keep grid definitions owned by each component. Let tablets use the
    available viewport, and reserve bottom navigation for compact screens.
 */
-@media (min-width: 900px) {
+@media (min-width: 1000px) {
   .kl-bottom-nav { display:none !important; }
+  .kl-menu-toggle { display:none !important; }
   .kl-sidebar { transform:translateX(0) !important; }
   .kl-topbar { margin-left:264px !important; width:calc(100% - 264px) !important; }
   .kl-content { margin-left:264px !important; width:calc(100% - 264px) !important; }
 }
-@media (min-width: 561px) and (max-width: 899px) {
+@media (min-width: 561px) and (max-width: 999px) {
   #root > div[data-theme] { width:100% !important; max-width:100% !important; margin:0 !important; }
   .kl-topbar { width:100% !important; margin-left:0 !important; }
   .kl-content { width:100% !important; margin-left:0 !important; }
-  .kl-topbar > div { flex-wrap:nowrap !important; }
+  .kl-topbar > div { flex-wrap:wrap !important; }
   .kl-brand-lockup { min-width:0 !important; }
-  .kl-cafe-identity { max-width:30vw !important; }
+  .kl-cafe-identity { max-width:32vw !important; }
+  .kl-sidebar { transform:translateX(-110%) !important; }
+  .kl-sidebar[style*="translateX(0)"] { transform:translateX(0) !important; }
+  .kl-menu-toggle { display:inline-flex !important; }
   .kl-bottom-nav { display:flex !important; }
 }
 @media (max-width: 560px) {
   #root > div[data-theme] { width:100% !important; max-width:100% !important; margin:0 !important; }
   .kl-topbar > div { flex-wrap:nowrap !important; }
   .kl-cafe-identity { max-width:34vw !important; }
+  .kl-menu-toggle { display:inline-flex !important; }
+  .kl-sidebar { transform:translateX(-110%) !important; }
+  .kl-sidebar[style*="translateX(0)"] { transform:translateX(0) !important; }
   .kl-bottom-nav { display:flex !important; }
   .kl-bottom-nav-item { flex:1 1 0 !important; width:auto !important; }
 }
@@ -1608,7 +1615,74 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 @media (max-width: 360px) {
   .kl-menu-grid { grid-template-columns:1fr !important; }
 }
-/* Final brand tokens and remaining warm surfaces: teal only. */
+/* Responsive safeguards: keep navigation reachable and content within viewport. */
+@media (max-width: 999px) {
+  .kl-bottom-nav {
+    box-sizing:border-box !important;
+    gap:2px !important;
+    padding-left:6px !important;
+    padding-right:6px !important;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom)) !important;
+    overflow:hidden !important;
+  }
+  .kl-bottom-nav > button,
+  .kl-bottom-nav-item {
+    flex:1 1 0 !important;
+    flex-basis:0 !important;
+    width:auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+  }
+  .kl-bottom-nav-label {
+    max-width:100% !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:normal !important;
+    overflow-wrap:normal !important;
+    word-break:normal !important;
+    text-align:center !important;
+    font-size:clamp(8px, 2.6vw, 10px) !important;
+    line-height:1.15 !important;
+  }
+  .kl-topbar,
+  .kl-topbar > div,
+  .kl-topbar > div > div:first-child,
+  .kl-topbar > div > div:last-child {
+    min-width:0 !important;
+  }
+  .kl-topbar > div > div:last-child {
+    flex-shrink:1 !important;
+  }
+  .kl-content,
+  .kl-content > *,
+  .kl-content [style*="display: grid"],
+  .kl-content [style*="display: flex"] {
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  .kl-content table {
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .kl-kasir-overlay > div {
+    box-sizing:border-box !important;
+    min-width:0 !important;
+    overflow-x:hidden !important;
+  }
+}
+@media (max-width: 380px) {
+  .kl-bottom-nav { gap:0 !important; padding-left:2px !important; padding-right:2px !important; }
+  .kl-bottom-nav-item { padding-left:0 !important; padding-right:0 !important; gap:3px !important; }
+  .kl-bottom-nav-item .kl-nav-icon { width:30px !important; }
+  .kl-bottom-nav-label { font-size:8px !important; letter-spacing:-.1px !important; }
+  .kl-brand-mark { flex:0 0 34px !important; width:34px !important; height:34px !important; }
+  .kl-brand-lockup { gap:6px !important; }
+  .kl-topbar h1 { font-size:17px !important; }
+}
+\n/* Final brand tokens and remaining warm surfaces: teal only. */
 :root {
   --kl-ref-bg:#effaf8 !important;
   --kl-ref-bg-2:#e5f6f2 !important;
