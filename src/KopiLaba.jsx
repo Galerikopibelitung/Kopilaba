@@ -406,8 +406,121 @@ export default function KopiLaba() {
   });
   const [pesananItems, setPesananItems] = useState([]);
   const [editTransaksiId, setEditTransaksiId] = useState(null);
-  const [pajakEnabled, setPajakEnabled] = useState(true);
-  const [persentasePajak] = useState(10);
+  const [pajakEnabled, setPajakEnabled] = useState(() => localStorage.getItem("kopilaba_pajak_enabled") !== "false");
+  const [backupImport, setBackupImport] = useState(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const backupInputRef = useRef(null);
+  const [persentasePajak, setPersentasePajak] = useState(() => {
+    const saved = Number(localStorage.getItem("kopilaba_pajak_persen"));
+    return Number.isFinite(saved) && saved >= 0 && saved <= 100 ? saved : 10;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("kopilaba_pajak_enabled", String(pajakEnabled));
+  }, [pajakEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("kopilaba_pajak_persen", String(persentasePajak));
+  }, [persentasePajak]);
+  
+  const buildBackupPayload = () => ({
+    app: "KopiLaba",
+    formatVersion: 1,
+    exportedAt: new Date().toISOString(),
+    cafe: { id: kafe?.id || profile?.kafe_id || null, nama: kafe?.nama || "Kafe" },
+    note: "Transaksi mengikuti data yang dimuat aplikasi saat ekspor (maksimum 500 terbaru pada versi ini).",
+    data: { menu, transaksi, absensi },
+    settings: { pajakEnabled, persentasePajak }
+  });
+
+  const handleBackupExport = () => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh membuat backup."); return; }
+    const payload = buildBackupPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kopilaba-backup-" + (kafe?.id || profile?.kafe_id || "data") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setSuccess("Backup berhasil diunduh ke perangkat ini.");
+  };
+
+  const handleBackupFile = async (e) => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      if (file.size > 15 * 1024 * 1024) throw new Error("File backup maksimal 15 MB.");
+      const parsed = JSON.parse(await file.text());
+      if (parsed?.app !== "KopiLaba" || parsed?.formatVersion !== 1 || !parsed?.data || !parsed?.cafe?.id) {
+        throw new Error("Format file bukan backup KopiLaba yang didukung.");
+      }
+      if (String(parsed.cafe.id) !== String(kafe?.id || profile?.kafe_id)) {
+        throw new Error("Backup ini berasal dari kafe berbeda. Impor dibatalkan demi keamanan data.");
+      }
+      for (const key of ["menu", "transaksi", "absensi"]) {
+        if (!Array.isArray(parsed.data[key])) throw new Error("Data " + key + " di dalam backup tidak valid.");
+        if (parsed.data[key].some((row) => String(row.kafe_id) !== String(kafe?.id || profile?.kafe_id))) {
+          throw new Error("Backup berisi data di luar kafe ini. Impor dibatalkan.");
+        }
+      }
+      setBackupImport({ fileName: file.name, payload: parsed });
+      setSuccess("File backup valid. Periksa jumlah data sebelum memulihkan.");
+    } catch (err) {
+      setBackupImport(null);
+      setError(err.message || "File backup tidak dapat dibaca.");
+    }
+  };
+
+  const handleBackupRestore = async () => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
+    if (!backupImport?.payload || !token) return;
+    const payload = backupImport.payload;
+    const counts = ["menu", "transaksi", "absensi"].reduce((a, key) => a + payload.data[key].length, 0);
+    if (!window.confirm("Pulihkan " + counts + " baris data dari " + backupImport.fileName + "? Data dengan ID sama akan diperbarui; data yang tidak ada di backup tidak dihapus.")) return;
+    setBackupBusy(true);
+    setError("");
+    setSuccess("");
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      const restoreTable = async (table, rows) => {
+        if (!rows.length) return;
+        const safeRows = rows.filter((row) => String(row.kafe_id) === String(kafeId));
+        for (let i = 0; i < safeRows.length; i += 100) {
+          const res = await fetch(SUPABASE_URL + "/rest/v1/" + table + "?on_conflict=id", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_KEY,
+              Authorization: "Bearer " + token,
+              Prefer: "resolution=merge-duplicates,return=minimal"
+            },
+            body: JSON.stringify(safeRows.slice(i, i + 100))
+          });
+          if (!res.ok) throw new Error("Gagal memulihkan " + table + " (HTTP " + res.status + "). Pastikan izin database mengizinkan pemulihan.");
+        }
+      };
+      await restoreTable("menu", payload.data.menu);
+      await restoreTable("transaksi", payload.data.transaksi);
+      await restoreTable("absensi", payload.data.absensi);
+      if (payload.settings) {
+        if (typeof payload.settings.pajakEnabled === "boolean") setPajakEnabled(payload.settings.pajakEnabled);
+        if (Number.isFinite(payload.settings.persentasePajak)) setPersentasePajak(Math.max(0, Math.min(100, payload.settings.persentasePajak)));
+      }
+      await loadData(token, profile);
+      setBackupImport(null);
+      setSuccess("Pemulihan selesai. Periksa menu, transaksi, dan absensi.");
+    } catch (err) {
+      setError(err.message || "Pemulihan backup gagal. Sebagian data mungkin sudah dipulihkan; ekspor backup terbaru sebelum mencoba lagi.");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
 
   // ------------------------------------------------------------
   // STATE MODAL MENU
@@ -498,6 +611,7 @@ export default function KopiLaba() {
   // ------------------------------------------------------------
   const [adminFilterPeriode, setAdminFilterPeriode] = useState("minggu");
   const [adminFilterOwner, setAdminFilterOwner] = useState("");
+  const [adminSearchOwner, setAdminSearchOwner] = useState("");
 
   // ------------------------------------------------------------
   // EFFECTS
@@ -2495,6 +2609,7 @@ export default function KopiLaba() {
         { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
+        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "💾", label: "Backup Data" }] : []),
       ];
 
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
@@ -2860,27 +2975,29 @@ export default function KopiLaba() {
       <div style={{ padding: "14px 20px 100px", width: "100%", boxSizing: "border-box", flex: 1 }}>
         {/* SUPER ADMIN DASHBOARD */}
         {isSuperAdmin && tab === "admin" && (
-          <div style={s.card}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>
+          <div className="kl-admin-dashboard" style={s.card}>
+            <p className="kl-admin-title" style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>
               👑 Super Admin Dashboard
             </p>
-            <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>
-              Lihat data semua owner dan toko
+            <p className="kl-admin-subtitle" style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>
+              Pantau performa semua kedai, owner, dan aktivitas penjualan dari satu tempat.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
               <select
+                className="kl-admin-filter"
                 style={s.input}
                 value={adminFilterOwner}
                 onChange={(e) => setAdminFilterOwner(e.target.value)}
               >
                 <option value="">Semua Owner</option>
-                {allOwners.map((o) => (
+                {allOwners.filter((o) => [o.nama, o.email, o.kafe_id].some((v) => String(v || "").toLowerCase().includes(adminSearchOwner.toLowerCase()))).map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.nama} - {o.kafe_id || "Tidak ada toko"}
                   </option>
                 ))}
               </select>
               <select
+                className="kl-admin-filter"
                 style={s.input}
                 value={adminFilterPeriode}
                 onChange={(e) => setAdminFilterPeriode(e.target.value)}
@@ -2900,11 +3017,11 @@ export default function KopiLaba() {
                 marginBottom: 14,
               }}
             >
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
                 <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{adminFiltered.length}</p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Keuntungan</p>
                 <p
                   style={{
@@ -2917,20 +3034,36 @@ export default function KopiLaba() {
                   {fmt(adminLaba)}
                 </p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pemasukan</p>
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.success }}>
                   {fmt(adminTotalPemasukan)}
                 </p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pengeluaran</p>
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>
                   {fmt(adminTotalPengeluaran)}
                 </p>
               </div>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Owner</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{allOwners.length}</p>
+              </div>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+                <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Owner dengan Kedai</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{allOwners.filter((o) => !!o.kafe_id).length}</p>
+              </div>
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📋 Daftar Owner & Toko</p>
+            <input
+              className="kl-owner-search"
+              aria-label="Cari owner atau kedai"
+              placeholder="Cari nama, email, atau ID kedai…"
+              value={adminSearchOwner}
+              onChange={(e) => setAdminSearchOwner(e.target.value)}
+              style={{ ...s.input, marginBottom: 10, background: theme.card }}
+            />
             <div style={s.card}>
               {allOwners.length === 0 && (
                 <p style={{ color: theme.textMuted }}>Belum ada owner terdaftar.</p>
@@ -2938,6 +3071,7 @@ export default function KopiLaba() {
               {allOwners.map((o) => (
                 <div
                   key={o.id}
+                  className="kl-owner-row"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -2954,6 +3088,50 @@ export default function KopiLaba() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+
+        {/* BACKUP DATA */}
+        {!isSuperAdmin && tab === "backup" && (
+          <div className="kl-backup-page">
+            <div className="kl-page-heading">
+              <div>
+                <div className="kl-eyebrow">KEAMANAN DATA</div>
+                <h2 style={{ margin: "4px 0", fontSize: 24, color: theme.text }}>Backup & Pemulihan</h2>
+                <p style={{ margin: "4px 0 0", color: theme.textMuted, fontSize: 13 }}>Simpan salinan data kafe ke perangkat, lalu pulihkan bila diperlukan.</p>
+              </div>
+              <span className="kl-status-pill">Kafe: {kafe?.nama || "Aktif"}</span>
+            </div>
+            <div className="kl-backup-grid">
+              <section className="kl-backup-card">
+                <div className="kl-backup-icon">⬇</div>
+                <h3>1. Unduh backup</h3>
+                <p>File JSON berisi menu, transaksi yang sedang dimuat, absensi, dan pengaturan pajak. Simpan di perangkat lain atau penyimpanan awan pribadi.</p>
+                <div className="kl-counts">
+                  <span><b>{menu.length}</b> menu</span>
+                  <span><b>{transaksi.length}</b> transaksi</span>
+                  <span><b>{absensi.length}</b> absensi</span>
+                </div>
+                <button type="button" className="kl-primary-action" onClick={handleBackupExport}>Unduh file backup</button>
+              </section>
+              <section className="kl-backup-card">
+                <div className="kl-backup-icon">↥</div>
+                <h3>2. Pulihkan backup</h3>
+                <p>Pilih file backup KopiLaba dari kafe yang sama. Data dengan ID yang sama akan diperbarui; data yang tidak ada di file tidak akan dihapus.</p>
+                <input ref={backupInputRef} type="file" accept=".json,application/json" onChange={handleBackupFile} style={{ display: "none" }} />
+                <button type="button" className="kl-secondary-action" onClick={() => backupInputRef.current?.click()}>Pilih file JSON</button>
+                {backupImport && (
+                  <div className="kl-import-preview">
+                    <b>{backupImport.fileName}</b>
+                    <span>Diekspor: {new Date(backupImport.payload.exportedAt).toLocaleString("id-ID")}</span>
+                    <span>{backupImport.payload.data.menu.length} menu · {backupImport.payload.data.transaksi.length} transaksi · {backupImport.payload.data.absensi.length} absensi</span>
+                    <button type="button" className="kl-primary-action" disabled={backupBusy} onClick={handleBackupRestore}>{backupBusy ? "Memulihkan…" : "Konfirmasi pemulihan"}</button>
+                  </div>
+                )}
+              </section>
+            </div>
+            <div className="kl-backup-warning"><b>Catatan penting</b><p>Backup bukan pengganti salinan rutin. Versi ini mengekspor maksimal 500 transaksi terbaru yang dimuat aplikasi. Pemulihan tidak menghapus transaksi lama. Jangan hapus data enam bulanan secara otomatis sebelum proses arsip lengkap, uji pemulihan, dan kebijakan retensi disiapkan.</p></div>
           </div>
         )}
 
@@ -3509,7 +3687,7 @@ export default function KopiLaba() {
                   ? "🍿"
                   : "☕";
               return (
-                <div key={m.id} style={s.card}>
+                <div key={m.id} className="kl-menu-admin-card" style={s.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {m.foto && (
@@ -4860,14 +5038,43 @@ export default function KopiLaba() {
             )}
 
             {addType === "masuk" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <label style={s.label}>Pajak {persentasePajak}%</label>
-                <button
-                  onClick={() => setPajakEnabled(!pajakEnabled)}
-                  style={{ ...s.btnSm, padding: "4px 12px" }}
-                >
-                  {pajakEnabled ? "ON" : "OFF"}
-                </button>
+              <div className="kl-tax-panel" style={{ marginBottom: 14, padding: 14, borderRadius: 16, border: "1px solid " + theme.cardBorder, background: theme.input }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: theme.text }}>Pajak penjualan</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 3 }}>Pengaturan tersimpan di perangkat ini</div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-pressed={pajakEnabled}
+                    onClick={() => setPajakEnabled(!pajakEnabled)}
+                    style={{ ...s.btnSm, minWidth: 96, padding: "9px 14px", background: pajakEnabled ? theme.success : theme.textMuted, color: "#fff" }}
+                  >
+                    {pajakEnabled ? "✓ Aktif" : "Nonaktif"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                  <label htmlFor="kl-tax-rate" style={{ ...s.label, margin: 0, fontSize: 12 }}>Tarif pajak (%)</label>
+                  <input
+                    id="kl-tax-rate"
+                    aria-label="Tarif pajak dalam persen"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={persentasePajak}
+                    onChange={(e) => setPersentasePajak(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                    style={{ ...s.input, width: 100, margin: 0, minHeight: 42, fontWeight: 700 }}
+                  />
+                </div>
+                <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: theme.card, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                  <div style={{ fontSize: 12, color: theme.textMuted }}>Contoh dari subtotal Rp50.000</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 12, color: theme.textMuted }}>Pajak {pajakEnabled ? String(persentasePajak) + "%" : "nonaktif"}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: theme.text }}>{fmt(pajakEnabled ? Math.round(50000 * persentasePajak / 100) : 0)}</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted }}>Total {fmt(50000 + (pajakEnabled ? Math.round(50000 * persentasePajak / 100) : 0))}</div>
+                  </div>
+                </div>
               </div>
             )}
 
