@@ -1694,7 +1694,7 @@ export default function KopiLaba() {
         return;
       }
       const qrisMasuk = pembayaran === "qris" ? grandTotal : pembayaran === "split" ? grandTotal - tunaiMasuk : 0;
-      const bayarInt = pembayaran === "tunai" ? tunaiMasuk : grandTotal;
+      const bayarInt = pembayaran === "piutang" ? 0 : pembayaran === "tunai" ? tunaiMasuk : grandTotal;
       const kembalianInt = pembayaran === "tunai" ? Math.max(0, tunaiMasuk - grandTotal) : 0;
       const status = pembayaran === "piutang" ? "belum_lunas" : "lunas";
 
