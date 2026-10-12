@@ -4012,7 +4012,7 @@ export default function KopiLaba() {
           </>
         )}
 
-        {/* KARYAWAN & ABSENSI */>
+        {/* KARYAWAN & ABSENSI */}
         {tab === "karyawan" && (
           <>
             <div
