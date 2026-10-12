@@ -3303,7 +3303,7 @@ export default function KopiLaba() {
         {!isSuperAdmin && tab === "dashboard" && (
           <>
             {!isBarista && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              <div className="kl-dashboard-range" style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {["hari", "minggu", "bulan", "tahun", "semua"].map((p) => (
                   <button
                     key={p}
@@ -3335,6 +3335,7 @@ export default function KopiLaba() {
             )}
 
             <div
+              className="kl-dashboard-hero"
               style={{
                 background: `linear-gradient(135deg,${theme.gold},${
                   darkMode ? "#8B5A1A" : "#B8860B"
@@ -3411,6 +3412,7 @@ export default function KopiLaba() {
             </div>
 
             <div
+              className="kl-dashboard-actions"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -3470,7 +3472,7 @@ export default function KopiLaba() {
               </button>
             </div>
 
-            <div style={s.card}>
+            <div className="kl-dashboard-recent" style={s.card}>
               <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600 }}>Transaksi Terbaru</p>
               {transaksi.length === 0 && (
                 <p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada transaksi.</p>
@@ -5982,6 +5984,7 @@ export default function KopiLaba() {
 
       {/* BOTTOM NAV */}
       <div
+        className="kl-bottom-nav"
         style={{
           position: "fixed",
           bottom: 0,
