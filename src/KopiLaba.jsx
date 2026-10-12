@@ -80,7 +80,7 @@ const buildReceiptHTML = (data) => {
     namaKafe, alamatKafe, teleponKafe,
     nomorTrx, tanggal, kasir, kasirRole,
     items, subtotal, pajak, pajakPersen,
-    total, bayar, kembalian, metode, status,
+    total, bayar, kembalian, metode, status, bayarTunai, bayarQris,
   } = data;
 
   const itemRows = (items || [])
@@ -156,6 +156,7 @@ const buildReceiptHTML = (data) => {
   <div class="row total-row"><span>TOTAL BIAYA</span><span>${fmt(total)}</span></div>
   <div class="solid"></div>
   <div class="row"><span>Jumlah Bayar (${metode || "Tunai"})</span><span>${fmt(bayar)}</span></div>
+  ${Number(bayarTunai || 0) > 0 && Number(bayarQris || 0) > 0 ? `<div class="row"><span>Bagian Tunai</span><span>${fmt(bayarTunai)}</span></div><div class="row"><span>Bagian QRIS</span><span>${fmt(bayarQris)}</span></div>` : ""}
   <div class="row"><span>Kembalian</span><span>${fmt(kembalian)}</span></div>
   <div class="solid"></div>
   <div class="center" style="font-weight:bold;">${isLunas ? "LUNAS" : "** BELUM LUNAS **"}</div>
@@ -253,7 +254,7 @@ export default function KopiLaba() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [networkError, setNetworkError] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -468,6 +469,7 @@ export default function KopiLaba() {
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
   const [bayarAmount, setBayarAmount] = useState("");
+  const [splitTunaiAmount, setSplitTunaiAmount] = useState("");
   const [jumlahMap, setJumlahMap] = useState({});
   const [lastReceipt, setLastReceipt] = useState(null); // struk setelah checkout
 
@@ -1678,10 +1680,23 @@ export default function KopiLaba() {
       }));
       const itemStr = JSON.stringify(itemsDetail);
 
-      const status = pembayaran === "tunai" ? "lunas" : "belum_lunas";
-      const bayarInt =
-        pembayaran === "tunai" ? parseInt(bayarAmount) || grandTotal : grandTotal;
-      const kembalianInt = pembayaran === "tunai" ? Math.max(0, bayarInt - grandTotal) : 0;
+      const tunaiMasuk = pembayaran === "tunai"
+        ? (parseInt(bayarAmount, 10) || grandTotal)
+        : pembayaran === "split" ? (parseInt(splitTunaiAmount, 10) || 0) : 0;
+      if (pembayaran === "tunai" && tunaiMasuk < grandTotal) {
+        setError("Jumlah uang tunai kurang dari total tagihan.");
+        setLoading(false);
+        return;
+      }
+      if (pembayaran === "split" && (tunaiMasuk <= 0 || tunaiMasuk >= grandTotal)) {
+        setError("Untuk split payment, nominal tunai harus lebih dari 0 dan kurang dari total tagihan.");
+        setLoading(false);
+        return;
+      }
+      const qrisMasuk = pembayaran === "qris" ? grandTotal : pembayaran === "split" ? grandTotal - tunaiMasuk : 0;
+      const bayarInt = pembayaran === "piutang" ? 0 : pembayaran === "tunai" ? tunaiMasuk : grandTotal;
+      const kembalianInt = pembayaran === "tunai" ? Math.max(0, tunaiMasuk - grandTotal) : 0;
+      const status = pembayaran === "piutang" ? "belum_lunas" : "lunas";
 
       const basePayload = {
         kafe_id: kafeId,
@@ -1695,9 +1710,8 @@ export default function KopiLaba() {
         pajak_enabled: pajakEnabled,
       };
 
-      // Coba simpan dengan field pembayaran; kalau gagal (kolom belum ada), fallback
-      try {
-        await api(
+      // Simpan transaksi sekali saja; QRIS tetap dikonfirmasi manual oleh kasir.
+      await api(
           "/rest/v1/transaksi",
           "POST",
           {
@@ -1705,12 +1719,11 @@ export default function KopiLaba() {
             bayar: bayarInt,
             kembalian: kembalianInt,
             metode: pembayaran,
+            bayar_tunai: tunaiMasuk,
+            bayar_qris: qrisMasuk,
           },
           token
         );
-      } catch (e1) {
-        await api("/rest/v1/transaksi", "POST", basePayload, token);
-      }
 
       // Simpan struk ke state untuk langsung print
       const receipt = {
@@ -1728,7 +1741,9 @@ export default function KopiLaba() {
         total: grandTotal,
         bayar: bayarInt,
         kembalian: kembalianInt,
-        metode: pembayaran === "tunai" ? "Tunai" : "Piutang",
+        bayarTunai: tunaiMasuk,
+        bayarQris: qrisMasuk,
+        metode: pembayaran === "tunai" ? "Tunai" : pembayaran === "qris" ? "QRIS" : pembayaran === "split" ? "Tunai + QRIS" : "Piutang",
         status,
       };
       setLastReceipt(receipt);
@@ -1746,6 +1761,8 @@ export default function KopiLaba() {
 
       setKeranjang([]);
       setBayarAmount("");
+      setSplitTunaiAmount("");
+      setPembayaran("tunai");
       setSuccess("Transaksi berhasil!");
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
@@ -2455,6 +2472,7 @@ export default function KopiLaba() {
         { id: "menu", icon: "☕", label: "Menu" },
         { id: "karyawan", icon: "👤", label: "Karyawan" },
         { id: "laporan", icon: "📊", label: "Laporan" },
+        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
       ]
@@ -2464,6 +2482,7 @@ export default function KopiLaba() {
         { id: "menu", icon: "☕", label: "Menu" },
         { id: "karyawan", icon: "👤", label: "Karyawan" },
         { id: "laporan", icon: "📊", label: "Laporan" },
+        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
       ];
@@ -2474,6 +2493,28 @@ export default function KopiLaba() {
   const filteredMenu = selectedKategori
     ? menu.filter((m) => m.kategori_id === selectedKategori)
     : menu;
+
+  const transaksiMasuk = transaksi.filter((t) => t.tipe === "masuk");
+  const pembayaranTunaiTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
+  const pembayaranQrisTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
+  const tanggalAnalitik = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  });
+  const transaksiPerHari = tanggalAnalitik.map((day) => {
+    const rows = transaksiMasuk.filter((t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t.created_at || Date.now())) === day);
+    return {
+      day, label: day.slice(8, 10) + "/" + day.slice(5, 7),
+      tunai: rows.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0),
+      qris: rows.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0),
+    };
+  });
+  const transaksiPerJam = Array.from({ length: 24 }, (_, hour) => {
+    const rows = transaksiMasuk.filter((t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23" }).format(new Date(t.created_at || Date.now()))) === hour);
+    return { hour, total: rows.reduce((sum, t) => sum + Number(t.total || 0), 0), count: rows.length };
+  });
+  const maxPerJam = Math.max(1, ...transaksiPerJam.map((x) => x.total));
+  const garisJam = transaksiPerJam.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxPerJam) * 78)).join(" ");
 
   return (
     <div style={s.wrap}>
@@ -3859,6 +3900,52 @@ export default function KopiLaba() {
               </div>
             )}
           </>
+        )}
+
+        {/* ANALITIK PEMBAYARAN */}
+        {tab === "pembayaran" && (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>💳 Analitik Pembayaran</p>
+              <p style={{ margin: 0, color: theme.textMuted, fontSize: 12 }}>Ringkasan transaksi masuk menurut metode pembayaran.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, marginTop: 14 }}>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total Tunai</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranTunaiTotal)}</div></div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total QRIS</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranQrisTotal)}</div></div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Transaksi Masuk</div><div style={{ fontSize: 18, fontWeight: 800 }}>{transaksiMasuk.length}</div></div>
+              </div>
+            </div>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 800 }}>Tunai vs QRIS · 7 hari terakhir</p>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, marginBottom: 12 }}>
+                <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.gold, marginRight: 6 }} />Tunai</span>
+                <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.success, marginRight: 6 }} />QRIS</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8, alignItems: "end", minHeight: 170 }}>
+                {transaksiPerHari.map((d) => {
+                  const max = Math.max(1, ...transaksiPerHari.map((x) => Math.max(x.tunai, x.qris)));
+                  return <div key={d.day} style={{ minWidth: 0, textAlign: "center" }}>
+                    <div style={{ height: 130, display: "flex", alignItems: "end", justifyContent: "center", gap: 3, borderBottom: "1px solid " + theme.cardBorder, paddingBottom: 3 }}>
+                      <div title={"Tunai " + fmt(d.tunai)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.tunai / max * 120) + "px", background: theme.gold, borderRadius: "5px 5px 0 0" }} />
+                      <div title={"QRIS " + fmt(d.qris)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.qris / max * 120) + "px", background: theme.success, borderRadius: "5px 5px 0 0" }} />
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted, marginTop: 6 }}>{d.label}</div>
+                  </div>;
+                })}
+              </div>
+              <p style={{ fontSize: 11, color: theme.textMuted, margin: "12px 0 0" }}>Transaksi lama tanpa rincian metode pembayaran mungkin belum muncul terpisah pada grafik ini.</p>
+            </div>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 800 }}>Jam Transaksi Tersibuk</p>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: theme.textMuted }}>Nilai transaksi per jam, berdasarkan waktu WIB.</p>
+              <svg viewBox="0 0 300 125" role="img" aria-label="Grafik garis transaksi per jam" style={{ width: "100%", display: "block", overflow: "visible" }}>
+                {[0, 1, 2, 3].map((n) => <line key={n} x1="20" x2="280" y1={22 + n * 26} y2={22 + n * 26} stroke={theme.cardBorder} strokeDasharray="3 4" />)}
+                <polyline points={garisJam} fill="none" stroke={theme.gold} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                {transaksiPerJam.map((x, i) => <circle key={x.hour} cx={20 + i * (260 / 23)} cy={100 - (x.total / maxPerJam) * 78} r={x.total > 0 ? 2.7 : 1.5} fill={theme.gold}><title>{String(x.hour).padStart(2, "0") + ":00 — " + fmt(x.total) + " (" + x.count + " transaksi)"}</title></circle>)}
+                {[0, 6, 12, 18, 23].map((h) => <text key={h} x={20 + h * (260 / 23)} y="119" fontSize="9" textAnchor="middle" fill={theme.textMuted}>{String(h).padStart(2, "0") + ":00"}</text>)}
+              </svg>
+              <div style={{ marginTop: 10, padding: 12, background: theme.input, borderRadius: 10, fontSize: 12 }}>Jam paling ramai: <strong>{String(transaksiPerJam.reduce((best, x) => x.count > best.count ? x : best, transaksiPerJam[0]).hour).padStart(2, "0")}:00 WIB</strong><span style={{ color: theme.textMuted }}> · {Math.max(...transaksiPerJam.map((x) => x.count))} transaksi</span></div>
+            </div>
+          </div>
         )}
 
         {/* LAPORAN */}
@@ -5424,8 +5511,8 @@ export default function KopiLaba() {
                         )}
                       </p>
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                      {["tunai", "piutang"].map((p) => (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 14 }}>
+                      {["tunai", "qris", "split", "piutang"].map((p) => (
                         <button
                           key={p}
                           onClick={() => setPembayaran(p)}
@@ -5445,10 +5532,19 @@ export default function KopiLaba() {
                             cursor: "pointer",
                           }}
                         >
-                          {p === "tunai" ? "💰 Tunai" : "📝 Piutang"}
+                          {p === "tunai" ? "💵 Tunai" : p === "qris" ? "📱 QRIS" : p === "split" ? "💳 Tunai + QRIS" : "📝 Piutang"}
                         </button>
                       ))}
                     </div>
+                    {pembayaran === "split" && (
+                      <div style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: theme.input, border: "1px solid " + theme.cardBorder }}>
+                        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Bagian dibayar tunai</label>
+                        <input style={{ ...s.input, marginBottom: 8 }} type="number" min="1" max={Math.max(1, totalKeranjang - 1)} placeholder="Masukkan nominal tunai" value={splitTunaiAmount} onChange={(e) => setSplitTunaiAmount(e.target.value)} />
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}><span style={{ color: theme.textMuted }}>Sisa dibayar QRIS</span><strong>{fmt(Math.max(0, totalKeranjang + (pajakEnabled ? Math.round(totalKeranjang * persentasePajak / 100) : 0) - (parseInt(splitTunaiAmount, 10) || 0)))}</strong></div>
+                        <p style={{ margin: "6px 0 0", fontSize: 11, color: theme.textMuted }}>Pastikan pembayaran QRIS sudah diterima sebelum menekan Bayar.</p>
+                      </div>
+                    )}
+                    {pembayaran === "qris" && <div style={{ marginBottom: 10, padding: 12, borderRadius: 12, background: theme.input, fontSize: 12, color: theme.textMuted }}>Konfirmasi bahwa pembayaran QRIS sudah diterima pelanggan. Aplikasi tidak memverifikasi pembayaran otomatis.</div>}
                     {pembayaran === "tunai" && (
                       <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
                         <input
