@@ -1059,7 +1059,9 @@ export default function KopiLaba() {
         qty: totalQty,
         total: grandTotal,
         tipe: addType,
-        status: "lunas",
+        status: editTransaksiId
+          ? (transaksi.find((t) => t.id === editTransaksiId)?.status || "lunas")
+          : "lunas",
         subtotal: subtotal,
         pajak: pajak,
         pajak_enabled: pajakEnabled && addType === "masuk",
