@@ -294,6 +294,7 @@ export default function KopiLaba() {
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const sidebarRef = useRef(null);
 
   // Ref untuk swipe (agar tidak rebind tiap gerakan)
@@ -2831,7 +2832,7 @@ export default function KopiLaba() {
   const garisJam = transaksiPerJam.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxPerJam) * 78)).join(" ");
 
   return (
-    <div style={s.wrap} data-theme={darkMode ? "dark" : "light"}>
+    <div className={desktopSidebarCollapsed ? "kl-app-shell kl-desktop-sidebar-collapsed" : "kl-app-shell"} style={s.wrap} data-theme={darkMode ? "dark" : "light"}>
       {/* HEADER */}
       <div
         className="kl-topbar"
@@ -2861,7 +2862,12 @@ export default function KopiLaba() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
               className="kl-menu-toggle"
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => {
+                if (window.innerWidth >= 1000) setDesktopSidebarCollapsed((collapsed) => !collapsed);
+                else setSidebarOpen(true);
+              }}
+              aria-label="Buka atau tutup menu samping"
+              aria-expanded={!desktopSidebarCollapsed}
               style={{
                 background: "transparent",
                 border: "none",
@@ -5973,18 +5979,13 @@ export default function KopiLaba() {
           zIndex: 10,
         }}
       >
-        {mobilePrimaryTabs.map((t) => (
+        {tabs.map((t) => (
           <button key={t.id} className={`kl-bottom-nav-item ${tab === t.id ? "is-active" : ""}`} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
             <span className="kl-nav-icon"><AppIcon name={t.icon} size={20} /></span>
             <span className="kl-bottom-nav-label">{t.label}</span>
             {tab === t.id && <span className="kl-bottom-nav-dot" />}
           </button>
         ))}
-        <button className={`kl-bottom-nav-item kl-bottom-nav-more ${mobileMoreActive ? "is-active" : ""}`} aria-label="Buka menu lainnya" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
-          <span className="kl-nav-icon"><AppIcon name="menu" size={20} /></span>
-          <span className="kl-bottom-nav-label">Lainnya</span>
-          {mobileMoreActive && <span className="kl-bottom-nav-dot" />}
-        </button>
       </div>
     </div>
   );
