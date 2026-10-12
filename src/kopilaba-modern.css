@@ -1301,3 +1301,24 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   .kl-brand-mark { width:50px; height:50px; }
   .kl-cafe-identity { max-width:40vw !important; }
 }
+
+/* Remove remaining warm/gold surfaces from login and utility screens */
+.kl-login-screen {
+  background:radial-gradient(ellipse at 15% 10%,#d8f5ef 0%,#effaf8 48%,#dff4ef 100%) !important;
+}
+.kl-login-screen > div {
+  border-color:#cfe8e3 !important;
+  box-shadow:0 28px 80px rgba(8,105,98,.12) !important;
+  background:rgba(255,255,255,.96) !important;
+}
+.kl-login-screen h1 { color:#087f78 !important; }
+.kl-login-screen button, .kl-primary-action {
+  background:linear-gradient(135deg,#35c8b7,#087f78) !important;
+  border-color:#087f78 !important;
+  color:#ffffff !important;
+}
+.kl-secondary-action { background:#effaf8 !important; border-color:#cfe8e3 !important; color:#087f78 !important; }
+.kl-backup-icon { background:#d8f5ef !important; color:#087f78 !important; }
+.kl-backup-warning { background:#effaf8 !important; border-color:#cfe8e3 !important; }
+.kl-backup-warning b, .kl-backup-card h3, .kl-counts b { color:#087f78 !important; }
+.kl-counts span, .kl-import-preview { background:#effaf8 !important; color:#315d58 !important; }
