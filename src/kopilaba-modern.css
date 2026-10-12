@@ -86,3 +86,22 @@ img { max-width: 100%; }
  .kl-menu-admin-card { padding:14px !important; }
  .kl-counts span { flex:1; text-align:center; }
 }
+
+
+/* Super Admin command-center refinement */
+.kl-admin-dashboard { padding:clamp(16px,2.4vw,28px) !important; background:linear-gradient(145deg,#fffdf9 0%,#f7efe5 100%) !important; border:1px solid #e8d9c7 !important; }
+.kl-admin-title { display:flex; align-items:center; gap:10px; font-size:24px !important; letter-spacing:-.04em; color:#452616 !important; }
+.kl-admin-subtitle { font-size:13px !important; line-height:1.65; max-width:620px; }
+.kl-admin-filter { flex:1 1 220px; width:auto !important; min-width:0; background:#fffdf9 !important; }
+.kl-admin-stat { min-width:0; border:1px solid #eadccc; border-radius:17px !important; padding:16px !important; background:#fffdf9 !important; }
+.kl-admin-stat p:first-child { font-size:11px !important; font-weight:700; letter-spacing:.02em; }
+.kl-admin-stat p:last-child { font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.kl-owner-row { align-items:center; gap:12px; padding:12px 10px !important; margin-bottom:6px !important; border:1px solid #eee2d5; border-radius:12px; background:#fffdf9; }
+.kl-owner-row strong { color:#452616; }
+.kl-admin-dashboard > div[style*="grid-template-columns"] { gap:12px !important; }
+.kl-admin-dashboard > div[style*="grid-template-columns"] > div { box-shadow:0 5px 16px rgba(66,42,20,.04); }
+@media (max-width:640px) {
+ .kl-admin-title { font-size:21px !important; }
+ .kl-owner-row { align-items:flex-start; flex-direction:column; }
+ .kl-admin-filter { flex-basis:100%; }
+}
