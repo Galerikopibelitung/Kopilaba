@@ -373,3 +373,15 @@ p,h1,h2,h3,h4,label,span,td,th{overflow-wrap:anywhere}
  .kl-login-screen>div>div[style*="margin-top: 30px"]{margin-top:20px!important}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Registration screen shares the same visual system as login */
+.kl-register-screen{min-height:100svh!important;padding:clamp(14px,3vw,36px)!important;display:flex!important;align-items:center!important;justify-content:center!important;background:radial-gradient(ellipse at 12% 12%,#f0dcc5 0%,#f7f3ed 42%,#eee3d5 100%)!important}
+.kl-register-screen>div{width:min(100%,540px)!important;max-width:540px!important;margin:auto!important;padding:clamp(22px,4vw,38px)!important;border:1px solid rgba(138,91,49,.18)!important;border-radius:26px!important;box-shadow:0 28px 80px rgba(69,42,22,.14)!important;background:rgba(255,253,250,.97)!important}
+.kl-register-screen h2{font-size:clamp(25px,5vw,32px)!important;line-height:1.15;letter-spacing:-1.2px}
+.kl-register-screen label{display:block;margin:12px 0 6px!important;font-size:12px!important;font-weight:750!important;color:#776656!important}
+.kl-register-screen input{width:100%;min-height:46px;background:#fff!important;border:1px solid #e6d9ca!important;border-radius:12px!important;padding:11px 13px!important;color:#2b2017!important}
+.kl-register-screen input:focus{outline:none;border-color:#b77b42!important;box-shadow:0 0 0 3px rgba(183,123,66,.13)!important}
+.kl-register-screen button[style*="width: 100%"]{min-height:49px!important;border-radius:13px!important;white-space:normal;overflow-wrap:anywhere}
+.kl-register-screen>div>div[style*="background:"]{overflow-wrap:anywhere}
+@media(max-width:560px){.kl-register-screen{padding:12px!important;align-items:flex-start!important}.kl-register-screen>div{padding:21px 16px!important;border-radius:21px!important}}
