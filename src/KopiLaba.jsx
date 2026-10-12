@@ -1049,7 +1049,20 @@ export default function KopiLaba() {
           setLoading(false);
           return;
         }
-        const tok = data.access_token || SUPABASE_KEY;
+        // When email confirmation is enabled, Supabase creates the auth user
+        // but intentionally does not issue a session yet. Never use the public
+        // anon key as a substitute for a user token to create private records.
+        if (!data.access_token && !isExistingGoogleSession) {
+          setSuccess("Akun berhasil dibuat. Silakan konfirmasi email jika diminta, lalu login. Setelah login, lengkapi data kafe untuk menyelesaikan pendaftaran.");
+          setLoginForm({ email: regForm.email, password: regForm.password });
+          setScreen("login");
+          setLoading(false);
+          return;
+        }
+        const tok = data.access_token || token;
+        if (!tok || tok === SUPABASE_KEY) {
+          throw new Error("Sesi pendaftaran belum aktif. Silakan login terlebih dahulu untuk melanjutkan.");
+        }
         let kafeId = null;
         try {
           const k = await api(
