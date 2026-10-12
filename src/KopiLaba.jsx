@@ -545,8 +545,17 @@ export default function KopiLaba() {
       await restoreTable("transaksi", payload.data.transaksi);
       await restoreTable("absensi", payload.data.absensi);
       if (payload.settings) {
-        if (typeof payload.settings.pajakEnabled === "boolean") setPajakEnabled(payload.settings.pajakEnabled);
-        if (Number.isFinite(payload.settings.persentasePajak)) setPersentasePajak(Math.max(0, Math.min(100, payload.settings.persentasePajak)));
+        const taxEnabled = typeof payload.settings.pajakEnabled === "boolean" ? payload.settings.pajakEnabled : pajakEnabled;
+        const taxRate = Number.isFinite(payload.settings.persentasePajak) ? Math.max(0, Math.min(100, payload.settings.persentasePajak)) : persentasePajak;
+        const taxResult = await api(
+          "/rest/v1/kafe?id=eq." + kafeId,
+          "PATCH",
+          { pajak_enabled: taxEnabled, pajak_persen: taxRate },
+          token
+        );
+        if (Array.isArray(taxResult) && taxResult[0]) setKafe((prev) => ({ ...prev, ...taxResult[0] }));
+        setPajakEnabled(taxEnabled);
+        setPersentasePajak(taxRate);
       }
       await loadData(token, profile);
       setBackupImport(null);
