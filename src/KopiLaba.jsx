@@ -2975,14 +2975,15 @@ export default function KopiLaba() {
         {/* SUPER ADMIN DASHBOARD */}
         {isSuperAdmin && tab === "admin" && (
           <div className="kl-admin-dashboard" style={s.card}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>
+            <p className="kl-admin-title" style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>
               👑 Super Admin Dashboard
             </p>
-            <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>
-              Lihat data semua owner dan toko
+            <p className="kl-admin-subtitle" style={{ fontSize: 12, color: theme.textMuted, marginBottom: 14 }}>
+              Pantau performa semua kedai, owner, dan aktivitas penjualan dari satu tempat.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
               <select
+                className="kl-admin-filter"
                 style={s.input}
                 value={adminFilterOwner}
                 onChange={(e) => setAdminFilterOwner(e.target.value)}
@@ -2995,6 +2996,7 @@ export default function KopiLaba() {
                 ))}
               </select>
               <select
+                className="kl-admin-filter"
                 style={s.input}
                 value={adminFilterPeriode}
                 onChange={(e) => setAdminFilterPeriode(e.target.value)}
@@ -3014,11 +3016,11 @@ export default function KopiLaba() {
                 marginBottom: 14,
               }}
             >
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Total Transaksi</p>
                 <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{adminFiltered.length}</p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Keuntungan</p>
                 <p
                   style={{
@@ -3031,13 +3033,13 @@ export default function KopiLaba() {
                   {fmt(adminLaba)}
                 </p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pemasukan</p>
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.success }}>
                   {fmt(adminTotalPemasukan)}
                 </p>
               </div>
-              <div style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
+              <div className="kl-admin-stat" style={{ background: theme.input, borderRadius: 12, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>Pengeluaran</p>
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: theme.danger }}>
                   {fmt(adminTotalPengeluaran)}
@@ -3052,6 +3054,7 @@ export default function KopiLaba() {
               {allOwners.map((o) => (
                 <div
                   key={o.id}
+                  className="kl-owner-row"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
