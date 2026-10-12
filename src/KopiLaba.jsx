@@ -1010,18 +1010,18 @@ export default function KopiLaba() {
     setError("");
     setNetworkError(false);
     const isAdminRegistration = String(regForm.email || "").trim().toLowerCase() === ADMIN_EMAIL;
-    if (!regForm.email || !regForm.password || (!isAdminRegistration && (!regForm.nama || !regForm.namaKafe))) {
-      setError(isAdminRegistration ? "Email dan password wajib diisi." : "Nama, email, password, dan nama kafe wajib diisi.");
+    const isExistingGoogleSession = Boolean(user?.id && token && String(user.email || "").toLowerCase() === String(regForm.email || "").toLowerCase());
+    if (!regForm.email || (!isExistingGoogleSession && !regForm.password) || (!isAdminRegistration && (!regForm.nama || !regForm.namaKafe))) {
+      setError(isAdminRegistration ? "Email dan password wajib diisi." : "Nama, email, dan nama kafe wajib diisi. Password hanya diperlukan untuk pendaftaran email.");
       setLoading(false);
       return;
     }
-    if (regForm.password.length < 6) {
+    if (!isExistingGoogleSession && regForm.password.length < 6) {
       setError("Password minimal 6 karakter!");
       setLoading(false);
       return;
     }
     try {
-      const isExistingGoogleSession = Boolean(user?.id && token && String(user.email || "").toLowerCase() === String(regForm.email || "").toLowerCase());
       const data = isExistingGoogleSession
         ? { user, access_token: token }
         : await authApi("/signup", {
