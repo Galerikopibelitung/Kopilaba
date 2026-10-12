@@ -10,6 +10,14 @@ const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
 // HELPER: FORMAT & UTIL
 // ============================================================
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+const escapeHTML = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
 
 // Tanggal hari ini dalam zona WIB (bukan UTC)
 const todayWIB = () => {
@@ -87,8 +95,8 @@ const buildReceiptHTML = (data) => {
     .map(
       (it) => `
     <tr>
-      <td style="padding:2px 0; vertical-align:top;">${it.nama}</td>
-      <td style="text-align:center; padding:2px 0;">${it.qty}</td>
+      <td style="padding:2px 0; vertical-align:top;">${escapeHTML(it.nama)}</td>
+      <td style="text-align:center; padding:2px 0;">${escapeHTML(it.qty)}</td>
       <td style="text-align:right; padding:2px 0;">${fmt(it.total)}</td>
     </tr>`
     )
@@ -100,7 +108,7 @@ const buildReceiptHTML = (data) => {
 <html>
 <head>
 <meta charset="utf-8">
-<title>Struk ${nomorTrx || ""}</title>
+<title>Struk ${escapeHTML(nomorTrx || "")}</title>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -130,14 +138,14 @@ const buildReceiptHTML = (data) => {
 </head>
 <body>
   <div class="center">
-    <div class="name">${namaKafe || "KAFE"}</div>
-    ${alamatKafe ? `<div>${alamatKafe}</div>` : ""}
-    ${teleponKafe ? `<div>Telp: ${teleponKafe}</div>` : ""}
+    <div class="name">${escapeHTML(namaKafe || "KAFE")}</div>
+    ${alamatKafe ? `<div>${escapeHTML(alamatKafe)}</div>` : ""}
+    ${teleponKafe ? `<div>Telp: ${escapeHTML(teleponKafe)}</div>` : ""}
   </div>
   <div class="dashed"></div>
-  <div class="row"><span>No</span><span>${nomorTrx || "-"}</span></div>
-  <div class="row"><span>Tgl</span><span>${tanggal || "-"}</span></div>
-  <div class="row"><span>Kasir</span><span>${kasir || "Admin"}${kasirRole ? ` (${kasirRole})` : ""}</span></div>
+  <div class="row"><span>No</span><span>${escapeHTML(nomorTrx || "-")}</span></div>
+  <div class="row"><span>Tgl</span><span>${escapeHTML(tanggal || "-")}</span></div>
+  <div class="row"><span>Kasir</span><span>${escapeHTML(kasir || "Admin")}${kasirRole ? ` (${escapeHTML(kasirRole)})` : ""}</span></div>
   <div class="dashed"></div>
   <table>
     <thead>
@@ -155,7 +163,7 @@ const buildReceiptHTML = (data) => {
   <div class="solid"></div>
   <div class="row total-row"><span>TOTAL BIAYA</span><span>${fmt(total)}</span></div>
   <div class="solid"></div>
-  <div class="row"><span>Jumlah Bayar (${metode || "Tunai"})</span><span>${fmt(bayar)}</span></div>
+  <div class="row"><span>Jumlah Bayar (${escapeHTML(metode || "Tunai")})</span><span>${fmt(bayar)}</span></div>
   ${Number(bayarTunai || 0) > 0 && Number(bayarQris || 0) > 0 ? `<div class="row"><span>Bagian Tunai</span><span>${fmt(bayarTunai)}</span></div><div class="row"><span>Bagian QRIS</span><span>${fmt(bayarQris)}</span></div>` : ""}
   <div class="row"><span>Kembalian</span><span>${fmt(kembalian)}</span></div>
   <div class="solid"></div>
@@ -1051,7 +1059,9 @@ export default function KopiLaba() {
         qty: totalQty,
         total: grandTotal,
         tipe: addType,
-        status: "lunas",
+        status: editTransaksiId
+          ? (transaksi.find((t) => t.id === editTransaksiId)?.status || "lunas")
+          : "lunas",
         subtotal: subtotal,
         pajak: pajak,
         pajak_enabled: pajakEnabled && addType === "masuk",
