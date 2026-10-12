@@ -234,3 +234,20 @@ body { background:#f7f3ed !important; color:var(--kl-ink); }
  .kl-admin-stat { padding:12px !important; }
  .kl-owner-row { gap:7px !important; }
 }
+
+
+/* v2 visual refresh: replace emoji/glyph navigation with a coherent icon system */
+.kl-brand-lockup{display:flex;align-items:center;gap:11px}
+.kl-brand-mark{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border-radius:15px;color:#fff;background:linear-gradient(145deg,#8c542d,#4a2918);box-shadow:0 6px 15px rgba(80,43,22,.18)}
+.kl-brand-caption{margin:2px 0 0;font-size:9px;font-weight:800;letter-spacing:1.8px;color:#9b8069}
+.kl-sidebar-brand{display:flex;align-items:center;gap:10px;color:#392719}
+.kl-sidebar-brand .kl-brand-mark{width:38px;height:38px;border-radius:12px}
+.kl-sidebar-brand small{display:block;font-size:9px;letter-spacing:1.7px;color:#a08369;margin-top:2px}
+.kl-nav-icon{display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;flex:0 0 38px;border:1px solid rgba(130,94,62,.13);border-radius:12px;background:rgba(255,255,255,.46);color:#806044;transition:all .18s ease}
+.kl-sidebar button{font-weight:600!important;letter-spacing:-.15px}
+.kl-sidebar button:hover .kl-nav-icon{background:#f3e5d5;border-color:#e4c8a9;color:#58341f;transform:translateY(-1px)}
+.kl-sidebar button[style*="background: rgb(217, 154, 69)"] .kl-nav-icon,.kl-sidebar button[style*="background: #d99a45"] .kl-nav-icon{background:rgba(255,255,255,.3);color:inherit;border-color:rgba(255,255,255,.35)}
+.kl-topbar .kl-menu-toggle{border-radius:13px!important}
+.kl-topbar button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.kl-topbar button:not(:first-child){border-radius:12px}
+@media(max-width:899px){.kl-brand-mark{width:39px;height:39px;border-radius:13px}.kl-brand-caption{font-size:8px}.kl-nav-icon{width:36px;height:36px;flex-basis:36px}}
