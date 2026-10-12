@@ -1716,3 +1716,57 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   .kl-menu-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
   .kl-menu-admin-card { min-width:0 !important; }
 }
+
+
+/* Follow-up fixes: complete mobile nav, reversible desktop sidebar, tidy headings and neutral finance cards. */
+@media (min-width: 1000px) {
+  .kl-menu-toggle { display:inline-flex !important; align-items:center; justify-content:center; width:42px; height:42px; border-radius:12px !important; }
+  .kl-sidebar { transform:translateX(0) !important; }
+  .kl-app-shell.kl-desktop-sidebar-collapsed .kl-sidebar { transform:translateX(-110%) !important; }
+  .kl-app-shell.kl-desktop-sidebar-collapsed .kl-topbar,
+  .kl-app-shell.kl-desktop-sidebar-collapsed .kl-content { margin-left:0 !important; width:100% !important; }
+}
+@media (max-width: 999px) {
+  .kl-bottom-nav {
+    display:flex !important; justify-content:flex-start !important;
+    overflow-x:auto !important; overflow-y:hidden !important;
+    overscroll-behavior-x:contain; scrollbar-width:none !important;
+    -webkit-overflow-scrolling:touch !important;
+    padding:8px 8px calc(10px + env(safe-area-inset-bottom)) !important;
+    gap:4px !important;
+  }
+  .kl-bottom-nav::-webkit-scrollbar { display:none !important; }
+  .kl-bottom-nav > .kl-bottom-nav-item {
+    flex:0 0 76px !important; width:76px !important; min-width:76px !important;
+    max-width:76px !important; position:relative !important;
+  }
+  .kl-bottom-nav-label {
+    display:block !important; overflow:visible !important; text-overflow:clip !important;
+    white-space:normal !important; overflow-wrap:normal !important; word-break:normal !important;
+    font-size:10px !important; line-height:1.2 !important; text-align:center !important;
+  }
+  .kl-topbar h1, .kl-brand-title {
+    font-size:clamp(17px, 2.2vw, 25px) !important;
+    line-height:1.15 !important; letter-spacing:-.035em !important;
+    white-space:nowrap !important; overflow-wrap:normal !important; word-break:normal !important;
+  }
+  .kl-brand-lockup { gap:8px !important; }
+  .kl-brand-copy { min-width:0 !important; }
+  .kl-brand-caption { font-size:9px !important; line-height:1.25 !important; letter-spacing:.06em !important; }
+}
+.kl-page-heading { align-items:center !important; gap:12px !important; }
+.kl-page-heading h1, .kl-page-heading h2, .kl-page-heading h3 {
+  margin:0 !important; max-width:100% !important; line-height:1.2 !important;
+  letter-spacing:-.025em !important; overflow-wrap:normal !important; word-break:normal !important;
+}
+.kl-content h1, .kl-content h2, .kl-content h3 {
+  line-height:1.22 !important; overflow-wrap:normal !important; word-break:normal !important;
+}
+.kl-content .kl-dashboard-hero { background:linear-gradient(135deg,#e8f8f5 0%,#d9f2ed 100%) !important; color:#123b38 !important; }
+.kl-content .kl-dashboard-hero * { color:#123b38 !important; }
+.kl-content .kl-dashboard-hero [style*="color: rgb(22, 163, 74)"],
+.kl-content .kl-dashboard-hero [style*="color: rgb(220, 38, 38)"],
+.kl-content .kl-dashboard-hero [style*="color: green"],
+.kl-content .kl-dashboard-hero [style*="color: red"] { color:#087f78 !important; }
+.kl-content .kl-dashboard-hero [style*="color: rgb(22, 163, 74)"] { color:#087f78 !important; }
+.kl-content .kl-dashboard-hero [style*="color: rgb(220, 38, 38)"] { color:#52736f !important; }
