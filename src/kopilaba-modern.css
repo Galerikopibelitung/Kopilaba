@@ -1146,3 +1146,158 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .kl-menu-admin-card img.kl-menu-photo { height:108px!important; }
   .kl-cafe-identity { max-width:43vw;font-size:11px!important; }
 }
+
+
+/* Final teal-only polish: summary/dashboard and desktop/tablet brand alignment */
+:root {
+  --kl-ink:#123b38 !important;
+  --kl-muted:#52736f !important;
+  --kl-coffee:#087f78 !important;
+  --kl-coffee-dark:#075e59 !important;
+  --kl-caramel:#35c8b7 !important;
+  --kl-cream:#effaf8 !important;
+  --kl-line:#cfe8e3 !important;
+  --kl-card:#ffffff !important;
+  --kl-green:#087f78 !important;
+  --kl-red:#d65b56 !important;
+  --kl-ref-green:#087f78 !important;
+  --kl-ref-red:#d65b56 !important;
+  --kl-ref-surface:#ffffff !important;
+  --kl-ref-line:#cfe8e3 !important;
+  --kl-ref-accent:#087f78 !important;
+}
+body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
+.kl-topbar {
+  background:#ffffff !important;
+  border-bottom:1px solid #cfe8e3 !important;
+  box-shadow:0 4px 22px rgba(8,105,98,.06) !important;
+  text-align:left !important;
+}
+.kl-topbar > div {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+.kl-topbar > div > div:first-child {
+  justify-content:flex-start !important;
+  text-align:left !important;
+  margin-right:auto !important;
+}
+.kl-topbar .kl-brand-lockup { justify-content:flex-start !important; text-align:left !important; }
+.kl-brand-copy, .kl-brand-title, .kl-brand-caption, .kl-cafe-identity {
+  text-align:left !important;
+  align-items:flex-start !important;
+}
+.kl-cafe-identity { margin-left:0 !important; max-width:min(48vw,560px) !important; }
+.kl-brand-title span:first-child { color:#087f78 !important; }
+.kl-brand-title span:last-child { color:#123b38 !important; }
+.kl-brand-mark { background:linear-gradient(145deg,#35c8b7,#087f78) !important; }
+.kl-sidebar {
+  background:linear-gradient(180deg,#087f78 0%,#075e59 100%) !important;
+  border-right-color:#cfe8e3 !important;
+}
+.kl-sidebar .kl-brand-mark { background:linear-gradient(145deg,#35c8b7,#087f78) !important; }
+.kl-bottom-nav > button:has(span[style*="font-weight: 700"]) .kl-nav-icon {
+  background:#35c8b7 !important; color:#063d39 !important;
+}
+.kl-dashboard-hero {
+  background:linear-gradient(135deg,#35c8b7 0%,#087f78 55%,#075e59 100%) !important;
+  color:#ffffff !important;
+  border:1px solid rgba(255,255,255,.35) !important;
+  box-shadow:0 14px 32px rgba(8,127,120,.18) !important;
+}
+.kl-dashboard-hero * { color:#ffffff !important; }
+.kl-dashboard-range > button {
+  border:1px solid #cfe8e3 !important;
+  background:#ffffff !important;
+  color:#087f78 !important;
+  border-radius:13px !important;
+}
+.kl-dashboard-range > button[style*="background"] {
+  background:#087f78 !important;
+  color:#ffffff !important;
+  border-color:#087f78 !important;
+}
+.kl-dashboard-actions button,
+.kl-dashboard-recent,
+.kl-admin-dashboard,
+.kl-admin-stat,
+.kl-owner-row,
+.kl-backup-card,
+.kl-status-pill {
+  background:#ffffff !important;
+  border-color:#cfe8e3 !important;
+  color:#123b38 !important;
+  box-shadow:0 7px 22px rgba(8,105,98,.06) !important;
+}
+.kl-admin-dashboard {
+  background:linear-gradient(145deg,#ffffff 0%,#e8f8f5 100%) !important;
+}
+.kl-admin-title, .kl-admin-dashboard h2, .kl-admin-dashboard h3,
+.kl-dashboard-recent > p:first-child { color:#087f78 !important; }
+.kl-dashboard-actions button:first-child p:first-child,
+.kl-dashboard-actions button:last-child p:first-child {
+  background:#087f78 !important; color:#ffffff !important;
+}
+.kl-dashboard-actions button:last-child p:first-child { background:#d65b56 !important; }
+.kl-dashboard-actions button:first-child p:last-child { color:#087f78 !important; }
+.kl-dashboard-actions button:last-child p:last-child { color:#d65b56 !important; }
+.kl-dashboard-recent > div { border-bottom-color:#cfe8e3 !important; }
+.kl-content { background:#effaf8 !important; }
+.kl-content input:focus, .kl-content select:focus, .kl-content textarea:focus {
+  border-color:#35c8b7 !important;
+  box-shadow:0 0 0 3px rgba(53,200,183,.16) !important;
+}
+.kl-content button[style*="#B8860B"],
+.kl-content button[style*="#C8822A"],
+.kl-content button[style*="rgb(184, 134, 11)"],
+.kl-content button[style*="rgb(200, 130, 42)"],
+.kl-content button[style*="#b8862b"],
+.kl-content button[style*="#e0b455"],
+.kl-topbar button[style*="background"] {
+  border-color:#087f78 !important;
+}
+.kl-content button[style*="#B8860B"],
+.kl-content button[style*="#C8822A"],
+.kl-content button[style*="rgb(184, 134, 11)"],
+.kl-content button[style*="rgb(200, 130, 42)"],
+.kl-content button[style*="#b8862b"],
+.kl-content button[style*="#e0b455"] {
+  background:#087f78 !important; color:#ffffff !important;
+}
+#root > div[data-theme="dark"] .kl-dashboard-hero {
+  background:linear-gradient(135deg,#35c8b7 0%,#087f78 55%,#064b47 100%) !important;
+}
+#root > div[data-theme="dark"] .kl-dashboard-actions button:first-child,
+#root > div[data-theme="dark"] .kl-dashboard-actions button:last-child,
+#root > div[data-theme="dark"] .kl-dashboard-recent,
+#root > div[data-theme="dark"] .kl-admin-dashboard,
+#root > div[data-theme="dark"] .kl-admin-stat,
+#root > div[data-theme="dark"] .kl-owner-row {
+  background:#0b3a37 !important;
+  color:#e7fffb !important;
+  border-color:#245b56 !important;
+}
+#root > div[data-theme="dark"] .kl-dashboard-range > button {
+  background:#0b3a37 !important;
+  color:#c2e5df !important;
+  border-color:#245b56 !important;
+}
+#root > div[data-theme="dark"] .kl-dashboard-range > button[style*="background"] {
+  background:#087f78 !important; color:#ffffff !important;
+}
+@media (min-width:760px) {
+  .kl-topbar { text-align:left !important; }
+  .kl-topbar > div { align-items:center !important; justify-content:flex-start !important; }
+  .kl-topbar > div > div:first-child { flex:1 1 auto !important; min-width:0 !important; }
+  .kl-topbar .kl-brand-lockup { gap:14px !important; }
+  .kl-brand-title { font-size:clamp(27px,2.2vw,34px) !important; }
+  .kl-brand-caption { font-size:11px !important; letter-spacing:2px !important; }
+  .kl-cafe-identity { font-size:16px !important; max-width:560px !important; }
+}
+@media (min-width:760px) and (max-width:1099px) {
+  .kl-topbar { padding:16px 22px !important; }
+  .kl-topbar > div { gap:14px !important; }
+  .kl-topbar > div > div:last-child { flex:0 1 auto !important; }
+  .kl-brand-mark { width:50px; height:50px; }
+  .kl-cafe-identity { max-width:40vw !important; }
+}
