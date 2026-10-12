@@ -2971,7 +2971,7 @@ export default function KopiLaba() {
       <div style={{ padding: "14px 20px 100px", width: "100%", boxSizing: "border-box", flex: 1 }}>
         {/* SUPER ADMIN DASHBOARD */}
         {isSuperAdmin && tab === "admin" && (
-          <div style={s.card}>
+          <div className="kl-admin-dashboard" style={s.card}>
             <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: theme.gold }}>
               👑 Super Admin Dashboard
             </p>
@@ -3664,7 +3664,7 @@ export default function KopiLaba() {
                   ? "🍿"
                   : "☕";
               return (
-                <div key={m.id} style={s.card}>
+                <div key={m.id} className="kl-menu-admin-card" style={s.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {m.foto && (
