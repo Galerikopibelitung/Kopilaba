@@ -409,6 +409,7 @@ export default function KopiLaba() {
   const [pajakEnabled, setPajakEnabled] = useState(() => localStorage.getItem("kopilaba_pajak_enabled") !== "false");
   const [backupImport, setBackupImport] = useState(null);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [taxSaving, setTaxSaving] = useState(false);
   const backupInputRef = useRef(null);
   const [persentasePajak, setPersentasePajak] = useState(() => {
     const saved = Number(localStorage.getItem("kopilaba_pajak_persen"));
@@ -422,6 +423,42 @@ export default function KopiLaba() {
   useEffect(() => {
     localStorage.setItem("kopilaba_pajak_persen", String(persentasePajak));
   }, [persentasePajak]);
+
+  useEffect(() => {
+    if (!kafe) return;
+    if (typeof kafe.pajak_enabled === "boolean") setPajakEnabled(kafe.pajak_enabled);
+    if (kafe.pajak_persen !== null && kafe.pajak_persen !== undefined) {
+      const rate = Number(kafe.pajak_persen);
+      if (Number.isFinite(rate) && rate >= 0 && rate <= 100) setPersentasePajak(rate);
+    }
+  }, [kafe?.id, kafe?.pajak_enabled, kafe?.pajak_persen]);
+
+  const handleSaveTaxSettings = async () => {
+    if (profile?.role !== "pemilik" || !kafe?.id || !token) {
+      setError("Hanya pemilik kafe yang dapat menyimpan pengaturan pajak.");
+      return;
+    }
+    setTaxSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await api(
+        "/rest/v1/kafe?id=eq." + kafe.id,
+        "PATCH",
+        { pajak_enabled: pajakEnabled, pajak_persen: persentasePajak },
+        token
+      );
+      if (!Array.isArray(result) || result.length === 0) {
+        throw new Error("Pengaturan tidak tersimpan. Periksa izin pemilik kafe pada database.");
+      }
+      setKafe((prev) => ({ ...prev, ...result[0] }));
+      setSuccess("Pengaturan pajak tersimpan untuk semua perangkat kafe.");
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan pengaturan pajak.");
+    } finally {
+      setTaxSaving(false);
+    }
+  };
   
   const buildBackupPayload = () => ({
     app: "KopiLaba",
@@ -5042,11 +5079,12 @@ export default function KopiLaba() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: theme.text }}>Pajak penjualan</div>
-                    <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 3 }}>Pengaturan tersimpan di perangkat ini</div>
+                    <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 3 }}>Pengaturan kafe · berlaku untuk semua perangkat setelah disimpan</div>
                   </div>
                   <button
                     type="button"
                     aria-pressed={pajakEnabled}
+                    disabled={profile?.role !== "pemilik"}
                     onClick={() => setPajakEnabled(!pajakEnabled)}
                     style={{ ...s.btnSm, minWidth: 96, padding: "9px 14px", background: pajakEnabled ? theme.success : theme.textMuted, color: "#fff" }}
                   >
@@ -5063,10 +5101,16 @@ export default function KopiLaba() {
                     max="100"
                     step="0.5"
                     value={persentasePajak}
+                    disabled={profile?.role !== "pemilik"}
                     onChange={(e) => setPersentasePajak(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
                     style={{ ...s.input, width: 100, margin: 0, minHeight: 42, fontWeight: 700 }}
                   />
                 </div>
+                {profile?.role === "pemilik" && (
+                  <button type="button" onClick={handleSaveTaxSettings} disabled={taxSaving} style={{ ...s.btnSm, width: "100%", marginTop: 12, padding: "10px 14px", background: theme.gold, color: "#fff" }}>
+                    {taxSaving ? "Menyimpan…" : "Simpan pengaturan pajak"}
+                  </button>
+                )}
                 <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: theme.card, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                   <div style={{ fontSize: 12, color: theme.textMuted }}>Contoh dari subtotal Rp50.000</div>
                   <div style={{ textAlign: "right" }}>
