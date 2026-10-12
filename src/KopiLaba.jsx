@@ -1710,9 +1710,8 @@ export default function KopiLaba() {
         pajak_enabled: pajakEnabled,
       };
 
-      // Coba simpan dengan field pembayaran; kalau gagal (kolom belum ada), fallback
-      try {
-        await api(
+      // Simpan transaksi sekali saja; QRIS tetap dikonfirmasi manual oleh kasir.
+      await api(
           "/rest/v1/transaksi",
           "POST",
           {
