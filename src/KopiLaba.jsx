@@ -269,6 +269,9 @@ const AppIcon = ({ name, size = 20, strokeWidth = 1.8 }) => {
     moon: <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />,
     key: <><circle cx="8" cy="15" r="5" /><path d="m11.5 11.5 9-9M17 6l3 3M14 9l3 3" /></>,
     close: <><path d="m18 6-12 12M6 6l12 12" /></>,
+    logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></>,
+    trash: <><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6" /></>,
+    check: <path d="m5 12 4 4L19 6" />,
     cart: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></>
   };
   return <svg {...common}>{shapes[name] || shapes.dashboard}</svg>;
@@ -2796,6 +2799,8 @@ export default function KopiLaba() {
         ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
       ];
 
+  const mobilePrimaryTabs = tabs.filter((t) => ["dashboard", "transaksi", "menu", "laporan"].includes(t.id));
+  const mobileMoreActive = !["dashboard", "transaksi", "menu", "laporan"].includes(tab);
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
   const isBarista = profile?.role === "barista";
 
@@ -2925,19 +2930,14 @@ export default function KopiLaba() {
             >
               <AppIcon name={darkMode ? "sun" : "moon"} size={19} />
             </button>
-            <button
-              onClick={() => setShowGantiPassword(true)}
-              style={{
-                background: "transparent",
-                border: "none",
-                fontSize: 18,
-                cursor: "pointer",
-                color: theme.textMuted,
-              }}
-            >
-              🔑
+            <button className="kl-header-action" type="button" aria-label="Ganti password" title="Ganti password" onClick={() => setShowGantiPassword(true)}>
+              <AppIcon name="key" size={18} />
             </button>
             <button
+              className="kl-header-action kl-header-logout"
+              type="button"
+              aria-label="Keluar dari akun"
+              title="Keluar"
               onClick={() => {
                 localStorage.removeItem("kopilaba_session");
                 setUser(null);
@@ -2946,15 +2946,8 @@ export default function KopiLaba() {
                 setIsSuperAdmin(false);
                 setScreen("login");
               }}
-              style={{
-                background: "transparent",
-                border: "none",
-                fontSize: 20,
-                cursor: "pointer",
-                color: theme.textMuted,
-              }}
             >
-              ✕
+              <AppIcon name="logout" size={18} />
             </button>
           </div>
         </div>
@@ -3820,44 +3813,22 @@ export default function KopiLaba() {
               >
                 Semua
               </button>
-              {kategori.map((k) => (
-                <div key={k.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <button
-                    onClick={() => setSelectedKategori(selectedKategori === k.id ? "" : k.id)}
-                    style={{
-                      padding: "6px 16px",
-                      borderRadius: 20,
-                      border: "none",
-                      background: selectedKategori === k.id ? theme.gold : theme.input,
-                      color:
-                        selectedKategori === k.id
-                          ? darkMode
-                            ? "#fff"
-                            : "#1A1208"
-                          : theme.textMuted,
-                      fontWeight: selectedKategori === k.id ? 700 : 400,
-                      cursor: "pointer",
-                      fontSize: 13,
-                    }}
-                  >
-                    {k.nama}
-                  </button>
-                  {isPemilik && (
-                    <button
-                      onClick={() => handleHapusKategori(k.id)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: theme.danger,
-                        cursor: "pointer",
-                        fontSize: 14,
-                      }}
-                    >
-                      ✕
+              {kategori.map((k) => {
+                const isSelected = selectedKategori === k.id;
+                return (
+                  <div key={k.id} className={`kl-category-chip-wrap ${isSelected ? "is-selected" : ""}`}>
+                    <button className={`kl-category-chip ${isSelected ? "is-selected" : ""}`} aria-pressed={isSelected} onClick={() => setSelectedKategori(isSelected ? "" : k.id)}>
+                      <span>{k.nama}</span>
+                      {isSelected && <AppIcon name="check" size={14} />}
                     </button>
-                  )}
-                </div>
-              ))}
+                    {isPemilik && isSelected && (
+                      <button className="kl-category-delete" type="button" aria-label={`Hapus kategori ${k.nama}`} title={`Hapus kategori ${k.nama}`} onClick={() => handleHapusKategori(k.id)}>
+                        <AppIcon name="trash" size={13} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {filteredMenu.length === 0 && (
@@ -3979,42 +3950,14 @@ export default function KopiLaba() {
                   </div>
 
                   {!isSuperAdmin && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                      <button
-                        onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) - 1)}
-                        style={{ ...s.btnSm, padding: "4px 10px", minWidth: 36 }}
-                        disabled={(jumlahMap[m.id] || 1) <= 1}
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        value={jumlahMap[m.id] || 1}
-                        onChange={(e) => handleJumlah(m.id, e.target.value)}
-                        style={{
-                          width: 50,
-                          textAlign: "center",
-                          background: theme.input,
-                          border: `1px solid ${theme.inputBorder}`,
-                          borderRadius: 8,
-                          padding: "4px 0",
-                          color: theme.text,
-                          fontSize: 14,
-                          fontWeight: 600,
-                        }}
-                        min="1"
-                      />
-                      <button
-                        onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) + 1)}
-                        style={{ ...s.btnSm, padding: "4px 10px", minWidth: 36 }}
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => tambahKeKeranjang(m, jumlahMap[m.id] || 1)}
-                        style={{ ...s.btnSm, flex: 1, background: theme.gold }}
-                      >
-                        Tambah
+                    <div className="kl-menu-actions">
+                      <div className="kl-qty-controls" aria-label={`Jumlah ${m.nama}`}>
+                        <button type="button" aria-label={`Kurangi ${m.nama}`} onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) - 1)} style={{ ...s.btnSm, padding: "6px 12px", minWidth: 42 }} disabled={(jumlahMap[m.id] || 1) <= 1}>−</button>
+                        <input type="number" aria-label={`Jumlah ${m.nama}`} value={jumlahMap[m.id] || 1} onChange={(e) => handleJumlah(m.id, e.target.value)} style={{ width: 58, textAlign: "center", background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 10, padding: "8px 0", color: theme.text, fontSize: 15, fontWeight: 700 }} min="1" />
+                        <button type="button" aria-label={`Tambah jumlah ${m.nama}`} onClick={() => handleJumlah(m.id, (jumlahMap[m.id] || 1) + 1)} style={{ ...s.btnSm, padding: "6px 12px", minWidth: 42 }}>+</button>
+                      </div>
+                      <button className="kl-add-to-cart" onClick={() => tambahKeKeranjang(m, jumlahMap[m.id] || 1)} type="button">
+                        <AppIcon name="cart" size={16} /> Tambah ke Keranjang
                       </button>
                     </div>
                   )}
@@ -6030,44 +5973,18 @@ export default function KopiLaba() {
           zIndex: 10,
         }}
       >
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "8px 0",
-            }}
-          >
-            <span className="kl-nav-icon"><AppIcon name={t.icon} size={19} /></span>
-            <span
-              style={{
-                fontSize: 10,
-                color: tab === t.id ? theme.gold : theme.textMuted,
-                fontWeight: tab === t.id ? 700 : 400,
-              }}
-            >
-              {t.label}
-            </span>
-            {tab === t.id && (
-              <div
-                style={{
-                  width: 4,
-                  height: 4,
-                  background: theme.gold,
-                  borderRadius: "50%",
-                }}
-              ></div>
-            )}
+        {mobilePrimaryTabs.map((t) => (
+          <button key={t.id} className={`kl-bottom-nav-item ${tab === t.id ? "is-active" : ""}`} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
+            <span className="kl-nav-icon"><AppIcon name={t.icon} size={20} /></span>
+            <span className="kl-bottom-nav-label">{t.label}</span>
+            {tab === t.id && <span className="kl-bottom-nav-dot" />}
           </button>
         ))}
+        <button className={`kl-bottom-nav-item kl-bottom-nav-more ${mobileMoreActive ? "is-active" : ""}`} aria-label="Buka menu lainnya" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
+          <span className="kl-nav-icon"><AppIcon name="menu" size={20} /></span>
+          <span className="kl-bottom-nav-label">Lainnya</span>
+          {mobileMoreActive && <span className="kl-bottom-nav-dot" />}
+        </button>
       </div>
     </div>
   );
