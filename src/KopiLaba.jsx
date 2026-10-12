@@ -253,7 +253,7 @@ export default function KopiLaba() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [networkError, setNetworkError] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -468,6 +468,7 @@ export default function KopiLaba() {
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
   const [bayarAmount, setBayarAmount] = useState("");
+  const [splitTunaiAmount, setSplitTunaiAmount] = useState("");
   const [jumlahMap, setJumlahMap] = useState({});
   const [lastReceipt, setLastReceipt] = useState(null); // struk setelah checkout
 
@@ -1678,10 +1679,23 @@ export default function KopiLaba() {
       }));
       const itemStr = JSON.stringify(itemsDetail);
 
-      const status = pembayaran === "tunai" ? "lunas" : "belum_lunas";
-      const bayarInt =
-        pembayaran === "tunai" ? parseInt(bayarAmount) || grandTotal : grandTotal;
-      const kembalianInt = pembayaran === "tunai" ? Math.max(0, bayarInt - grandTotal) : 0;
+      const tunaiMasuk = pembayaran === "tunai"
+        ? (parseInt(bayarAmount, 10) || grandTotal)
+        : pembayaran === "split" ? (parseInt(splitTunaiAmount, 10) || 0) : 0;
+      if (pembayaran === "tunai" && tunaiMasuk < grandTotal) {
+        setError("Jumlah uang tunai kurang dari total tagihan.");
+        setLoading(false);
+        return;
+      }
+      if (pembayaran === "split" && (tunaiMasuk <= 0 || tunaiMasuk >= grandTotal)) {
+        setError("Untuk split payment, nominal tunai harus lebih dari 0 dan kurang dari total tagihan.");
+        setLoading(false);
+        return;
+      }
+      const qrisMasuk = pembayaran === "qris" ? grandTotal : pembayaran === "split" ? grandTotal - tunaiMasuk : 0;
+      const bayarInt = pembayaran === "tunai" ? tunaiMasuk : grandTotal;
+      const kembalianInt = pembayaran === "tunai" ? Math.max(0, tunaiMasuk - grandTotal) : 0;
+      const status = pembayaran === "piutang" ? "belum_lunas" : "lunas";
 
       const basePayload = {
         kafe_id: kafeId,
@@ -1705,12 +1719,11 @@ export default function KopiLaba() {
             bayar: bayarInt,
             kembalian: kembalianInt,
             metode: pembayaran,
+            bayar_tunai: tunaiMasuk,
+            bayar_qris: qrisMasuk,
           },
           token
         );
-      } catch (e1) {
-        await api("/rest/v1/transaksi", "POST", basePayload, token);
-      }
 
       // Simpan struk ke state untuk langsung print
       const receipt = {
@@ -1728,7 +1741,9 @@ export default function KopiLaba() {
         total: grandTotal,
         bayar: bayarInt,
         kembalian: kembalianInt,
-        metode: pembayaran === "tunai" ? "Tunai" : "Piutang",
+        bayarTunai: tunaiMasuk,
+        bayarQris: qrisMasuk,
+        metode: pembayaran === "tunai" ? "Tunai" : pembayaran === "qris" ? "QRIS" : pembayaran === "split" ? "Tunai + QRIS" : "Piutang",
         status,
       };
       setLastReceipt(receipt);
@@ -1746,6 +1761,8 @@ export default function KopiLaba() {
 
       setKeranjang([]);
       setBayarAmount("");
+      setSplitTunaiAmount("");
+      setPembayaran("tunai");
       setSuccess("Transaksi berhasil!");
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
