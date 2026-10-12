@@ -265,8 +265,8 @@ body{min-height:100%;background:var(--kl-bg)!important;color:var(--kl-ink);overf
 *,*::before,*::after{box-sizing:border-box}
 img,svg,canvas,video{max-width:100%}
 button,input,select,textarea{max-width:100%;min-width:0}
-button{line-height:1.25;white-space:normal;overflow-wrap:anywhere}
-p,h1,h2,h3,h4,label,span,td,th{overflow-wrap:anywhere}
+button{line-height:1.25;white-space:normal;overflow-wrap:normal;word-break:normal}
+p,h1,h2,h3,h4,label,span,td,th{overflow-wrap:normal;word-break:normal}
 .kl-topbar{display:flex;align-items:center;min-height:78px;padding:14px clamp(14px,2vw,28px)!important;background:rgba(255,253,250,.94)!important;backdrop-filter:blur(18px)!important;border-bottom:1px solid var(--kl-border)!important;box-shadow:0 4px 22px rgba(48,29,17,.035)!important}
 .kl-topbar>div{min-width:0;gap:12px!important}
 .kl-brand-lockup{gap:12px;min-width:0}
@@ -297,8 +297,8 @@ p,h1,h2,h3,h4,label,span,td,th{overflow-wrap:anywhere}
 .kl-content td,.kl-content th{white-space:normal;overflow-wrap:anywhere;word-break:normal}
 .kl-content input:not([type=checkbox]):not([type=radio]),.kl-content select,.kl-content textarea{width:100%;max-width:100%;min-height:44px;border:1px solid #e2d5c6!important;border-radius:12px!important;background:#fffdfa!important;color:#2b2017!important;padding:11px 13px!important;outline:none}
 .kl-content input:focus,.kl-content select:focus,.kl-content textarea:focus{border-color:#bd8750!important;box-shadow:0 0 0 3px rgba(189,135,80,.14)!important}
-.kl-content button{min-height:38px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;border-radius:11px}
-.kl-content [style*="overflow: hidden"]{overflow-wrap:anywhere}
+.kl-content button{min-height:38px;line-height:1.25;white-space:normal;overflow-wrap:normal;word-break:normal;border-radius:11px}
+.kl-content [style*="overflow: hidden"]{overflow-wrap:normal;word-break:normal}
 .kl-content>div[style*="border-radius"],.kl-content>div[class*=card]{border-color:var(--kl-border)!important;box-shadow:var(--kl-shadow)!important}
 .kl-admin-dashboard{background:linear-gradient(135deg,#fffdfa,#f4e8d8)!important;border:1px solid #e5d3bf!important;border-radius:26px!important;padding:clamp(18px,3vw,32px)!important;box-shadow:0 14px 36px rgba(69,43,24,.07)!important}
 .kl-admin-title{font-size:clamp(22px,2.4vw,30px)!important;line-height:1.18;letter-spacing:-.9px!important}
