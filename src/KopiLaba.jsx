@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 // ============================================================
 const SUPABASE_URL = "https://mxylkyoehzpbbsxgyhcx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D";
+const ADMIN_EMAIL = "kopigaleri77@gmail.com";
 
 // ============================================================
 // HELPER: FORMAT & UTIL
@@ -328,6 +329,38 @@ export default function KopiLaba() {
       );
     }
   }, [profile, token, user, isSuperAdmin]);
+
+  useEffect(() => {
+    const hash = window.location.hash || "";
+    if (!hash.includes("access_token=")) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const oauthToken = params.get("access_token");
+    if (!oauthToken) return;
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${oauthToken}` }
+        });
+        const oauthUser = await response.json();
+        if (!response.ok || !oauthUser?.id) throw new Error("Login Google gagal. Coba ulangi.");
+        if (!cancelled) await finishAuthenticatedSession(oauthUser, oauthToken);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Login Google gagal. Pastikan Google OAuth sudah diaktifkan.");
+          setScreen("login");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // OAuth callback is handled once on mount; session completion uses current app functions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     document.body.style.margin = "0";
@@ -882,54 +915,88 @@ export default function KopiLaba() {
   // ============================================================
   // AUTH
   // ============================================================
+  const startGoogleAuth = () => {
+    setError("");
+    setSuccess("");
+    const redirectTo = window.location.origin;
+    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+    window.location.assign(url);
+  };
+
+  const finishAuthenticatedSession = async (u, tok) => {
+    if (!u || !tok) throw new Error("Sesi login tidak lengkap. Silakan coba lagi.");
+    setToken(tok);
+    setUser(u);
+    const email = String(u.email || "").trim().toLowerCase();
+    let p = null;
+    try {
+      const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
+      p = Array.isArray(prof) ? prof[0] : null;
+    } catch (profileErr) {
+      throw new Error("Gagal memuat profil. Coba lagi.");
+    }
+
+    if (email === ADMIN_EMAIL) {
+      const googleVerified = u.app_metadata?.provider === "google" ||
+        (Array.isArray(u.identities) && u.identities.some((identity) => identity.provider === "google"));
+      const emailVerified = Boolean(u.email_confirmed_at || u.confirmed_at || googleVerified);
+      if (!emailVerified) {
+        setScreen("login");
+        throw new Error("Email Super Admin belum terverifikasi. Verifikasi email terlebih dahulu.");
+      }
+      if (!p) {
+        const created = await api("/rest/v1/profiles", "POST", {
+          id: u.id, nama: "Galeri Kopi", role: "super_admin", kafe_id: null, telepon: ""
+        }, tok);
+        p = Array.isArray(created) ? created[0] : created;
+      } else if (p.role !== "super_admin" || p.kafe_id) {
+        const updated = await api(`/rest/v1/profiles?id=eq.${u.id}`, "PATCH", {
+          role: "super_admin", kafe_id: null
+        }, tok);
+        p = { ...p, role: "super_admin", kafe_id: null };
+        if (Array.isArray(updated) && updated[0]) p = updated[0];
+      }
+    }
+
+    if (!p) {
+      setRegForm((prev) => ({
+        ...prev,
+        nama: u.user_metadata?.full_name || u.user_metadata?.name || prev.nama || "",
+        email: u.email || prev.email,
+      }));
+      setSuccess("Google berhasil terhubung. Lengkapi data kafe untuk menyelesaikan pendaftaran.");
+      setScreen("register");
+      return;
+    }
+
+    setProfile(p);
+    setNetworkError(false);
+    if (p.role === "super_admin") {
+      setIsSuperAdmin(true);
+      await loadAllData(tok);
+    } else {
+      setIsSuperAdmin(false);
+      await loadData(tok, p);
+    }
+    setScreen("app");
+    setSuccess("Login berhasil!");
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
     setNetworkError(false);
     try {
       const data = await authApi("/token?grant_type=password", loginForm);
-      if (data.access_token) {
-        const tok = data.access_token;
-        const u = data.user;
-        setToken(tok);
-        setUser(u);
-
-        let p = null;
-        try {
-          const prof = await api(`/rest/v1/profiles?id=eq.${u.id}&limit=1`, "GET", null, tok);
-          p = Array.isArray(prof) ? prof[0] : null;
-        } catch (profileErr) {
-          console.error("Gagal ambil profile:", profileErr);
-          setError("Gagal memuat profil. Coba lagi.");
-          setLoading(false);
-          return;
-        }
-
-        if (!p) {
-          setError("Profil tidak ditemukan. Silakan hubungi admin.");
-          setLoading(false);
-          return;
-        }
-
-        setProfile(p);
-        setNetworkError(false);
-
-        if (p.role === "super_admin") {
-          setIsSuperAdmin(true);
-          await loadAllData(tok);
-        } else {
-          setIsSuperAdmin(false);
-          await loadData(tok, p);
-        }
-
-        setScreen("app");
-        setSuccess("Login berhasil!");
+      if (data.access_token && data.user) {
+        await finishAuthenticatedSession(data.user, data.access_token);
       } else {
         setError(data.error_description || "Login gagal. Cek email & password.");
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Terjadi kesalahan: " + (err.message || "Coba lagi."));
+      setError(err.message || "Terjadi kesalahan. Coba lagi.");
       if (err.message?.includes("Failed to fetch") || err.message?.includes("Network")) {
         setNetworkError(true);
       }
@@ -953,10 +1020,13 @@ export default function KopiLaba() {
       return;
     }
     try {
-      const data = await authApi("/signup", {
-        email: regForm.email,
-        password: regForm.password,
-      });
+      const isExistingGoogleSession = Boolean(user?.id && token && String(user.email || "").toLowerCase() === String(regForm.email || "").toLowerCase());
+      const data = isExistingGoogleSession
+        ? { user, access_token: token }
+        : await authApi("/signup", {
+            email: regForm.email,
+            password: regForm.password,
+          });
       if (data.user) {
         const u = data.user;
         const tok = data.access_token || SUPABASE_KEY;
@@ -2489,6 +2559,10 @@ export default function KopiLaba() {
           <button style={s.btn} onClick={handleLogin} disabled={loading}>
             {loading ? "Masuk..." : "Masuk"}
           </button>
+          <button type="button" className="kl-google-button" onClick={startGoogleAuth} disabled={loading}>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.89 13.72 17.48 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.98 46.98 31.96 46.98 24.55Z"/><path fill="#FBBC05" d="M9.99 28.59A14.4 14.4 0 0 1 9.2 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.01 10.78l7.98-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.52 0-12.11-4.22-14.01-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
+            Lanjutkan dengan Google
+          </button>
           <p style={{ textAlign: "center", marginTop: 20, color: theme.textMuted, fontSize: 14 }}>
             Belum punya akun?{" "}
             <span
@@ -2638,6 +2712,11 @@ export default function KopiLaba() {
             value={regForm.alamatKafe}
             onChange={(e) => setRegForm({ ...regForm, alamatKafe: e.target.value })}
           />
+          <button type="button" className="kl-google-button kl-google-register" onClick={startGoogleAuth} disabled={loading}>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.89 13.72 17.48 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.98 46.98 31.96 46.98 24.55Z"/><path fill="#FBBC05" d="M9.99 28.59A14.4 14.4 0 0 1 9.2 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.01 10.78l7.98-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.52 0-12.11-4.22-14.01-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
+            Daftar dengan Google
+          </button>
+          <div className="kl-auth-divider"><span>atau daftar dengan email</span></div>
           <button style={s.btn} onClick={handleRegister} disabled={loading}>
             {loading ? "Mendaftar..." : "Daftar Sekarang"}
           </button>
