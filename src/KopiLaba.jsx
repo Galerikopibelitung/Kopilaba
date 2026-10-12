@@ -3793,7 +3793,7 @@ export default function KopiLaba() {
 
             <div className="kl-menu-categories" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
               <button
-                onClick={() => setSelectedKategori("")}>
+                onClick={() => setSelectedKategori("")}
                 style={{
                   padding: "6px 16px",
                   borderRadius: 20,
