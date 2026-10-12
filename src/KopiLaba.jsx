@@ -1009,8 +1009,9 @@ export default function KopiLaba() {
     setLoading(true);
     setError("");
     setNetworkError(false);
-    if (!regForm.nama || !regForm.email || !regForm.password || !regForm.namaKafe) {
-      setError("Semua kolom wajib diisi!");
+    const isAdminRegistration = String(regForm.email || "").trim().toLowerCase() === ADMIN_EMAIL;
+    if (!regForm.email || !regForm.password || (!isAdminRegistration && (!regForm.nama || !regForm.namaKafe))) {
+      setError(isAdminRegistration ? "Email dan password wajib diisi." : "Nama, email, password, dan nama kafe wajib diisi.");
       setLoading(false);
       return;
     }
@@ -1029,6 +1030,13 @@ export default function KopiLaba() {
           });
       if (data.user) {
         const u = data.user;
+        if (isAdminRegistration) {
+          setSuccess("Akun Super Admin berhasil dibuat. Jika diminta, konfirmasi email terlebih dahulu, lalu masuk dengan email ini.");
+          setScreen("login");
+          setLoginForm({ email: ADMIN_EMAIL, password: regForm.password });
+          setLoading(false);
+          return;
+        }
         const tok = data.access_token || SUPABASE_KEY;
         let kafeId = null;
         try {
@@ -2614,7 +2622,7 @@ export default function KopiLaba() {
   // ============================================================
   if (screen === "register")
     return (
-      <div style={{ ...s.wrap, padding: "20px" }}>
+      <div className="kl-register-screen" style={{ ...s.wrap, padding: "20px" }}>
         <div
           style={{
             width: "100%",
