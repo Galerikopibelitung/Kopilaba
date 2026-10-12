@@ -2801,7 +2801,7 @@ export default function KopiLaba() {
   const garisJam = transaksiPerJam.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxPerJam) * 78)).join(" ");
 
   return (
-    <div style={s.wrap}>
+    <div style={s.wrap} data-theme={darkMode ? "dark" : "light"}>
       {/* HEADER */}
       <div
         className="kl-topbar"
