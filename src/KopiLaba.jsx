@@ -434,6 +434,7 @@ export default function KopiLaba() {
   });
 
   const handleBackupExport = () => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh membuat backup."); return; }
     const payload = buildBackupPayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -448,6 +449,7 @@ export default function KopiLaba() {
   };
 
   const handleBackupFile = async (e) => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -475,6 +477,7 @@ export default function KopiLaba() {
   };
 
   const handleBackupRestore = async () => {
+    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
     if (!backupImport?.payload || !token) return;
     const payload = backupImport.payload;
     const counts = ["menu", "transaksi", "absensi"].reduce((a, key) => a + payload.data[key].length, 0);
@@ -2605,7 +2608,7 @@ export default function KopiLaba() {
         { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
-        { id: "backup", icon: "💾", label: "Backup Data" },
+        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "💾", label: "Backup Data" }] : []),
       ];
 
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
