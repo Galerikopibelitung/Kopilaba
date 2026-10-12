@@ -2346,6 +2346,7 @@ export default function KopiLaba() {
   if (screen === "login")
     return (
       <div
+        className="kl-login-screen"
         style={{
           ...s.wrap,
           display: "flex",
@@ -2692,6 +2693,7 @@ export default function KopiLaba() {
     <div style={s.wrap}>
       {/* HEADER */}
       <div
+        className="kl-topbar"
         style={{
           padding: "16px 20px",
           background: theme.headerBg,
@@ -2717,6 +2719,7 @@ export default function KopiLaba() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
+              className="kl-menu-toggle"
               onClick={() => setSidebarOpen(true)}
               style={{
                 background: "transparent",
@@ -2822,6 +2825,7 @@ export default function KopiLaba() {
       {/* SIDEBAR */}
       <div
         ref={sidebarRef}
+        className="kl-sidebar"
         style={{
           position: "fixed",
           top: 0,
@@ -3019,7 +3023,7 @@ export default function KopiLaba() {
       )}
 
       {/* CONTENT */}
-      <div style={{ padding: "14px 20px 100px", width: "100%", boxSizing: "border-box", flex: 1 }}>
+      <div className="kl-content" style={{ padding: "24px 28px 100px", width: "100%", boxSizing: "border-box", flex: 1 }}>
         {/* SUPER ADMIN DASHBOARD */}
         {isSuperAdmin && tab === "admin" && (
           <div className="kl-admin-dashboard" style={s.card}>
@@ -5585,6 +5589,7 @@ export default function KopiLaba() {
       {/* ===== MODAL: KASIR ===== */}
       {showKasir && !isSuperAdmin && (
         <div
+          className="kl-kasir-overlay"
           style={{
             position: "fixed",
             inset: 0,
