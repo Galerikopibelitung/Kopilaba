@@ -2472,6 +2472,7 @@ export default function KopiLaba() {
         { id: "menu", icon: "☕", label: "Menu" },
         { id: "karyawan", icon: "👤", label: "Karyawan" },
         { id: "laporan", icon: "📊", label: "Laporan" },
+        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
       ]
@@ -2481,6 +2482,7 @@ export default function KopiLaba() {
         { id: "menu", icon: "☕", label: "Menu" },
         { id: "karyawan", icon: "👤", label: "Karyawan" },
         { id: "laporan", icon: "📊", label: "Laporan" },
+        { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
       ];
@@ -2491,6 +2493,28 @@ export default function KopiLaba() {
   const filteredMenu = selectedKategori
     ? menu.filter((m) => m.kategori_id === selectedKategori)
     : menu;
+
+  const transaksiMasuk = transaksi.filter((t) => t.tipe === "masuk");
+  const pembayaranTunaiTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
+  const pembayaranQrisTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
+  const tanggalAnalitik = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  });
+  const transaksiPerHari = tanggalAnalitik.map((day) => {
+    const rows = transaksiMasuk.filter((t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t.created_at || Date.now())) === day);
+    return {
+      day, label: day.slice(8, 10) + "/" + day.slice(5, 7),
+      tunai: rows.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0),
+      qris: rows.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0),
+    };
+  });
+  const transaksiPerJam = Array.from({ length: 24 }, (_, hour) => {
+    const rows = transaksiMasuk.filter((t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23" }).format(new Date(t.created_at || Date.now()))) === hour);
+    return { hour, total: rows.reduce((sum, t) => sum + Number(t.total || 0), 0), count: rows.length };
+  });
+  const maxPerJam = Math.max(1, ...transaksiPerJam.map((x) => x.total));
+  const garisJam = transaksiPerJam.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxPerJam) * 78)).join(" ");
 
   return (
     <div style={s.wrap}>
