@@ -1,0 +1,31 @@
+name: Supabase activity check
+
+on:
+  schedule:
+    # Best-effort database activity check every three days (UTC).
+    - cron: "17 3 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Make a lightweight Supabase REST request
+        env:
+          SUPABASE_URL: https://mxylkyoehzpbbsxgyhcx.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_JSxrkF5z0bI9aJtl3eucag_OX7GN06D
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --max-time 20 \
+            -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/kafe?select=id&limit=1")
+          echo "Supabase REST status: ${status}"
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "The Supabase activity request did not succeed. Check project access and API permissions."
+            exit 1
+          fi
