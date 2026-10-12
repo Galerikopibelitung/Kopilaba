@@ -332,8 +332,16 @@ export default function KopiLaba() {
 
   useEffect(() => {
     const hash = window.location.hash || "";
-    if (!hash.includes("access_token=")) return;
+    if (!hash) return;
     const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const oauthError = params.get("error_description") || params.get("error");
+    if (oauthError) {
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      setError(oauthError.replace(/\+/g, " "));
+      setScreen("login");
+      setLoading(false);
+      return;
+    }
     const oauthToken = params.get("access_token");
     if (!oauthToken) return;
     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
@@ -918,9 +926,13 @@ export default function KopiLaba() {
   const startGoogleAuth = () => {
     setError("");
     setSuccess("");
-    const redirectTo = window.location.origin;
-    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
-    window.location.assign(url);
+    setLoading(true);
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const authUrl = new URL(`${SUPABASE_URL}/auth/v1/authorize`);
+    authUrl.searchParams.set("provider", "google");
+    authUrl.searchParams.set("redirect_to", redirectTo);
+    authUrl.searchParams.set("prompt", "select_account");
+    window.location.assign(authUrl.toString());
   };
 
   const finishAuthenticatedSession = async (u, tok) => {
@@ -2337,33 +2349,33 @@ export default function KopiLaba() {
   // ============================================================
   const theme = darkMode
     ? {
-        bg: "#0F0A06",
-        card: "rgba(26, 18, 8, 0.75)",
-        cardBorder: "rgba(255,255,255,0.08)",
+        bg: "#062d2b",
+        card: "rgba(8, 45, 43, 0.96)",
+        cardBorder: "rgba(132, 219, 209, 0.18)",
         text: "#F5EFE6",
-        textMuted: "#8B7355",
-        input: "rgba(15, 10, 6, 0.6)",
-        inputBorder: "rgba(255,255,255,0.1)",
-        gold: "#C8822A",
-        success: "#6DBF5A",
+        textMuted: "#9bc7c2",
+        input: "rgba(5, 35, 34, 0.82)",
+        inputBorder: "rgba(132, 219, 209, 0.24)",
+        gold: "#35c8b7",
+        success: "#35c8b7",
         danger: "#EF8080",
-        headerBg: "rgba(26, 15, 7, 0.85)",
-        shadow: "0 8px 32px rgba(0,0,0,0.5)",
+        headerBg: "rgba(6, 45, 43, 0.94)",
+        shadow: "0 10px 36px rgba(0,0,0,0.28)",
         blur: "blur(20px)",
       }
     : {
-        bg: "#F8F4F0",
-        card: "rgba(255, 255, 255, 0.7)",
-        cardBorder: "rgba(0,0,0,0.06)",
-        text: "#1A1208",
-        textMuted: "#6B5A4A",
-        input: "rgba(255,255,255,0.5)",
-        inputBorder: "rgba(0,0,0,0.08)",
-        gold: "#B8860B",
-        success: "#2E7D32",
+        bg: "#effaf8",
+        card: "rgba(255, 255, 255, 0.94)",
+        cardBorder: "rgba(10, 125, 116, 0.14)",
+        text: "#123b38",
+        textMuted: "#52736f",
+        input: "rgba(255,255,255,0.92)",
+        inputBorder: "rgba(10, 125, 116, 0.18)",
+        gold: "#087f78",
+        success: "#087f78",
         danger: "#C62828",
-        headerBg: "rgba(240, 234, 228, 0.85)",
-        shadow: "0 8px 32px rgba(0,0,0,0.08)",
+        headerBg: "rgba(236, 250, 247, 0.96)",
+        shadow: "0 8px 30px rgba(8, 105, 98, 0.09)",
         blur: "blur(20px)",
       };
 
@@ -2846,11 +2858,11 @@ export default function KopiLaba() {
             <div>
               <div className="kl-brand-lockup">
               <span className="kl-brand-mark"><AppIcon name="coffee" size={23} strokeWidth={2} /></span>
-              <div><h1 style={{ margin: 0, fontSize: 22, fontWeight: 850, letterSpacing: "-.9px" }}>
+              <div className="kl-brand-copy"><h1 className="kl-brand-title" style={{ margin: 0, fontSize: 22, fontWeight: 850, letterSpacing: "-.9px" }}>
                 <span style={{ color: theme.gold }}>KOPI</span><span style={{ color: theme.text }}>LABA</span>
               </h1><p className="kl-brand-caption">CAFE MANAGEMENT</p></div>
               </div>
-              <p style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
+              <p className="kl-cafe-identity" style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
                 {isSuperAdmin ? "👑 Super Admin" : `${kafe?.nama || "Kafe kamu"} · ${profile?.role}`}
               </p>
             </div>
@@ -3779,9 +3791,9 @@ export default function KopiLaba() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            <div className="kl-menu-categories" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
               <button
-                onClick={() => setSelectedKategori("")}
+                onClick={() => setSelectedKategori("")>
                 style={{
                   padding: "6px 16px",
                   borderRadius: 20,
@@ -3840,6 +3852,7 @@ export default function KopiLaba() {
                 <p style={{ color: theme.textMuted, fontSize: 13 }}>Tidak ada menu di kategori ini.</p>
               </div>
             )}
+            <div className="kl-menu-grid">
             {filteredMenu.map((m) => {
               const margin = m.harga ? (((m.harga - m.hpp) / m.harga) * 100).toFixed(1) : 0;
               const stok = m.stok || 0;
@@ -3858,6 +3871,7 @@ export default function KopiLaba() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {m.foto && (
                         <img
+                          className="kl-menu-photo"
                           src={m.foto}
                           alt={m.nama}
                           style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 8 }}
@@ -3994,10 +4008,11 @@ export default function KopiLaba() {
                 </div>
               );
             })}
+            </div>
           </>
         )}
 
-        {/* KARYAWAN & ABSENSI */}
+        {/* KARYAWAN & ABSENSI */>
         {tab === "karyawan" && (
           <>
             <div
