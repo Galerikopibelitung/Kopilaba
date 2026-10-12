@@ -3902,6 +3902,52 @@ export default function KopiLaba() {
           </>
         )}
 
+        {/* ANALITIK PEMBAYARAN */}
+        {tab === "pembayaran" && (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>💳 Analitik Pembayaran</p>
+              <p style={{ margin: 0, color: theme.textMuted, fontSize: 12 }}>Ringkasan transaksi masuk menurut metode pembayaran.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, marginTop: 14 }}>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total Tunai</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranTunaiTotal)}</div></div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total QRIS</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranQrisTotal)}</div></div>
+                <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Transaksi Masuk</div><div style={{ fontSize: 18, fontWeight: 800 }}>{transaksiMasuk.length}</div></div>
+              </div>
+            </div>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 800 }}>Tunai vs QRIS · 7 hari terakhir</p>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, marginBottom: 12 }}>
+                <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.gold, marginRight: 6 }} />Tunai</span>
+                <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.success, marginRight: 6 }} />QRIS</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8, alignItems: "end", minHeight: 170 }}>
+                {transaksiPerHari.map((d) => {
+                  const max = Math.max(1, ...transaksiPerHari.map((x) => Math.max(x.tunai, x.qris)));
+                  return <div key={d.day} style={{ minWidth: 0, textAlign: "center" }}>
+                    <div style={{ height: 130, display: "flex", alignItems: "end", justifyContent: "center", gap: 3, borderBottom: "1px solid " + theme.cardBorder, paddingBottom: 3 }}>
+                      <div title={"Tunai " + fmt(d.tunai)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.tunai / max * 120) + "px", background: theme.gold, borderRadius: "5px 5px 0 0" }} />
+                      <div title={"QRIS " + fmt(d.qris)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.qris / max * 120) + "px", background: theme.success, borderRadius: "5px 5px 0 0" }} />
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted, marginTop: 6 }}>{d.label}</div>
+                  </div>;
+                })}
+              </div>
+              <p style={{ fontSize: 11, color: theme.textMuted, margin: "12px 0 0" }}>Transaksi lama tanpa rincian metode pembayaran mungkin belum muncul terpisah pada grafik ini.</p>
+            </div>
+            <div style={s.card}>
+              <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 800 }}>Jam Transaksi Tersibuk</p>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: theme.textMuted }}>Nilai transaksi per jam, berdasarkan waktu WIB.</p>
+              <svg viewBox="0 0 300 125" role="img" aria-label="Grafik garis transaksi per jam" style={{ width: "100%", display: "block", overflow: "visible" }}>
+                {[0, 1, 2, 3].map((n) => <line key={n} x1="20" x2="280" y1={22 + n * 26} y2={22 + n * 26} stroke={theme.cardBorder} strokeDasharray="3 4" />)}
+                <polyline points={garisJam} fill="none" stroke={theme.gold} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                {transaksiPerJam.map((x, i) => <circle key={x.hour} cx={20 + i * (260 / 23)} cy={100 - (x.total / maxPerJam) * 78} r={x.total > 0 ? 2.7 : 1.5} fill={theme.gold}><title>{String(x.hour).padStart(2, "0") + ":00 — " + fmt(x.total) + " (" + x.count + " transaksi)"}</title></circle>)}
+                {[0, 6, 12, 18, 23].map((h) => <text key={h} x={20 + h * (260 / 23)} y="119" fontSize="9" textAnchor="middle" fill={theme.textMuted}>{String(h).padStart(2, "0") + ":00"}</text>)}
+              </svg>
+              <div style={{ marginTop: 10, padding: 12, background: theme.input, borderRadius: 10, fontSize: 12 }}>Jam paling ramai: <strong>{String(transaksiPerJam.reduce((best, x) => x.count > best.count ? x : best, transaksiPerJam[0]).hour).padStart(2, "0")}:00 WIB</strong><span style={{ color: theme.textMuted }}> · {Math.max(...transaksiPerJam.map((x) => x.count))} transaksi</span></div>
+            </div>
+          </div>
+        )}
+
         {/* LAPORAN */}
         {tab === "laporan" && (
           <div style={s.card}>
