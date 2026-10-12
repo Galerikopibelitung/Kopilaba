@@ -80,7 +80,7 @@ const buildReceiptHTML = (data) => {
     namaKafe, alamatKafe, teleponKafe,
     nomorTrx, tanggal, kasir, kasirRole,
     items, subtotal, pajak, pajakPersen,
-    total, bayar, kembalian, metode, status,
+    total, bayar, kembalian, metode, status, bayarTunai, bayarQris,
   } = data;
 
   const itemRows = (items || [])
@@ -156,6 +156,7 @@ const buildReceiptHTML = (data) => {
   <div class="row total-row"><span>TOTAL BIAYA</span><span>${fmt(total)}</span></div>
   <div class="solid"></div>
   <div class="row"><span>Jumlah Bayar (${metode || "Tunai"})</span><span>${fmt(bayar)}</span></div>
+  ${Number(bayarTunai || 0) > 0 && Number(bayarQris || 0) > 0 ? `<div class="row"><span>Bagian Tunai</span><span>${fmt(bayarTunai)}</span></div><div class="row"><span>Bagian QRIS</span><span>${fmt(bayarQris)}</span></div>` : ""}
   <div class="row"><span>Kembalian</span><span>${fmt(kembalian)}</span></div>
   <div class="solid"></div>
   <div class="center" style="font-weight:bold;">${isLunas ? "LUNAS" : "** BELUM LUNAS **"}</div>
