@@ -407,6 +407,9 @@ export default function KopiLaba() {
   const [pesananItems, setPesananItems] = useState([]);
   const [editTransaksiId, setEditTransaksiId] = useState(null);
   const [pajakEnabled, setPajakEnabled] = useState(() => localStorage.getItem("kopilaba_pajak_enabled") !== "false");
+  const [backupImport, setBackupImport] = useState(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const backupInputRef = useRef(null);
   const [persentasePajak, setPersentasePajak] = useState(() => {
     const saved = Number(localStorage.getItem("kopilaba_pajak_persen"));
     return Number.isFinite(saved) && saved >= 0 && saved <= 100 ? saved : 10;
@@ -419,6 +422,102 @@ export default function KopiLaba() {
   useEffect(() => {
     localStorage.setItem("kopilaba_pajak_persen", String(persentasePajak));
   }, [persentasePajak]);
+  
+  const buildBackupPayload = () => ({
+    app: "KopiLaba",
+    formatVersion: 1,
+    exportedAt: new Date().toISOString(),
+    cafe: { id: kafe?.id || profile?.kafe_id || null, nama: kafe?.nama || "Kafe" },
+    note: "Transaksi mengikuti data yang dimuat aplikasi saat ekspor (maksimum 500 terbaru pada versi ini).",
+    data: { menu, transaksi, absensi },
+    settings: { pajakEnabled, persentasePajak }
+  });
+
+  const handleBackupExport = () => {
+    const payload = buildBackupPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kopilaba-backup-" + (kafe?.id || profile?.kafe_id || "data") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setSuccess("Backup berhasil diunduh ke perangkat ini.");
+  };
+
+  const handleBackupFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      if (file.size > 15 * 1024 * 1024) throw new Error("File backup maksimal 15 MB.");
+      const parsed = JSON.parse(await file.text());
+      if (parsed?.app !== "KopiLaba" || parsed?.formatVersion !== 1 || !parsed?.data || !parsed?.cafe?.id) {
+        throw new Error("Format file bukan backup KopiLaba yang didukung.");
+      }
+      if (String(parsed.cafe.id) !== String(kafe?.id || profile?.kafe_id)) {
+        throw new Error("Backup ini berasal dari kafe berbeda. Impor dibatalkan demi keamanan data.");
+      }
+      for (const key of ["menu", "transaksi", "absensi"]) {
+        if (!Array.isArray(parsed.data[key])) throw new Error("Data " + key + " di dalam backup tidak valid.");
+        if (parsed.data[key].some((row) => String(row.kafe_id) !== String(kafe?.id || profile?.kafe_id))) {
+          throw new Error("Backup berisi data di luar kafe ini. Impor dibatalkan.");
+        }
+      }
+      setBackupImport({ fileName: file.name, payload: parsed });
+      setSuccess("File backup valid. Periksa jumlah data sebelum memulihkan.");
+    } catch (err) {
+      setBackupImport(null);
+      setError(err.message || "File backup tidak dapat dibaca.");
+    }
+  };
+
+  const handleBackupRestore = async () => {
+    if (!backupImport?.payload || !token) return;
+    const payload = backupImport.payload;
+    const counts = ["menu", "transaksi", "absensi"].reduce((a, key) => a + payload.data[key].length, 0);
+    if (!window.confirm("Pulihkan " + counts + " baris data dari " + backupImport.fileName + "? Data dengan ID sama akan diperbarui; data yang tidak ada di backup tidak dihapus.")) return;
+    setBackupBusy(true);
+    setError("");
+    setSuccess("");
+    try {
+      const kafeId = kafe?.id || profile?.kafe_id;
+      const restoreTable = async (table, rows) => {
+        if (!rows.length) return;
+        const safeRows = rows.filter((row) => String(row.kafe_id) === String(kafeId));
+        for (let i = 0; i < safeRows.length; i += 100) {
+          const res = await fetch(SUPABASE_URL + "/rest/v1/" + table + "?on_conflict=id", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_KEY,
+              Authorization: "Bearer " + token,
+              Prefer: "resolution=merge-duplicates,return=minimal"
+            },
+            body: JSON.stringify(safeRows.slice(i, i + 100))
+          });
+          if (!res.ok) throw new Error("Gagal memulihkan " + table + " (HTTP " + res.status + "). Pastikan izin database mengizinkan pemulihan.");
+        }
+      };
+      await restoreTable("menu", payload.data.menu);
+      await restoreTable("transaksi", payload.data.transaksi);
+      await restoreTable("absensi", payload.data.absensi);
+      if (payload.settings) {
+        if (typeof payload.settings.pajakEnabled === "boolean") setPajakEnabled(payload.settings.pajakEnabled);
+        if (Number.isFinite(payload.settings.persentasePajak)) setPersentasePajak(Math.max(0, Math.min(100, payload.settings.persentasePajak)));
+      }
+      await loadData(token, profile);
+      setBackupImport(null);
+      setSuccess("Pemulihan selesai. Periksa menu, transaksi, dan absensi.");
+    } catch (err) {
+      setError(err.message || "Pemulihan backup gagal. Sebagian data mungkin sudah dipulihkan; ekspor backup terbaru sebelum mencoba lagi.");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
 
   // ------------------------------------------------------------
   // STATE MODAL MENU
@@ -2506,6 +2605,7 @@ export default function KopiLaba() {
         { id: "pembayaran", icon: "💳", label: "Analitik Bayar" },
         { id: "struk", icon: "🧾", label: "Struk" },
         { id: "qris", icon: "📱", label: "QRIS" },
+        { id: "backup", icon: "💾", label: "Backup Data" },
       ];
 
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
@@ -2965,6 +3065,50 @@ export default function KopiLaba() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+
+        {/* BACKUP DATA */}
+        {!isSuperAdmin && tab === "backup" && (
+          <div className="kl-backup-page">
+            <div className="kl-page-heading">
+              <div>
+                <div className="kl-eyebrow">KEAMANAN DATA</div>
+                <h2 style={{ margin: "4px 0", fontSize: 24, color: theme.text }}>Backup & Pemulihan</h2>
+                <p style={{ margin: "4px 0 0", color: theme.textMuted, fontSize: 13 }}>Simpan salinan data kafe ke perangkat, lalu pulihkan bila diperlukan.</p>
+              </div>
+              <span className="kl-status-pill">Kafe: {kafe?.nama || "Aktif"}</span>
+            </div>
+            <div className="kl-backup-grid">
+              <section className="kl-backup-card">
+                <div className="kl-backup-icon">⬇</div>
+                <h3>1. Unduh backup</h3>
+                <p>File JSON berisi menu, transaksi yang sedang dimuat, absensi, dan pengaturan pajak. Simpan di perangkat lain atau penyimpanan awan pribadi.</p>
+                <div className="kl-counts">
+                  <span><b>{menu.length}</b> menu</span>
+                  <span><b>{transaksi.length}</b> transaksi</span>
+                  <span><b>{absensi.length}</b> absensi</span>
+                </div>
+                <button type="button" className="kl-primary-action" onClick={handleBackupExport}>Unduh file backup</button>
+              </section>
+              <section className="kl-backup-card">
+                <div className="kl-backup-icon">↥</div>
+                <h3>2. Pulihkan backup</h3>
+                <p>Pilih file backup KopiLaba dari kafe yang sama. Data dengan ID yang sama akan diperbarui; data yang tidak ada di file tidak akan dihapus.</p>
+                <input ref={backupInputRef} type="file" accept=".json,application/json" onChange={handleBackupFile} style={{ display: "none" }} />
+                <button type="button" className="kl-secondary-action" onClick={() => backupInputRef.current?.click()}>Pilih file JSON</button>
+                {backupImport && (
+                  <div className="kl-import-preview">
+                    <b>{backupImport.fileName}</b>
+                    <span>Diekspor: {new Date(backupImport.payload.exportedAt).toLocaleString("id-ID")}</span>
+                    <span>{backupImport.payload.data.menu.length} menu · {backupImport.payload.data.transaksi.length} transaksi · {backupImport.payload.data.absensi.length} absensi</span>
+                    <button type="button" className="kl-primary-action" disabled={backupBusy} onClick={handleBackupRestore}>{backupBusy ? "Memulihkan…" : "Konfirmasi pemulihan"}</button>
+                  </div>
+                )}
+              </section>
+            </div>
+            <div className="kl-backup-warning"><b>Catatan penting</b><p>Backup bukan pengganti salinan rutin. Versi ini mengekspor maksimal 500 transaksi terbaru yang dimuat aplikasi. Pemulihan tidak menghapus transaksi lama. Jangan hapus data enam bulanan secara otomatis sebelum proses arsip lengkap, uji pemulihan, dan kebijakan retensi disiapkan.</p></div>
           </div>
         )}
 
