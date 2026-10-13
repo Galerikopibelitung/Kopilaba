@@ -3566,7 +3566,6 @@ export default function KopiLaba() {
                     {showLaba ? fmt(dashboardData.totalMasuk) : "••••••••"}
                   </p>
                 </div>
-                <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }}></div>
                 <div>
                   <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
                     Pengeluaran
