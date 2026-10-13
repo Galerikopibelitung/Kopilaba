@@ -274,6 +274,35 @@ const api = async (endpoint, method = "GET", body = null, token = null) => {
   }
 };
 
+const getRetentionBrowserId = () => {
+  const key = "kopilaba_retention_browser_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : "kl-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+    localStorage.setItem(key, id);
+  }
+  return id;
+};
+
+const getRetentionDeviceId = (profileId) => getRetentionBrowserId() + ":" + String(profileId || "unknown");
+
+const retentionRequest = async (endpoint, method, body, token) => {
+  const response = await fetch(`${SUPABASE_URL}${endpoint}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${token}`,
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: body ? JSON.stringify(body) : null,
+  });
+  if (!response.ok) throw new Error("HTTP " + response.status + ": " + (await response.text()));
+  return response.status === 204 ? [] : await response.json();
+};
+
 const authApi = async (endpoint, body) => {
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1${endpoint}`, {
@@ -539,6 +568,7 @@ export default function KopiLaba() {
   const [editTransaksiId, setEditTransaksiId] = useState(null);
   const [pajakEnabled, setPajakEnabled] = useState(() => localStorage.getItem("kopilaba_pajak_enabled") !== "false");
   const [backupImport, setBackupImport] = useState(null);
+  const [backupPendingConfirmation, setBackupPendingConfirmation] = useState(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [taxSaving, setTaxSaving] = useState(false);
   const backupInputRef = useRef(null);
@@ -602,7 +632,7 @@ export default function KopiLaba() {
   });
 
   const handleBackupExport = async () => {
-    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh membuat backup."); return; }
+    if (!profile?.id || !["pemilik", "barista"].includes(profile?.role)) { setError("Sesi pengguna kafe tidak valid. Silakan masuk kembali."); return; }
     const kafeId = kafe?.id || profile?.kafe_id;
     if (!kafeId || !token) { setError("Sesi atau data kafe tidak tersedia. Silakan masuk kembali."); return; }
     setBackupBusy(true);
@@ -635,7 +665,11 @@ export default function KopiLaba() {
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      setSuccess(`Backup lengkap dibuat: ${allTransactions.length} transaksi, ${menu.length} menu, dan ${absensi.length} data absensi. Pastikan file benar-benar tersimpan di perangkat sebelum menganggap backup selesai.`);
+      const nextPeriod = retentionReminder?.date
+        ? [retentionReminder.date.getFullYear(), String(retentionReminder.date.getMonth() + 1).padStart(2, "0"), String(retentionReminder.date.getDate()).padStart(2, "0")].join("-")
+        : null;
+      setBackupPendingConfirmation(nextPeriod ? { period: nextPeriod, transactionCount: allTransactions.length } : null);
+      setSuccess(`Backup lengkap dibuat: ${allTransactions.length} transaksi, ${menu.length} menu, dan ${absensi.length} data absensi. Setelah memastikan file tersimpan, tekan tombol konfirmasi di bawah.`);
     } catch (err) {
       setError("Backup belum selesai. Tidak ada data yang dihapus. " + (err.message || "Periksa koneksi lalu coba lagi."));
     } finally {
@@ -651,12 +685,58 @@ export default function KopiLaba() {
       new Date(now.getFullYear(), 6, 1),
       new Date(now.getFullYear() + 1, 0, 1),
       new Date(now.getFullYear() + 1, 6, 1),
-    ].filter((date) => date.getTime() >= todayUtc).sort((a, b) => a - b)[0];
+    ].filter((date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) >= todayUtc)
+     .sort((a, b) => a - b)[0];
     if (!upcoming) return null;
     const days = Math.round((Date.UTC(upcoming.getFullYear(), upcoming.getMonth(), upcoming.getDate()) - todayUtc) / 86400000);
-    if (![0, 1, 4, 7].includes(days)) return null;
-    return { days, date: upcoming };
+    return { days, date: upcoming, show: [0, 1, 4, 7].includes(days) };
   })();
+
+  const registerRetentionDevice = async (tok, prof, cafeId) => {
+    if (!tok || !prof?.id || !cafeId) return;
+    const deviceId = getRetentionDeviceId(prof.id);
+    try {
+      await retentionRequest("/rest/v1/kopilaba_retention_devices?on_conflict=kafe_id,device_id", "POST", {
+        kafe_id: cafeId,
+        device_id: deviceId,
+        user_id: prof.id,
+        last_seen: new Date().toISOString(),
+      }, tok);
+    } catch (err) {
+      // Retention tracking must never prevent the normal app from opening.
+      console.warn("Retention device registration skipped:", err);
+    }
+  };
+
+  const handleConfirmRetentionBackup = async () => {
+    if (!backupPendingConfirmation || !token || !profile?.id || !kafe?.id) return;
+    setBackupBusy(true);
+    setError("");
+    try {
+      const deviceId = getRetentionDeviceId(profile.id);
+      const result = await api(
+        "/rest/v1/kopilaba_retention_devices?kafe_id=eq." + encodeURIComponent(kafe.id) +
+          "&device_id=eq." + encodeURIComponent(deviceId),
+        "PATCH",
+        {
+          backup_period: backupPendingConfirmation.period,
+          backup_at: new Date().toISOString(),
+          backup_transaction_count: backupPendingConfirmation.transactionCount,
+          last_seen: new Date().toISOString(),
+        },
+        token
+      );
+      if (!Array.isArray(result) || result.length === 0) {
+        throw new Error("Konfirmasi backup tidak tersimpan. Muat ulang aplikasi dan coba lagi.");
+      }
+      setSuccess("Konfirmasi backup perangkat tersimpan untuk jadwal " + new Date(backupPendingConfirmation.period + "T12:00:00").toLocaleDateString("id-ID") + ".");
+      setBackupPendingConfirmation(null);
+    } catch (err) {
+      setError(err.message || "Konfirmasi backup gagal tersimpan.");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
 
   const handleBackupFile = async (e) => {
     if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
@@ -940,6 +1020,7 @@ export default function KopiLaba() {
       setQrisUrl(kafeObj?.qris_url || "");
       const kafeId = kafeObj?.id || prof.kafe_id;
       if (!kafeId) return;
+      await registerRetentionDevice(tok, prof, kafeId);
 
       // These requests are independent; run them together instead of waiting
       // for each network round-trip before starting the next one.
@@ -3650,6 +3731,10 @@ export default function KopiLaba() {
                   <span><b>{absensi.length}</b> absensi</span>
                 </div>
                 <button type="button" className="kl-primary-action" disabled={backupBusy} onClick={handleBackupExport}>{backupBusy ? "Mengambil seluruh transaksi…" : "Unduh backup lengkap"}</button>
+                {backupPendingConfirmation && <div style={{ marginTop: 10 }}>
+                  <p style={{ fontSize: 12, color: theme.textMuted }}>Setelah memastikan file backup sudah tersimpan di perangkat ini, konfirmasikan untuk membuka gerbang retensi tanggal {new Date(backupPendingConfirmation.period + "T12:00:00").toLocaleDateString("id-ID")}.</p>
+                  <button type="button" className="kl-secondary-action" disabled={backupBusy} onClick={handleConfirmRetentionBackup}>{backupBusy ? "Menyimpan konfirmasi…" : "Saya sudah menyimpan file backup"}</button>
+                </div>}
               </section>
               <section className="kl-backup-card">
                 <div className="kl-backup-icon">↥</div>
@@ -3667,7 +3752,7 @@ export default function KopiLaba() {
                 )}
               </section>
             </div>
-            {retentionReminder && profile?.role === "pemilik" && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
+            {retentionReminder?.show && ["pemilik", "barista"].includes(profile?.role) && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
             <div className="kl-backup-warning"><b>Jadwal retensi data</b><p>Rencana penghapusan hanya pada 1 Januari dan 1 Juli. Menu, foto produk, QRIS, pengaturan pajak, dan akun tidak termasuk. Penghapusan transaksi tetap dinonaktifkan sampai proses backup semua perangkat dan pemulihan teruji aman.</p></div>
           </div>
         )}
