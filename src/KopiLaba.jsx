@@ -920,6 +920,16 @@ export default function KopiLaba() {
   const [aiQuery, setAiQuery] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  // Refresh tanggal kalender WIB setiap menit agar ringkasan tidak tertinggal saat lewat tengah malam.
+  const [wibDayKey, setWibDayKey] = useState(() => todayWIB());
+  useEffect(() => {
+    const refreshWibDay = () => {
+      const currentDay = todayWIB();
+      setWibDayKey((previousDay) => previousDay === currentDay ? previousDay : currentDay);
+    };
+    const intervalId = setInterval(refreshWibDay, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // ------------------------------------------------------------
   // STATE SUPER ADMIN FILTER
@@ -2765,15 +2775,6 @@ export default function KopiLaba() {
     () => selectedKategori ? menu.filter((m) => m.kategori_id === selectedKategori) : menu,
     [selectedKategori, menu]
   );
-  const [wibDayKey, setWibDayKey] = useState(() => todayWIB());
-  useEffect(() => {
-    const refreshWibDay = () => {
-      const currentDay = todayWIB();
-      setWibDayKey((previousDay) => previousDay === currentDay ? previousDay : currentDay);
-    };
-    const intervalId = setInterval(refreshWibDay, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
   const analyticsDayKey = wibDayKey;
   const [analyticsStartDate, setAnalyticsStartDate] = useState(() => todayWIB());
   const [analyticsEndDate, setAnalyticsEndDate] = useState(() => todayWIB());
