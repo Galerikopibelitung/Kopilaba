@@ -2214,8 +2214,13 @@ export default function KopiLaba() {
 
   const getDashboardData = () => {
     const data = filterTransaksiByPeriode(transaksi, periodeFilter);
-    const masuk = data.filter((t) => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-    const keluar = data.filter((t) => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+    let masuk = 0;
+    let keluar = 0;
+    for (const t of data) {
+      const total = Number(t.total) || 0;
+      if (t.tipe === "masuk") masuk += total;
+      else if (t.tipe === "keluar") keluar += total;
+    }
     return { totalMasuk: masuk, totalKeluar: keluar, laba: masuk - keluar, count: data.length };
   };
 
@@ -2272,6 +2277,8 @@ export default function KopiLaba() {
         chartData[date].keluar += Number(t.total) || 0;
       }
 
+      // On Ringkasan, keep chart totals but skip expensive item parsing used only by product reports.
+      if (menu !== "Analitik" && menu !== "Laporan" && !showLaporanStok) return;
       if (t.tipe !== "masuk" || !t.item) return;
       const items = parseItems(t.item);
       items.forEach((item) => {
