@@ -2311,6 +2311,8 @@ export default function KopiLaba() {
   // edit a cart, or switch unrelated UI state.
   const reportData = useMemo(() => {
     const chartData = {};
+    // Reuse formatter; constructing one for every transaction is unnecessary work.
+    const reportDateFormatter = new Intl.DateTimeFormat("id-ID");
     const laporanStokData = menu.map((m) => ({ ...m, terjual: 0, sisa: Number(m.stok) || 0 }));
     const stockByName = new Map(laporanStokData.map((m) => [m.nama, m]));
     const kategoriById = new Map(kategori.map((k) => [k.id, k.nama || "Umum"]));
@@ -2327,11 +2329,11 @@ export default function KopiLaba() {
 
     filtered.forEach((t) => {
       if (t.tipe === "masuk") {
-        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        const date = reportDateFormatter.format(new Date(t.created_at));
         if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
         chartData[date].masuk += Number(t.total) || 0;
       } else {
-        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        const date = reportDateFormatter.format(new Date(t.created_at));
         if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
         chartData[date].keluar += Number(t.total) || 0;
       }
