@@ -2311,6 +2311,8 @@ export default function KopiLaba() {
   // edit a cart, or switch unrelated UI state.
   const reportData = useMemo(() => {
     const chartData = {};
+    // Reuse formatter; constructing one for every transaction is unnecessary work.
+    const reportDateFormatter = new Intl.DateTimeFormat("id-ID");
     const laporanStokData = menu.map((m) => ({ ...m, terjual: 0, sisa: Number(m.stok) || 0 }));
     const stockByName = new Map(laporanStokData.map((m) => [m.nama, m]));
     const kategoriById = new Map(kategori.map((k) => [k.id, k.nama || "Umum"]));
@@ -2327,11 +2329,11 @@ export default function KopiLaba() {
 
     filtered.forEach((t) => {
       if (t.tipe === "masuk") {
-        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        const date = reportDateFormatter.format(new Date(t.created_at));
         if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
         chartData[date].masuk += Number(t.total) || 0;
       } else {
-        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        const date = reportDateFormatter.format(new Date(t.created_at));
         if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
         chartData[date].keluar += Number(t.total) || 0;
       }
@@ -2657,13 +2659,6 @@ export default function KopiLaba() {
     const hourFormatter = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23"
     });
-    const incoming = transaksi.filter((t) => {
-      if (t.tipe !== "masuk") return false;
-      const day = dayFormatter.format(new Date(t.created_at || Date.now()));
-      return day >= rangeStart && day <= rangeEnd;
-    });
-    const cashTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
-    const qrisTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
     const days = [];
     const cursor = new Date(rangeStart + "T12:00:00+07:00");
     const lastDay = new Date(rangeEnd + "T12:00:00+07:00");
@@ -2674,12 +2669,24 @@ export default function KopiLaba() {
     if (days.length === 0) days.push(analyticsDayKey);
     const byDay = Object.fromEntries(days.map((day) => [day, { tunai: 0, qris: 0 }]));
     const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, total: 0, count: 0 }));
-    for (const t of incoming) {
+    const incoming = [];
+    let cashTotal = 0;
+    let qrisTotal = 0;
+    // Satu lintasan transaksi untuk filter tanggal, total pembayaran, grafik harian,
+    // dan grafik per jam; menghindari filter + dua reduce + lintasan ulang.
+    for (const t of transaksi) {
+      if (t.tipe !== "masuk") continue;
       const date = new Date(t.created_at || Date.now());
       const day = dayFormatter.format(date);
+      if (day < rangeStart || day > rangeEnd) continue;
+      incoming.push(t);
+      const tunai = Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0);
+      const qris = Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0);
+      cashTotal += tunai;
+      qrisTotal += qris;
       if (byDay[day]) {
-        byDay[day].tunai += Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0);
-        byDay[day].qris += Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0);
+        byDay[day].tunai += tunai;
+        byDay[day].qris += qris;
       }
       const hour = Number(hourFormatter.format(date));
       if (byHour[hour]) {
