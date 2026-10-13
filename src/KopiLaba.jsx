@@ -830,32 +830,39 @@ export default function KopiLaba() {
         await loadAllData(tok);
         return;
       }
+
       const kafeData = await api(
         `/rest/v1/kafe?pemilik_id=eq.${prof.id}&limit=1`,
         "GET",
         null,
         tok
       );
-      const k = Array.isArray(kafeData) ? kafeData[0] : null;
-      if (!k && prof.kafe_id) {
-        const k2 = await api(`/rest/v1/kafe?id=eq.${prof.kafe_id}&limit=1`, "GET", null, tok);
-        const kafeObj = Array.isArray(k2) ? k2[0] : null;
-        setKafe(kafeObj || null);
-        if (kafeObj) setQrisUrl(kafeObj.qris_url || "");
-        await loadTransaksi(tok, prof.kafe_id);
-        await loadMenu(tok, prof.kafe_id);
-        await loadKategori(tok);
-        await loadKaryawan(tok, prof.kafe_id);
-        await loadAbsensi(tok, prof.kafe_id);
-      } else if (k) {
-        setKafe(k);
-        setQrisUrl(k.qris_url || "");
-        await loadTransaksi(tok, k.id);
-        await loadMenu(tok, k.id);
-        await loadKategori(tok);
-        await loadKaryawan(tok, k.id);
-        await loadAbsensi(tok, k.id);
+      let kafeObj = Array.isArray(kafeData) ? kafeData[0] : null;
+
+      if (!kafeObj && prof.kafe_id) {
+        const fallbackData = await api(
+          `/rest/v1/kafe?id=eq.${prof.kafe_id}&limit=1`,
+          "GET",
+          null,
+          tok
+        );
+        kafeObj = Array.isArray(fallbackData) ? fallbackData[0] : null;
       }
+
+      setKafe(kafeObj || null);
+      setQrisUrl(kafeObj?.qris_url || "");
+      const kafeId = kafeObj?.id || prof.kafe_id;
+      if (!kafeId) return;
+
+      // These requests are independent; run them together instead of waiting
+      // for each network round-trip before starting the next one.
+      await Promise.all([
+        loadTransaksi(tok, kafeId),
+        loadMenu(tok, kafeId),
+        loadKategori(tok),
+        loadKaryawan(tok, kafeId),
+        loadAbsensi(tok, kafeId),
+      ]);
     } catch (err) {
       console.error("Load data error:", err);
       setNetworkError(true);
@@ -865,22 +872,30 @@ export default function KopiLaba() {
 
   const loadAllData = async (tok) => {
     try {
-      const owners = await api("/rest/v1/profiles?role=eq.pemilik", "GET", null, tok);
-      setAllOwners(Array.isArray(owners) ? owners : []);
-      const allTrans = await api(
-        "/rest/v1/transaksi?order=created_at.desc&limit=1000",
-        "GET",
-        null,
-        tok
-      );
-      setAllTransaksi(Array.isArray(allTrans) ? allTrans : []);
-      setTransaksi(Array.isArray(allTrans) ? allTrans : []);
-      const allMenu = await api("/rest/v1/menu", "GET", null, tok);
-      setMenu(Array.isArray(allMenu) ? allMenu : []);
-      const allKategori = await api("/rest/v1/kategori", "GET", null, tok);
-      setKategori(Array.isArray(allKategori) ? allKategori : []);
-      const allKaryawan = await api("/rest/v1/profiles?role=eq.barista", "GET", null, tok);
-      setKaryawan(Array.isArray(allKaryawan) ? allKaryawan : []);
+      // Fetch independent admin datasets concurrently to reduce startup wait.
+      const results = await Promise.allSettled([
+        api("/rest/v1/profiles?role=eq.pemilik", "GET", null, tok),
+        api("/rest/v1/transaksi?order=created_at.desc&limit=1000", "GET", null, tok),
+        api("/rest/v1/menu", "GET", null, tok),
+        api("/rest/v1/kategori", "GET", null, tok),
+        api("/rest/v1/profiles?role=eq.barista", "GET", null, tok),
+      ]);
+      const [ownersResult, transaksiResult, menuResult, kategoriResult, karyawanResult] = results;
+      const asArray = (result) =>
+        result.status === "fulfilled" && Array.isArray(result.value) ? result.value : [];
+
+      const owners = asArray(ownersResult);
+      const allTrans = asArray(transaksiResult);
+      setAllOwners(owners);
+      setAllTransaksi(allTrans);
+      setTransaksi(allTrans);
+      setMenu(asArray(menuResult));
+      setKategori(asArray(kategoriResult));
+      setKaryawan(asArray(karyawanResult));
+
+      if (results.some((result) => result.status === "rejected")) {
+        throw new Error("Sebagian data admin gagal dimuat");
+      }
     } catch (err) {
       console.error("Load all data error:", err);
       setError("Gagal memuat data super admin.");
