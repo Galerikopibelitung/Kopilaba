@@ -333,7 +333,6 @@ export default function KopiLaba() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [token, setToken] = useState(null);
-  const [refreshToken, setRefreshToken] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -355,101 +354,22 @@ export default function KopiLaba() {
   // SESSION PERSISTENCE
   // ------------------------------------------------------------
   useEffect(() => {
-    let cancelled = false;
-    const restoreSession = async () => {
-      const hash = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
-      const query = new URLSearchParams(window.location.search || "");
-      // Let the OAuth callback handler own URLs containing an auth response/error.
-      if (hash.has("access_token") || hash.has("error") || hash.has("error_description") || query.has("access_token") || query.has("error") || query.has("error_description")) return;
-      const saved = localStorage.getItem("kopilaba_session");
-      if (!saved) return;
-      let session;
+    const saved = localStorage.getItem("kopilaba_session");
+    if (saved) {
       try {
-        session = JSON.parse(saved);
-      } catch (_) {
-        localStorage.removeItem("kopilaba_session");
-        return;
-      }
-      if (!session?.profile || !session?.token) {
-        localStorage.removeItem("kopilaba_session");
-        return;
-      }
-
-      // A responsive viewport change or browser "desktop site" reload must not
-      // silently drop a valid login. Validate the saved token and refresh it
-      // when possible before restoring the authenticated screen.
-      let activeToken = session.token;
-      let activeRefreshToken = session.refreshToken || null;
-      let authUser = null;
-      try {
-        let response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${activeToken}` },
-        });
-        if (response.ok) {
-          authUser = await response.json().catch(() => null);
-        } else if (response.status === 401 && activeRefreshToken) {
-          const refreshResponse = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-            body: JSON.stringify({ refresh_token: activeRefreshToken }),
-          });
-          const refreshed = await refreshResponse.json().catch(() => ({}));
-          if (refreshResponse.ok && refreshed.access_token && refreshed.user) {
-            activeToken = refreshed.access_token;
-            activeRefreshToken = refreshed.refresh_token || activeRefreshToken;
-            authUser = refreshed.user;
-          } else {
-            localStorage.removeItem("kopilaba_session");
-            if (!cancelled) {
-              setUser(null); setProfile(null); setToken(null); setRefreshToken(null);
-              setIsSuperAdmin(false); setScreen("login");
-            }
-            return;
-          }
-        } else if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem("kopilaba_session");
-          if (!cancelled) {
-            setUser(null); setProfile(null); setToken(null); setRefreshToken(null);
-            setIsSuperAdmin(false); setScreen("login");
-          }
-          return;
-        } else {
-          throw new Error("Sambungan autentikasi sementara gagal.");
+        const session = JSON.parse(saved);
+        if (session.profile && session.token) {
+          setUser(session.user || null);
+          setProfile(session.profile);
+          setToken(session.token);
+          setIsSuperAdmin(session.isSuperAdmin || false);
+          setScreen("app");
+          loadData(session.token, session.profile);
         }
       } catch (e) {
-        // A temporary network issue should not erase a saved login.
-        console.warn("Session validation temporarily unavailable:", e);
-        if (!cancelled) {
-          setUser(session.user || null); setProfile(session.profile); setToken(activeToken);
-          setRefreshToken(activeRefreshToken); setIsSuperAdmin(Boolean(session.isSuperAdmin));
-          setScreen("app");
-          loadData(activeToken, session.profile);
-        }
-        return;
+        console.warn("Session load error:", e);
       }
-
-      if (cancelled) return;
-      if (!authUser?.id || authUser.id !== session.profile.id) {
-        localStorage.removeItem("kopilaba_session");
-        setUser(null); setProfile(null); setToken(null); setRefreshToken(null);
-        setIsSuperAdmin(false); setScreen("login");
-        return;
-      }
-      try {
-        await finishAuthenticatedSession(authUser, activeToken, activeRefreshToken);
-      } catch (e) {
-        console.error("Session restore error:", e);
-        // Keep the existing authenticated state if profile/data fetch briefly fails.
-        if (!cancelled) {
-          setUser(authUser); setProfile(session.profile); setToken(activeToken);
-          setRefreshToken(activeRefreshToken); setIsSuperAdmin(Boolean(session.isSuperAdmin));
-          setScreen("app");
-          setError(e.message || "Sesi dipulihkan, tetapi data belum berhasil dimuat.");
-        }
-      }
-    };
-    restoreSession();
-    return () => { cancelled = true; };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -457,10 +377,10 @@ export default function KopiLaba() {
     if (profile && token) {
       localStorage.setItem(
         "kopilaba_session",
-        JSON.stringify({ user, profile, token, refreshToken, isSuperAdmin })
+        JSON.stringify({ user, profile, token, isSuperAdmin })
       );
     }
-  }, [profile, token, refreshToken, user, isSuperAdmin]);
+  }, [profile, token, user, isSuperAdmin]);
 
   useEffect(() => {
     const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
@@ -471,7 +391,6 @@ export default function KopiLaba() {
       queryParams.get("error_description") ||
       queryParams.get("error");
     const oauthToken = hashParams.get("access_token") || queryParams.get("access_token");
-    const oauthRefreshToken = hashParams.get("refresh_token") || queryParams.get("refresh_token");
 
     if (oauthError) {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -501,7 +420,7 @@ export default function KopiLaba() {
           const detail = oauthUser?.msg || oauthUser?.message || oauthUser?.error_description;
           throw new Error(detail || "Login Google gagal. Periksa konfigurasi Google OAuth di Supabase.");
         }
-        if (!cancelled) await finishAuthenticatedSession(oauthUser, oauthToken, oauthRefreshToken);
+        if (!cancelled) await finishAuthenticatedSession(oauthUser, oauthToken);
       } catch (err) {
         if (!cancelled) {
           setError(err.message || "Login Google gagal. Coba ulangi.");
@@ -1114,10 +1033,9 @@ export default function KopiLaba() {
     window.location.assign(authUrl.toString());
   };
 
-  const finishAuthenticatedSession = async (u, tok, refreshTok = null) => {
+  const finishAuthenticatedSession = async (u, tok) => {
     if (!u || !tok) throw new Error("Sesi login tidak lengkap. Silakan coba lagi.");
     setToken(tok);
-    setRefreshToken(refreshTok || null);
     setUser(u);
     const email = String(u.email || "").trim().toLowerCase();
     let p = null;
@@ -1182,7 +1100,7 @@ export default function KopiLaba() {
     try {
       const data = await authApi("/token?grant_type=password", loginForm);
       if (data.access_token && data.user) {
-        await finishAuthenticatedSession(data.user, data.access_token, data.refresh_token || null);
+        await finishAuthenticatedSession(data.user, data.access_token);
       } else {
         setError(data.error_description || "Login gagal. Cek email & password.");
       }
@@ -3307,7 +3225,6 @@ export default function KopiLaba() {
                 localStorage.removeItem("kopilaba_session");
                 setUser(null);
                 setToken(null);
-                setRefreshToken(null);
                 setProfile(null);
                 setIsSuperAdmin(false);
                 setScreen("login");
@@ -3407,7 +3324,6 @@ export default function KopiLaba() {
               localStorage.removeItem("kopilaba_session");
               setUser(null);
               setToken(null);
-              setRefreshToken(null);
               setProfile(null);
               setIsSuperAdmin(false);
               setScreen("login");
