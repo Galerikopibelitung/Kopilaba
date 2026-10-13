@@ -2000,7 +2000,10 @@ export default function KopiLaba() {
     setKeranjang((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const totalKeranjang = keranjang.reduce((sum, item) => sum + item.harga * item.qty, 0);
+  const totalKeranjang = useMemo(
+    () => keranjang.reduce((sum, item) => sum + (Number(item.harga) || 0) * (Number(item.qty) || 0), 0),
+    [keranjang]
+  );
 
   const handleCheckout = async () => {
     if (keranjang.length === 0) {
@@ -2216,74 +2219,86 @@ export default function KopiLaba() {
     return { totalMasuk: masuk, totalKeluar: keluar, laba: masuk - keluar, count: data.length };
   };
 
-  const dashboardData = getDashboardData();
-  const filtered = getFilteredTransaksi();
-  const totalMasuk = filtered.filter((t) => t.tipe === "masuk").reduce((a, b) => a + b.total, 0);
-  const totalKeluar = filtered.filter((t) => t.tipe === "keluar").reduce((a, b) => a + b.total, 0);
+  const filtered = useMemo(
+    () => getFilteredTransaksi(),
+    [transaksi, profile?.role, filterTglMulai, filterTglSelesai, filterStatus, periodeFilter]
+  );
+  const dashboardData = useMemo(
+    () => getDashboardData(),
+    [transaksi, periodeFilter, profile?.role]
+  );
+  const { totalMasuk, totalKeluar } = useMemo(() => {
+    let masuk = 0;
+    let keluar = 0;
+    for (const t of filtered) {
+      const total = Number(t.total) || 0;
+      if (t.tipe === "masuk") masuk += total;
+      else if (t.tipe === "keluar") keluar += total;
+    }
+    return { totalMasuk: masuk, totalKeluar: keluar };
+  }, [filtered]);
   const laba = totalMasuk - totalKeluar;
-  const totalStok = menu.reduce((sum, item) => sum + (item.stok || 0), 0);
+  const totalStok = useMemo(
+    () => menu.reduce((sum, item) => sum + (Number(item.stok) || 0), 0),
+    [menu]
+  );
 
-  const chartData = {};
-  filtered.forEach((t) => {
-    const date = new Date(t.created_at).toLocaleDateString("id-ID");
-    if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
-    if (t.tipe === "masuk") chartData[date].masuk += t.total;
-    else chartData[date].keluar += t.total;
-  });
+  // Report data is the heaviest derived work. Keep it cached while users type,
+  // edit a cart, or switch unrelated UI state.
+  const reportData = useMemo(() => {
+    const chartData = {};
+    const laporanStokData = menu.map((m) => ({ ...m, terjual: 0, sisa: Number(m.stok) || 0 }));
+    const stockByName = new Map(laporanStokData.map((m) => [m.nama, m]));
+    const kategoriById = new Map(kategori.map((k) => [k.id, k.nama || "Umum"]));
+    const menuByName = new Map(menu.map((m) => [m.nama, m]));
+    const kategoriPenjualan = {};
+    const produkPerKategori = {};
+    const produkTerjual = {};
+
+    menu.forEach((m) => {
+      const katNama = kategoriById.get(m.kategori_id) || "Umum";
+      if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
+      produkPerKategori[katNama].push(m);
+    });
+
+    filtered.forEach((t) => {
+      if (t.tipe === "masuk") {
+        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
+        chartData[date].masuk += Number(t.total) || 0;
+      } else {
+        const date = new Date(t.created_at).toLocaleDateString("id-ID");
+        if (!chartData[date]) chartData[date] = { masuk: 0, keluar: 0 };
+        chartData[date].keluar += Number(t.total) || 0;
+      }
+
+      if (t.tipe !== "masuk" || !t.item) return;
+      const items = parseItems(t.item);
+      items.forEach((item) => {
+        const stockItem = stockByName.get(item.nama);
+        if (stockItem) {
+          stockItem.terjual = (stockItem.terjual || 0) + item.qty;
+          stockItem.sisa = (Number(stockItem.stok) || 0) - stockItem.terjual;
+        }
+        const menuItem = menuByName.get(item.nama);
+        if (menuItem) {
+          const katNama = kategoriById.get(menuItem.kategori_id) || "Umum";
+          kategoriPenjualan[katNama] = (kategoriPenjualan[katNama] || 0) + item.qty;
+        }
+        produkTerjual[item.nama] = (produkTerjual[item.nama] || 0) + item.qty;
+      });
+    });
+
+    return { chartData, laporanStokData, kategoriPenjualan, produkPerKategori, produkTerjual };
+  }, [filtered, menu, kategori]);
+  const { chartData, laporanStokData, kategoriPenjualan, produkPerKategori, produkTerjual } = reportData;
   const chartLabels = Object.keys(chartData).slice(-7);
   const chartMasuk = chartLabels.map((d) => chartData[d].masuk);
   const chartKeluar = chartLabels.map((d) => chartData[d].keluar);
   const maxChart = Math.max(1, ...chartMasuk, ...chartKeluar);
-
-  const laporanStokData = menu.map((m) => ({ ...m, terjual: 0, sisa: m.stok || 0 }));
-  filtered.forEach((t) => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = parseItems(t.item);
-      items.forEach((item) => {
-        const found = laporanStokData.find((m) => m.nama === item.nama);
-        if (found) {
-          found.terjual = (found.terjual || 0) + item.qty;
-          found.sisa = (found.stok || 0) - found.terjual;
-        }
-      });
-    }
-  });
-
-  const kategoriPenjualan = {};
-  filtered.forEach((t) => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = parseItems(t.item);
-      items.forEach((item) => {
-        const menuItem = menu.find((m) => m.nama === item.nama);
-        if (menuItem) {
-          const kat = menuItem.kategori_id || "umum";
-          const katNama = kategori.find((k) => k.id === kat)?.nama || "Umum";
-          if (!kategoriPenjualan[katNama]) kategoriPenjualan[katNama] = 0;
-          kategoriPenjualan[katNama] += item.qty;
-        }
-      });
-    }
-  });
   const sortedKategori = Object.entries(kategoriPenjualan).sort((a, b) => b[1] - a[1]);
   const top5Kategori = sortedKategori.slice(0, 5);
   const bottom5Kategori = sortedKategori.slice(-5).reverse();
-
-  const produkPerKategori = {};
-  menu.forEach((m) => {
-    const katNama = kategori.find((k) => k.id === m.kategori_id)?.nama || "Umum";
-    if (!produkPerKategori[katNama]) produkPerKategori[katNama] = [];
-    produkPerKategori[katNama].push(m);
-  });
-  const produkTerjual = {};
-  filtered.forEach((t) => {
-    if (t.tipe === "masuk" && t.item) {
-      const items = parseItems(t.item);
-      items.forEach((item) => {
-        if (!produkTerjual[item.nama]) produkTerjual[item.nama] = 0;
-        produkTerjual[item.nama] += item.qty;
-      });
-    }
-  });
 
   const exportExcel = () => {
     const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
@@ -2403,13 +2418,20 @@ export default function KopiLaba() {
     return filtered;
   };
 
-  const adminFiltered = getAdminFilteredTransaksi();
-  const adminTotalPemasukan = adminFiltered
-    .filter((t) => t.tipe === "masuk")
-    .reduce((a, b) => a + b.total, 0);
-  const adminTotalPengeluaran = adminFiltered
-    .filter((t) => t.tipe === "keluar")
-    .reduce((a, b) => a + b.total, 0);
+  const adminFiltered = useMemo(
+    () => getAdminFilteredTransaksi(),
+    [allTransaksi, adminFilterPeriode, adminFilterOwner, allOwners]
+  );
+  const { adminTotalPemasukan, adminTotalPengeluaran } = useMemo(() => {
+    let masuk = 0;
+    let keluar = 0;
+    for (const t of adminFiltered) {
+      const total = Number(t.total) || 0;
+      if (t.tipe === "masuk") masuk += total;
+      else if (t.tipe === "keluar") keluar += total;
+    }
+    return { adminTotalPemasukan: masuk, adminTotalPengeluaran: keluar };
+  }, [adminFiltered]);
   const adminLaba = adminTotalPemasukan - adminTotalPengeluaran;
 
   // ============================================================
@@ -3624,6 +3646,9 @@ export default function KopiLaba() {
                       color: "#fff",
                       filter: showLaba ? "none" : "blur(6px)",
                       transition: "filter 0.3s",
+                      whiteSpace: "nowrap",
+                      overflowWrap: "normal",
+                      letterSpacing: "-0.025em",
                     }}
                   >
                     {showLaba ? fmt(dashboardData.totalKeluar) : "••••••••"}
