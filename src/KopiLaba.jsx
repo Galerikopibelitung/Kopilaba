@@ -275,7 +275,7 @@ const AppIcon = ({ name, size = 20, strokeWidth = 1.8 }) => {
     logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></>,
     trash: <><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6" /></>,
     check: <path d="m5 12 4 4L19 6" />,
-    cart: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></>
+    cart: <><path d="M3 10h18l-2 10H5L3 10Z" /><path d="m8 10 4-7 4 7M8 14v3M12 14v3M16 14v3" /></>
   };
   return <svg {...common}>{shapes[name] || shapes.dashboard}</svg>;
 };
@@ -2852,7 +2852,7 @@ export default function KopiLaba() {
           box-sizing:border-box !important;
         }
         .kl-topbar .kl-kasir-toggle > span {
-          display:inline-block !important;
+          display:none !important;
           white-space:nowrap !important;
           word-break:keep-all !important;
           line-height:1 !important;
@@ -2865,14 +2865,16 @@ export default function KopiLaba() {
         }
         @media(max-width:560px) {
           .kl-topbar .kl-kasir-toggle {
-            min-width:112px !important;
-            width:auto !important;
-            min-height:42px !important;
-            padding:10px 15px !important;
-            font-size:13px !important;
+            min-width:44px !important;
+            width:44px !important;
+            max-width:44px !important;
+            min-height:44px !important;
+            padding:0 !important;
+            font-size:0 !important;
           }
         }
       `}</style>
+      <style>{`\n        /* Performance: avoid expensive backdrop filters on small touch devices. */\n        @media (max-width:640px) {\n          .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {\n            backdrop-filter:none !important;\n            -webkit-backdrop-filter:none !important;\n          }\n          .kl-topbar { background:rgba(255,253,250,.98) !important; }\n          .kl-bottom-nav { background:rgba(255,255,255,.98) !important; }\n        }\n      `}</style>
       {/* HEADER */}
       <div
         className="kl-topbar"
@@ -2947,11 +2949,13 @@ export default function KopiLaba() {
                   alignItems: "center",
                   justifyContent: "center",
                   flexWrap: "nowrap",
-                  gap: 9,
+                  gap: 0,
                   boxSizing: "border-box",
-                  minWidth: 120,
+                  width: 44,
+                  minWidth: 44,
+                  maxWidth: 44,
                   minHeight: 44,
-                  padding: "11px 17px",
+                  padding: 0,
                   background: theme.gold,
                   border: `1px solid ${theme.gold}`,
                   borderRadius: 12,
@@ -2964,8 +2968,7 @@ export default function KopiLaba() {
                   boxShadow: "0 3px 8px rgba(112,66,34,.16)",
                 }}
               >
-                <AppIcon name="shopping-cart" size={19} />
-                <span style={{ display: "inline-block", whiteSpace: "nowrap", lineHeight: 1 }}>Kasir</span>
+                <AppIcon name="cart" size={21} />
                 {keranjang.length > 0 && (
                   <span
                     style={{
