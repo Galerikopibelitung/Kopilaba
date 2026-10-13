@@ -7,6 +7,12 @@ begin;
 alter table public.kategori
   add column if not exists kafe_id uuid references public.kafe(id) on delete cascade;
 
+-- Category names were previously globally unique. Make uniqueness per cafe so cafes
+-- can maintain independent category lists with the same names.
+alter table public.kategori drop constraint if exists kategori_nama_key;
+create unique index if not exists kategori_kafe_nama_key
+  on public.kategori (kafe_id, nama) where kafe_id is not null;
+
 -- Give each existing cafe its own category records, preserving category names and
 -- updating each menu to reference the corresponding cafe-scoped category.
 insert into public.kategori (nama, created_at, kafe_id)
