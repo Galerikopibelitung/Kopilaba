@@ -2846,9 +2846,9 @@ export default function KopiLaba() {
           white-space:nowrap !important;
           word-break:keep-all !important;
           overflow:visible !important;
-          background:#16803c !important;
-          color:#fff !important;
-          border:1px solid #126c32 !important;
+          background:var(--kl-accent,#dba35b) !important;
+          color:var(--kl-ink,#24180f) !important;
+          border:1px solid var(--kl-accent,#dba35b) !important;
           box-sizing:border-box !important;
         }
         .kl-topbar .kl-kasir-toggle > span {
@@ -2859,17 +2859,17 @@ export default function KopiLaba() {
         }
         .kl-topbar .kl-kasir-toggle svg {
           display:block !important;
-          flex:0 0 17px !important;
-          width:17px !important;
-          height:17px !important;
+          flex:0 0 19px !important;
+          width:19px !important;
+          height:19px !important;
         }
         @media(max-width:560px) {
           .kl-topbar .kl-kasir-toggle {
-            min-width:94px !important;
+            min-width:112px !important;
             width:auto !important;
-            min-height:40px !important;
-            padding:8px 11px !important;
-            font-size:12px !important;
+            min-height:42px !important;
+            padding:10px 15px !important;
+            font-size:13px !important;
           }
         }
       `}</style>
