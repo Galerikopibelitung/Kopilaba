@@ -1035,7 +1035,7 @@ export default function KopiLaba() {
       await Promise.all([
         loadTransaksi(tok, kafeId),
         loadMenu(tok, kafeId),
-        loadKategori(tok),
+        loadKategori(tok, kafeId),
         loadKaryawan(tok, kafeId),
         loadAbsensi(tok, kafeId),
       ]);
@@ -1101,9 +1101,17 @@ export default function KopiLaba() {
     }
   };
 
-  const loadKategori = async (tok) => {
+  const loadKategori = async (tok, kafeId = null) => {
     try {
-      const data = await api("/rest/v1/kategori?order=nama.asc", "GET", null, tok);
+      // Pemilik/barista hanya memuat kategori milik kafenya; super admin dapat melihat semuanya.
+      if (!kafeId && profile?.role !== "super_admin") {
+        setKategori([]);
+        return;
+      }
+      const endpoint = kafeId
+        ? `/rest/v1/kategori?kafe_id=eq.${encodeURIComponent(kafeId)}&order=nama.asc`
+        : "/rest/v1/kategori?order=nama.asc";
+      const data = await api(endpoint, "GET", null, tok);
       setKategori(Array.isArray(data) ? data : []);
     } catch (err) {
       setKategori([]);
@@ -1846,12 +1854,12 @@ export default function KopiLaba() {
         setSuccess("Kategori diupdate!");
         setEditKategoriId(null);
       } else {
-        await api("/rest/v1/kategori", "POST", { nama: kategoriForm.nama }, token);
+        await api("/rest/v1/kategori", "POST", { nama: kategoriForm.nama, kafe_id: kafe?.id || profile?.kafe_id || null }, token);
         setSuccess("Kategori ditambahkan!");
       }
       setKategoriForm({ nama: "" });
       setShowAddKategori(false);
-      await loadKategori(token);
+      await loadKategori(token, kafe?.id || profile?.kafe_id);
     } catch (err) {
       console.error("Kategori error:", err);
       setError("Gagal menyimpan kategori.");
@@ -1866,7 +1874,7 @@ export default function KopiLaba() {
     try {
       await api(`/rest/v1/kategori?id=eq.${id}`, "DELETE", null, token);
       setSuccess("Kategori dihapus!");
-      await loadKategori(token);
+      await loadKategori(token, kafe?.id || profile?.kafe_id);
     } catch (err) {
       setError("Gagal hapus kategori.");
     }
