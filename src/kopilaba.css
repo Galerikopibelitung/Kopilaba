@@ -2406,3 +2406,7 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 .kl-login-screen .kl-google-button,.kl-register-screen .kl-google-button{font-size:15px!important;font-weight:700!important}
 
 
+
+/* Fast drawer: fixed overlay never changes header layout and avoids costly blur repaint. */
+.kl-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; height: 100dvh !important; max-height: 100dvh !important; }
+.kl-topbar { position: sticky !important; top: 0 !important; z-index: 20 !important; }
