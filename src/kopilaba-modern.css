@@ -1864,3 +1864,116 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   .kl-app-shell.kl-desktop-sidebar-collapsed .kl-topbar { margin-left:0 !important; width:100% !important; }
   .kl-app-shell.kl-desktop-sidebar-collapsed .kl-content { margin-left:0 !important; width:100% !important; }
 }
+
+
+/* Final navigation and cashier tap-target repair (mobile, tablet and desktop). */
+.kl-menu-toggle {
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  flex:0 0 42px !important;
+  width:42px !important;
+  min-width:42px !important;
+  height:42px !important;
+  min-height:42px !important;
+  border-radius:12px !important;
+  cursor:pointer !important;
+  touch-action:manipulation;
+}
+.kl-kasir-toggle {
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:7px !important;
+  min-width:104px !important;
+  min-height:42px !important;
+  padding:9px 18px !important;
+  border-radius:12px !important;
+  white-space:nowrap !important;
+  touch-action:manipulation;
+}
+.kl-bottom-nav {
+  box-sizing:border-box !important;
+  display:flex !important;
+  align-items:stretch !important;
+  justify-content:space-between !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  gap:2px !important;
+  overflow:hidden !important;
+  padding:7px 6px calc(9px + env(safe-area-inset-bottom)) !important;
+}
+.kl-bottom-nav > .kl-bottom-nav-item,
+.kl-bottom-nav .kl-bottom-nav-item {
+  box-sizing:border-box !important;
+  display:flex !important;
+  flex:1 1 0% !important;
+  flex-basis:0 !important;
+  width:0 !important;
+  min-width:0 !important;
+  max-width:none !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:3px !important;
+  padding:5px 1px !important;
+  min-height:60px !important;
+  overflow:hidden !important;
+}
+.kl-bottom-nav .kl-nav-icon {
+  box-sizing:border-box !important;
+  display:flex !important;
+  flex:0 0 26px !important;
+  width:26px !important;
+  min-width:0 !important;
+  height:26px !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+.kl-bottom-nav .kl-nav-icon svg { width:18px !important; height:18px !important; }
+.kl-bottom-nav .kl-bottom-nav-label {
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+  text-align:center !important;
+  font-size:clamp(7px, 1vw, 10px) !important;
+  line-height:1.12 !important;
+  letter-spacing:-.12px !important;
+}
+@media (max-width: 560px) {
+  .kl-topbar { padding:10px 10px !important; }
+  .kl-topbar > div > div:last-child { gap:4px !important; }
+  .kl-topbar > div > div:last-child button { min-width:32px !important; }
+  .kl-kasir-toggle {
+    min-width:92px !important;
+    min-height:42px !important;
+    padding:8px 12px !important;
+    font-size:12px !important;
+  }
+  .kl-bottom-nav { gap:1px !important; padding-left:3px !important; padding-right:3px !important; }
+  .kl-bottom-nav .kl-bottom-nav-item { padding-left:0 !important; padding-right:0 !important; gap:3px !important; }
+  .kl-bottom-nav .kl-nav-icon { flex-basis:23px !important; width:23px !important; height:23px !important; }
+  .kl-bottom-nav .kl-nav-icon svg { width:17px !important; height:17px !important; }
+  .kl-bottom-nav .kl-bottom-nav-label { font-size:clamp(6.8px, 2.05vw, 8.5px) !important; }
+  .kl-content { padding-bottom:calc(88px + env(safe-area-inset-bottom)) !important; }
+}
+@media (min-width: 1000px) {
+  .kl-bottom-nav {
+    display:flex !important;
+    min-height:70px !important;
+    padding:8px 18px calc(8px + env(safe-area-inset-bottom)) !important;
+    border-radius:0 !important;
+  }
+  .kl-bottom-nav .kl-bottom-nav-item { min-height:54px !important; }
+  .kl-bottom-nav .kl-bottom-nav-label { font-size:10px !important; }
+  .kl-kasir-toggle { min-width:116px !important; padding-left:20px !important; padding-right:20px !important; }
+}
