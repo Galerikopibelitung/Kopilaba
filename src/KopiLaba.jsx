@@ -591,30 +591,72 @@ export default function KopiLaba() {
     }
   };
   
-  const buildBackupPayload = () => ({
+  const buildBackupPayload = (allTransactions) => ({
     app: "KopiLaba",
-    formatVersion: 1,
+    formatVersion: 2,
     exportedAt: new Date().toISOString(),
     cafe: { id: kafe?.id || profile?.kafe_id || null, nama: kafe?.nama || "Kafe" },
-    note: "Transaksi mengikuti data yang dimuat aplikasi saat ekspor (maksimum 500 terbaru pada versi ini).",
-    data: { menu, transaksi, absensi },
+    note: "Backup lengkap seluruh halaman transaksi yang berhasil diambil dari server saat ekspor.",
+    data: { menu, transaksi: allTransactions, absensi },
     settings: { pajakEnabled, persentasePajak }
   });
 
-  const handleBackupExport = () => {
+  const handleBackupExport = async () => {
     if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh membuat backup."); return; }
-    const payload = buildBackupPayload();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "kopilaba-backup-" + (kafe?.id || profile?.kafe_id || "data") + "-" + new Date().toISOString().slice(0, 10) + ".json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setSuccess("Backup berhasil diunduh ke perangkat ini.");
+    const kafeId = kafe?.id || profile?.kafe_id;
+    if (!kafeId || !token) { setError("Sesi atau data kafe tidak tersedia. Silakan masuk kembali."); return; }
+    setBackupBusy(true);
+    setError("");
+    setSuccess("");
+    try {
+      // Ambil transaksi per halaman agar backup tidak terbatas pada 500 data di layar.
+      const pageSize = 1000;
+      const allTransactions = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const page = await api(
+          `/rest/v1/transaksi?kafe_id=eq.${encodeURIComponent(kafeId)}&order=created_at.asc,id.asc&limit=${pageSize}&offset=${offset}`,
+          "GET",
+          null,
+          token
+        );
+        if (!Array.isArray(page)) throw new Error("Server tidak mengembalikan daftar transaksi yang valid.");
+        allTransactions.push(...page);
+        if (page.length < pageSize) break;
+      }
+      const payload = buildBackupPayload(allTransactions);
+      payload.backupScope = "complete";
+      payload.counts = { menu: menu.length, transaksi: allTransactions.length, absensi: absensi.length };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kopilaba-backup-" + kafeId + "-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setSuccess(`Backup lengkap dibuat: ${allTransactions.length} transaksi, ${menu.length} menu, dan ${absensi.length} data absensi. Pastikan file benar-benar tersimpan di perangkat sebelum menganggap backup selesai.`);
+    } catch (err) {
+      setError("Backup belum selesai. Tidak ada data yang dihapus. " + (err.message || "Periksa koneksi lalu coba lagi."));
+    } finally {
+      setBackupBusy(false);
+    }
   };
+
+  const retentionReminder = (() => {
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const upcoming = [
+      new Date(now.getFullYear(), 0, 1),
+      new Date(now.getFullYear(), 6, 1),
+      new Date(now.getFullYear() + 1, 0, 1),
+      new Date(now.getFullYear() + 1, 6, 1),
+    ].filter((date) => date.getTime() >= todayUtc).sort((a, b) => a - b)[0];
+    if (!upcoming) return null;
+    const days = Math.round((Date.UTC(upcoming.getFullYear(), upcoming.getMonth(), upcoming.getDate()) - todayUtc) / 86400000);
+    if (![0, 1, 4, 7].includes(days)) return null;
+    return { days, date: upcoming };
+  })();
 
   const handleBackupFile = async (e) => {
     if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh memulihkan backup."); return; }
@@ -3601,13 +3643,13 @@ export default function KopiLaba() {
               <section className="kl-backup-card">
                 <div className="kl-backup-icon">⬇</div>
                 <h3>1. Unduh backup</h3>
-                <p>File JSON berisi menu, transaksi yang sedang dimuat, absensi, dan pengaturan pajak. Simpan di perangkat lain atau penyimpanan awan pribadi.</p>
+                <p>File JSON mencakup seluruh halaman transaksi di server, menu, absensi, serta pengaturan pajak. Simpan file di perangkat ini dan buat salinan tambahan di tempat aman.</p>
                 <div className="kl-counts">
                   <span><b>{menu.length}</b> menu</span>
                   <span><b>{transaksi.length}</b> transaksi</span>
                   <span><b>{absensi.length}</b> absensi</span>
                 </div>
-                <button type="button" className="kl-primary-action" onClick={handleBackupExport}>Unduh file backup</button>
+                <button type="button" className="kl-primary-action" disabled={backupBusy} onClick={handleBackupExport}>{backupBusy ? "Mengambil seluruh transaksi…" : "Unduh backup lengkap"}</button>
               </section>
               <section className="kl-backup-card">
                 <div className="kl-backup-icon">↥</div>
@@ -3625,7 +3667,8 @@ export default function KopiLaba() {
                 )}
               </section>
             </div>
-            <div className="kl-backup-warning"><b>Catatan penting</b><p>Backup bukan pengganti salinan rutin. Versi ini mengekspor maksimal 500 transaksi terbaru yang dimuat aplikasi. Pemulihan tidak menghapus transaksi lama. Jangan hapus data enam bulanan secara otomatis sebelum proses arsip lengkap, uji pemulihan, dan kebijakan retensi disiapkan.</p></div>
+            {retentionReminder && profile?.role === "pemilik" && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
+            <div className="kl-backup-warning"><b>Jadwal retensi data</b><p>Rencana penghapusan hanya pada 1 Januari dan 1 Juli. Menu, foto produk, QRIS, pengaturan pajak, dan akun tidak termasuk. Penghapusan transaksi tetap dinonaktifkan sampai proses backup semua perangkat dan pemulihan teruji aman.</p></div>
           </div>
         )}
 
