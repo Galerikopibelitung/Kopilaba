@@ -666,7 +666,7 @@ export default function KopiLaba() {
     try {
       if (file.size > 15 * 1024 * 1024) throw new Error("File backup maksimal 15 MB.");
       const parsed = JSON.parse(await file.text());
-      if (parsed?.app !== "KopiLaba" || parsed?.formatVersion !== 1 || !parsed?.data || !parsed?.cafe?.id) {
+      if (parsed?.app !== "KopiLaba" || ![1, 2].includes(parsed?.formatVersion) || !parsed?.data || !parsed?.cafe?.id) {
         throw new Error("Format file bukan backup KopiLaba yang didukung.");
       }
       if (String(parsed.cafe.id) !== String(kafe?.id || profile?.kafe_id)) {
