@@ -2975,17 +2975,6 @@ export default function KopiLaba() {
                 <span style={{ color: theme.gold }}>KOPI</span><span style={{ color: theme.text }}>LABA</span>
               </h1>
               <p className="kl-brand-caption">CAFE MANAGEMENT</p>
-              <p className="kl-cafe-identity" style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
-                {isSuperAdmin ? (
-                  <span className="kl-identity-role kl-identity-super"><AppIcon name="crown" size={13} />Super Admin</span>
-                ) : (
-                  <>
-                    <span className="kl-identity-cafe"><AppIcon name="coffee" size={13} /><span className="kl-identity-cafe-name">{kafe?.nama || "Kafe kamu"}</span></span>
-                    <span className="kl-identity-separator" aria-hidden="true">·</span>
-                    <span className="kl-identity-role"><AppIcon name="users" size={13} />{profile?.role === "pemilik" ? "Pemilik" : profile?.role === "barista" ? "Barista" : profile?.role || "Pengguna"}</span>
-                  </>
-                )}
-              </p>
               </div>
               </div>
             </div>
@@ -3183,6 +3172,31 @@ export default function KopiLaba() {
           >
             🚪 Logout
           </button>
+          <div
+            className="kl-sidebar-identity"
+            style={{
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: `1px solid ${theme.cardBorder}`,
+              color: theme.textMuted,
+              fontSize: 12,
+            }}
+          >
+            <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 800, letterSpacing: ".08em", color: "#c6a98d" }}>
+              IDENTITAS KAFE
+            </p>
+            <div className="kl-cafe-identity" style={{ justifyContent: "flex-start", flexWrap: "wrap", gap: "6px 8px", margin: 0, color: "#f6e8d9", whiteSpace: "normal" }}>
+              {isSuperAdmin ? (
+                <span className="kl-identity-role kl-identity-super"><AppIcon name="crown" size={13} />Super Admin</span>
+              ) : (
+                <>
+                  <span className="kl-identity-cafe"><AppIcon name="coffee" size={13} /><span className="kl-identity-cafe-name" style={{ maxWidth: "100%", overflowWrap: "anywhere" }}>{kafe?.nama || "Kafe kamu"}</span></span>
+                  <span className="kl-identity-separator" aria-hidden="true">·</span>
+                  <span className="kl-identity-role"><AppIcon name="users" size={13} />{profile?.role === "pemilik" ? "Pemilik" : profile?.role === "barista" ? "Barista" : profile?.role || "Pengguna"}</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
