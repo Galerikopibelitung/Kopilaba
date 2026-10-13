@@ -2947,24 +2947,24 @@ export default function KopiLaba() {
                   alignItems: "center",
                   justifyContent: "center",
                   flexWrap: "nowrap",
-                  gap: 8,
+                  gap: 9,
                   boxSizing: "border-box",
-                  minWidth: 104,
-                  minHeight: 42,
-                  padding: "9px 14px",
-                  background: "#16803c",
-                  border: "1px solid #126c32",
-                  borderRadius: 11,
-                  color: "#fff",
+                  minWidth: 120,
+                  minHeight: 44,
+                  padding: "11px 17px",
+                  background: theme.gold,
+                  border: `1px solid ${theme.gold}`,
+                  borderRadius: 12,
+                  color: "#24180f",
                   fontWeight: 750,
-                  fontSize: 13,
+                  fontSize: 14,
                   lineHeight: 1,
                   whiteSpace: "nowrap",
                   cursor: "pointer",
-                  boxShadow: "0 3px 8px rgba(22,128,60,.18)",
+                  boxShadow: "0 3px 8px rgba(112,66,34,.16)",
                 }}
               >
-                <AppIcon name="shopping-cart" size={17} />
+                <AppIcon name="shopping-cart" size={19} />
                 <span style={{ display: "inline-block", whiteSpace: "nowrap", lineHeight: 1 }}>Kasir</span>
                 {keranjang.length > 0 && (
                   <span
