@@ -2978,7 +2978,7 @@ export default function KopiLaba() {
           WebkitBackdropFilter: theme.blur,
           borderRight: `1px solid ${theme.cardBorder}`,
           boxShadow: theme.shadow,
-          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transform: (typeof window !== "undefined" && window.innerWidth >= 1000 ? desktopSidebarCollapsed : !sidebarOpen) ? "translateX(-110%)" : "translateX(0)",
           transition: "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
           zIndex: 100,
           padding: "20px 16px",
