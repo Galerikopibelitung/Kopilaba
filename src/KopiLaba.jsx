@@ -68,11 +68,29 @@ const escapeHTML = (value) =>
     "'": "&#39;",
   })[char]);
 
-// Tanggal hari ini dalam zona WIB (bukan UTC)
-const todayWIB = () => {
-  const d = new Date();
-  d.setHours(d.getHours() + 7);
-  return d.toISOString().slice(0, 10);
+// Tanggal transaksi dihitung berdasarkan kalender WIB, tanpa bergantung zona waktu perangkat.
+const dateKeyWIB = (value) => {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+};
+const todayWIB = () => dateKeyWIB(new Date());
+const shiftDateKey = (dateKey, days) => {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+const shiftMonthKey = (dateKey, months) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const targetMonth = new Date(Date.UTC(year, month - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(targetMonth.getUTCFullYear(), targetMonth.getUTCMonth() + 1, 0)).getUTCDate();
+  targetMonth.setUTCDate(Math.min(day, lastDay));
+  return targetMonth.toISOString().slice(0, 10);
 };
 
 // Parse field item (JSON baru atau string lama "nama x2, ...")
@@ -953,38 +971,26 @@ export default function KopiLaba() {
   // FUNGSI BANTU PERIODE
   // ============================================================
   const getDateRange = (periode) => {
-    const now = new Date();
-    let start = new Date(now);
-    if (periode === "hari") {
-      start.setHours(0, 0, 0, 0);
-    } else if (periode === "minggu") {
-      start.setDate(now.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
-    } else if (periode === "bulan") {
-      start.setMonth(now.getMonth() - 1);
-      start.setHours(0, 0, 0, 0);
-    } else if (periode === "tahun") {
-      start.setFullYear(now.getFullYear() - 1);
-      start.setHours(0, 0, 0, 0);
-    } else {
-      start = new Date(0);
-    }
-    return { start, end: now };
+    const today = todayWIB();
+    let startDate = "1970-01-01";
+    if (periode === "hari") startDate = today;
+    else if (periode === "minggu") startDate = shiftDateKey(today, -7);
+    else if (periode === "bulan") startDate = shiftMonthKey(today, -1);
+    else if (periode === "tahun") startDate = shiftMonthKey(today, -12);
+    return {
+      start: new Date(`${startDate}T00:00:00+07:00`),
+      end: new Date()
+    };
   };
 
   const filterTransaksiByPeriode = (data, periode) => {
-    if (profile?.role === "barista") {
-      const today = todayWIB();
-      return data.filter((t) => {
-        const d = new Date(t.created_at);
-        d.setHours(d.getHours() + 7);
-        return d.toISOString().slice(0, 10) === today;
-      });
-    }
-    const { start, end } = getDateRange(periode);
+    const { start } = getDateRange(periode);
+    const startKey = dateKeyWIB(start);
+    const endKey = todayWIB();
     return data.filter((t) => {
-      const d = new Date(t.created_at);
-      return d >= start && d <= end;
+      const day = dateKeyWIB(t.created_at);
+      if (!day || day < startKey || day > endKey) return false;
+      return profile?.role !== "barista" || day === endKey;
     });
   };
 
@@ -2366,22 +2372,20 @@ export default function KopiLaba() {
   const getFilteredTransaksi = () => {
     if (profile?.role === "barista") {
       const today = todayWIB();
-      return transaksi.filter((t) => {
-        const d = new Date(t.created_at);
-        d.setHours(d.getHours() + 7);
-        return d.toISOString().slice(0, 10) === today;
-      });
+      return transaksi.filter((t) => dateKeyWIB(t.created_at) === today);
     }
     let filtered = [...transaksi];
     if (filterTglMulai) {
-      const start = new Date(filterTglMulai);
-      start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((t) => new Date(t.created_at) >= start);
+      filtered = filtered.filter((t) => {
+        const day = dateKeyWIB(t.created_at);
+        return day && day >= filterTglMulai;
+      });
     }
     if (filterTglSelesai) {
-      const end = new Date(filterTglSelesai);
-      end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((t) => new Date(t.created_at) <= end);
+      filtered = filtered.filter((t) => {
+        const day = dateKeyWIB(t.created_at);
+        return day && day <= filterTglSelesai;
+      });
     }
     if (!filterTglMulai && !filterTglSelesai) {
       filtered = filterTransaksiByPeriode(filtered, periodeFilter);
@@ -2764,7 +2768,16 @@ export default function KopiLaba() {
     () => selectedKategori ? menu.filter((m) => m.kategori_id === selectedKategori) : menu,
     [selectedKategori, menu]
   );
-  const analyticsDayKey = todayWIB();
+  const [wibDayKey, setWibDayKey] = useState(() => todayWIB());
+  useEffect(() => {
+    const refreshWibDay = () => {
+      const currentDay = todayWIB();
+      setWibDayKey((previousDay) => previousDay === currentDay ? previousDay : currentDay);
+    };
+    const intervalId = setInterval(refreshWibDay, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+  const analyticsDayKey = wibDayKey;
   const [analyticsStartDate, setAnalyticsStartDate] = useState(() => todayWIB());
   const [analyticsEndDate, setAnalyticsEndDate] = useState(() => todayWIB());
   const {
