@@ -2412,11 +2412,18 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 .kl-topbar { position: sticky !important; top: 0 !important; z-index: 20 !important; }
 
 
-/* Keep Summary income and expense amounts on one line with identical sizing. */
-.kl-dashboard-hero > div:last-child > div > p:last-child {
+/* Keep Ringkasan income and expense rupiah amounts exactly the same size. */
+.kl-dashboard-hero .kl-summary-money {
+  display: block !important;
+  margin: 0 !important;
+  width: max-content !important;
+  max-width: 100% !important;
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
   font-size: clamp(10px, 3.3vw, 14px) !important;
+  line-height: 1.35 !important;
+  font-weight: 700 !important;
   letter-spacing: -0.025em !important;
+  font-variant-numeric: tabular-nums !important;
 }
