@@ -2640,24 +2640,39 @@ export default function KopiLaba() {
     () => selectedKategori ? menu.filter((m) => m.kategori_id === selectedKategori) : menu,
     [selectedKategori, menu]
   );
-  const analyticsDayKey = new Date().toDateString();
+  const analyticsDayKey = todayWIB();
+  const [analyticsStartDate, setAnalyticsStartDate] = useState(() => todayWIB());
+  const [analyticsEndDate, setAnalyticsEndDate] = useState(() => todayWIB());
   const {
     transaksiMasuk, pembayaranTunaiTotal, pembayaranQrisTotal,
     tanggalAnalitik, transaksiPerHari, transaksiPerJam, maxPerJam, garisJam
   } = useMemo(() => {
-    const incoming = transaksi.filter((t) => t.tipe === "masuk");
-    const cashTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
-    const qrisTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
+    const isBaristaAnalytics = profile?.role === "barista";
+    const selectedStart = isBaristaAnalytics ? analyticsDayKey : (analyticsStartDate || analyticsDayKey);
+    const selectedEnd = isBaristaAnalytics ? analyticsDayKey : (analyticsEndDate || analyticsDayKey);
+    const rangeStart = selectedStart <= selectedEnd ? selectedStart : selectedEnd;
+    const rangeEnd = selectedStart <= selectedEnd ? selectedEnd : selectedStart;
     const dayFormatter = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
     });
     const hourFormatter = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23"
     });
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(); d.setDate(d.getDate() - (6 - i));
-      return dayFormatter.format(d);
+    const incoming = transaksi.filter((t) => {
+      if (t.tipe !== "masuk") return false;
+      const day = dayFormatter.format(new Date(t.created_at || Date.now()));
+      return day >= rangeStart && day <= rangeEnd;
     });
+    const cashTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
+    const qrisTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
+    const days = [];
+    const cursor = new Date(rangeStart + "T12:00:00+07:00");
+    const lastDay = new Date(rangeEnd + "T12:00:00+07:00");
+    for (let guard = 0; cursor <= lastDay && guard < 366; guard++) {
+      days.push(dayFormatter.format(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (days.length === 0) days.push(analyticsDayKey);
     const byDay = Object.fromEntries(days.map((day) => [day, { tunai: 0, qris: 0 }]));
     const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, total: 0, count: 0 }));
     for (const t of incoming) {
@@ -2689,7 +2704,7 @@ export default function KopiLaba() {
       maxPerJam: maxHour,
       garisJam: line
     };
-  }, [transaksi, analyticsDayKey]);
+  }, [transaksi, analyticsDayKey, analyticsStartDate, analyticsEndDate, profile?.role]);
 
   // ============================================================
   // RENDER LOGIN
@@ -4529,6 +4544,14 @@ export default function KopiLaba() {
             <div style={s.card}>
               <p style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>💳 Analitik Pembayaran</p>
               <p style={{ margin: 0, color: theme.textMuted, fontSize: 12 }}>Ringkasan transaksi masuk menurut metode pembayaran.</p>
+              {isPemilik ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginTop: 12, alignItems: "end" }}>
+                  <div><label style={s.label}>Dari tanggal</label><input type="date" value={analyticsStartDate} max={analyticsDayKey} onChange={(e) => setAnalyticsStartDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
+                  <div><label style={s.label}>Sampai tanggal</label><input type="date" value={analyticsEndDate} max={analyticsDayKey} onChange={(e) => setAnalyticsEndDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, background: theme.input, color: theme.textMuted, fontSize: 12 }}>Data analitik hanya untuk hari ini ({analyticsDayKey}).</div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(135px,1fr))", gap: 10, marginTop: 14 }}>
                 <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total Tunai</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranTunaiTotal)}</div></div>
                 <div style={{ background: theme.input, borderRadius: 12, padding: 14 }}><div style={{ fontSize: 12, color: theme.textMuted }}>Total QRIS</div><div style={{ fontSize: 18, fontWeight: 800 }}>{fmt(pembayaranQrisTotal)}</div></div>
@@ -4536,15 +4559,15 @@ export default function KopiLaba() {
               </div>
             </div>
             <div style={s.card}>
-              <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 800 }}>Tunai vs QRIS · 7 hari terakhir</p>
+              <p style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 800 }}>Tunai vs QRIS · {tanggalAnalitik[0]} sampai {tanggalAnalitik[tanggalAnalitik.length - 1]}</p>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, marginBottom: 12 }}>
                 <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.gold, marginRight: 6 }} />Tunai</span>
                 <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 9, background: theme.success, marginRight: 6 }} />QRIS</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 8, alignItems: "end", minHeight: 170 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "end", minHeight: 170, overflowX: "auto", paddingBottom: 4 }}>
                 {transaksiPerHari.map((d) => {
                   const max = Math.max(1, ...transaksiPerHari.map((x) => Math.max(x.tunai, x.qris)));
-                  return <div key={d.day} style={{ minWidth: 0, textAlign: "center" }}>
+                  return <div key={d.day} style={{ minWidth: 32, flex: "1 0 32px", textAlign: "center" }}>
                     <div style={{ height: 130, display: "flex", alignItems: "end", justifyContent: "center", gap: 3, borderBottom: "1px solid " + theme.cardBorder, paddingBottom: 3 }}>
                       <div title={"Tunai " + fmt(d.tunai)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.tunai / max * 120) + "px", background: theme.gold, borderRadius: "5px 5px 0 0" }} />
                       <div title={"QRIS " + fmt(d.qris)} style={{ width: "35%", maxWidth: 18, height: Math.max(3, d.qris / max * 120) + "px", background: theme.success, borderRadius: "5px 5px 0 0" }} />
