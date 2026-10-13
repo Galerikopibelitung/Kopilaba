@@ -3628,6 +3628,7 @@ export default function KopiLaba() {
                 <div>
                   <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pemasukan</p>
                   <p
+                    className="kl-summary-money"
                     style={{
                       margin: 0,
                       fontSize: 14,
@@ -3646,6 +3647,7 @@ export default function KopiLaba() {
                     Pengeluaran
                   </p>
                   <p
+                    className="kl-summary-money"
                     style={{
                       margin: 0,
                       fontSize: 14,
