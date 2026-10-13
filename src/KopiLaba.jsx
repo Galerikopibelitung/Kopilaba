@@ -2863,11 +2863,14 @@ export default function KopiLaba() {
             <button
               className="kl-menu-toggle"
               onClick={() => {
-                if (window.innerWidth >= 1000) setDesktopSidebarCollapsed((collapsed) => !collapsed);
-                else setSidebarOpen(true);
+                if (window.innerWidth >= 1000) {
+                  setDesktopSidebarCollapsed((collapsed) => !collapsed);
+                } else {
+                  setSidebarOpen((open) => !open);
+                }
               }}
               aria-label="Buka atau tutup menu samping"
-              aria-expanded={!desktopSidebarCollapsed}
+              aria-expanded={typeof window !== "undefined" && window.innerWidth >= 1000 ? !desktopSidebarCollapsed : sidebarOpen}
               style={{
                 background: "transparent",
                 border: "none",
@@ -2894,6 +2897,7 @@ export default function KopiLaba() {
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             {!isSuperAdmin && (
               <button
+                className="kl-kasir-toggle"
                 onClick={() => setShowKasir(true)}
                 style={{
                   position: "relative",
