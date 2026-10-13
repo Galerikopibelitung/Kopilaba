@@ -6441,3 +6441,5 @@ export default function KopiLaba() {
 }
 
 // Trigger production rebuild so Netlify picks up the latest approved UI changes.
+
+// Deploy verification: no runtime changes.
