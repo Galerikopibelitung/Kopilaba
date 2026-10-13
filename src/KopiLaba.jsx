@@ -2042,7 +2042,7 @@ export default function KopiLaba() {
         items: itemsDetail,
         subtotal,
         pajak,
-        pajakPersen: selectedTransaksi.pajak_persen ?? persentasePajak,
+        pajakPersen: persentasePajak,
         total: grandTotal,
         bayar: bayarInt,
         kembalian: kembalianInt,
