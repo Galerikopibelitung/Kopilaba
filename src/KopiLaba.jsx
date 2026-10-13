@@ -357,6 +357,10 @@ export default function KopiLaba() {
   useEffect(() => {
     let cancelled = false;
     const restoreSession = async () => {
+      const hash = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+      const query = new URLSearchParams(window.location.search || "");
+      // Let the OAuth callback handler own URLs containing an auth response/error.
+      if (hash.has("access_token") || hash.has("error") || hash.has("error_description") || query.has("access_token") || query.has("error") || query.has("error_description")) return;
       const saved = localStorage.getItem("kopilaba_session");
       if (!saved) return;
       let session;
@@ -1113,7 +1117,7 @@ export default function KopiLaba() {
   const finishAuthenticatedSession = async (u, tok, refreshTok = null) => {
     if (!u || !tok) throw new Error("Sesi login tidak lengkap. Silakan coba lagi.");
     setToken(tok);
-    if (refreshTok) setRefreshToken(refreshTok);
+    setRefreshToken(refreshTok || null);
     setUser(u);
     const email = String(u.email || "").trim().toLowerCase();
     let p = null;
