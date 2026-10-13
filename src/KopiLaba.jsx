@@ -73,7 +73,7 @@ const parseTimestampWIB = (value) => {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   let text = String(value).trim();
-  if (!/(Z|[+-]\\d{2}:?\\d{2})$/i.test(text)) text += "Z";
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(text)) text += "Z";
   const date = new Date(text);
   return Number.isNaN(date.getTime()) ? null : date;
 };
