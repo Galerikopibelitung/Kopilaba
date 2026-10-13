@@ -68,11 +68,18 @@ const escapeHTML = (value) =>
     "'": "&#39;",
   })[char]);
 
-// Tanggal transaksi dihitung berdasarkan kalender WIB, tanpa bergantung zona waktu perangkat.
+// Normalisasi timestamp agar tanggal dan jam konsisten dengan kalender WIB.
+const parseTimestampWIB = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  let text = String(value).trim();
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(text)) text += "Z";
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 const dateKeyWIB = (value) => {
-  if (!value) return "";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseTimestampWIB(value);
+  if (!date) return "";
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
   }).formatToParts(date);
@@ -107,43 +114,28 @@ const parseItems = (itemStr) => {
   });
 };
 
-const formatJamWIB = (isoString) => {
-  if (!isoString) return "-";
-  let dateStr = isoString;
-  if (!isoString.endsWith("Z") && !isoString.includes("+")) dateStr = isoString + "Z";
-  const date = new Date(dateStr);
-  return date.toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    hour: "2-digit",
-    minute: "2-digit",
+const formatJamWIB = (value) => {
+  const date = parseTimestampWIB(value);
+  if (!date) return "-";
+  return date.toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
   });
 };
 
-const formatTanggalWIB = (isoString) => {
-  if (!isoString) return "-";
-  let dateStr = isoString;
-  if (!isoString.endsWith("Z") && !isoString.includes("+")) dateStr = isoString + "Z";
-  const date = new Date(dateStr);
+const formatTanggalWIB = (value) => {
+  const date = parseTimestampWIB(value);
+  if (!date) return "-";
   return date.toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+    timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
   });
 };
 
-const formatDateTimeWIB = (isoString) => {
-  if (!isoString) return "-";
-  let dateStr = isoString;
-  if (!isoString.endsWith("Z") && !isoString.includes("+")) dateStr = isoString + "Z";
-  const date = new Date(dateStr);
+const formatDateTimeWIB = (value) => {
+  const date = parseTimestampWIB(value);
+  if (!date) return "-";
   return date.toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
   });
 };
 
@@ -928,6 +920,16 @@ export default function KopiLaba() {
   const [aiQuery, setAiQuery] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  // Refresh tanggal kalender WIB setiap menit agar ringkasan tidak tertinggal saat lewat tengah malam.
+  const [wibDayKey, setWibDayKey] = useState(() => todayWIB());
+  useEffect(() => {
+    const refreshWibDay = () => {
+      const currentDay = todayWIB();
+      setWibDayKey((previousDay) => previousDay === currentDay ? previousDay : currentDay);
+    };
+    const intervalId = setInterval(refreshWibDay, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // ------------------------------------------------------------
   // STATE SUPER ADMIN FILTER
@@ -2412,11 +2414,11 @@ export default function KopiLaba() {
 
   const filtered = useMemo(
     () => getFilteredTransaksi(),
-    [transaksi, profile?.role, filterTglMulai, filterTglSelesai, filterStatus, periodeFilter]
+    [transaksi, profile?.role, filterTglMulai, filterTglSelesai, filterStatus, periodeFilter, wibDayKey]
   );
   const dashboardData = useMemo(
     () => getDashboardData(),
-    [transaksi, periodeFilter, profile?.role]
+    [transaksi, periodeFilter, profile?.role, wibDayKey]
   );
   const { totalMasuk, totalKeluar } = useMemo(() => {
     let masuk = 0;
@@ -2439,7 +2441,7 @@ export default function KopiLaba() {
   const reportData = useMemo(() => {
     const chartData = {};
     // Reuse formatter; constructing one for every transaction is unnecessary work.
-    const reportDateFormatter = new Intl.DateTimeFormat("id-ID");
+    const reportDateFormatter = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta" });
     const laporanStokData = menu.map((m) => ({ ...m, terjual: 0, sisa: Number(m.stok) || 0 }));
     const stockByName = new Map(laporanStokData.map((m) => [m.nama, m]));
     const kategoriById = new Map(kategori.map((k) => [k.id, k.nama || "Umum"]));
@@ -2500,7 +2502,7 @@ export default function KopiLaba() {
       .map((t) => {
         const items = parseItems(t.item);
         const itemDisplay = items.map((i) => `${i.nama} x${i.qty}`).join(", ");
-        return `${new Date(t.created_at).toLocaleDateString("id-ID")},${itemDisplay},${t.qty},${t.total},${t.tipe},${t.status || "lunas"}`;
+        return `${formatTanggalWIB(t.created_at)},${itemDisplay},${t.qty},${t.total},${t.tipe},${t.status || "lunas"}`;
       })
       .join("\n");
     const csv = header + rows;
@@ -2602,7 +2604,12 @@ export default function KopiLaba() {
   const getAdminFilteredTransaksi = () => {
     let filtered = [...allTransaksi];
     const { start } = getDateRange(adminFilterPeriode);
-    filtered = filtered.filter((t) => new Date(t.created_at) >= start);
+    const startKey = dateKeyWIB(start);
+    const endKey = todayWIB();
+    filtered = filtered.filter((t) => {
+      const day = dateKeyWIB(t.created_at);
+      return day && day >= startKey && day <= endKey;
+    });
     if (adminFilterOwner) {
       const ownerKafe = allOwners.find((o) => o.id === adminFilterOwner);
       if (ownerKafe) {
@@ -2768,15 +2775,6 @@ export default function KopiLaba() {
     () => selectedKategori ? menu.filter((m) => m.kategori_id === selectedKategori) : menu,
     [selectedKategori, menu]
   );
-  const [wibDayKey, setWibDayKey] = useState(() => todayWIB());
-  useEffect(() => {
-    const refreshWibDay = () => {
-      const currentDay = todayWIB();
-      setWibDayKey((previousDay) => previousDay === currentDay ? previousDay : currentDay);
-    };
-    const intervalId = setInterval(refreshWibDay, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
   const analyticsDayKey = wibDayKey;
   const [analyticsStartDate, setAnalyticsStartDate] = useState(() => todayWIB());
   const [analyticsEndDate, setAnalyticsEndDate] = useState(() => todayWIB());
@@ -2818,7 +2816,8 @@ export default function KopiLaba() {
     // dan grafik per jam; menghindari filter + dua reduce + lintasan ulang.
     for (const t of transaksi) {
       if (t.tipe !== "masuk") continue;
-      const date = new Date(t.created_at || Date.now());
+      const date = parseTimestampWIB(t.created_at || Date.now());
+      if (!date) continue;
       const day = dayFormatter.format(date);
       if (day < rangeStart || day > rangeEnd) continue;
       incoming.push(t);
@@ -4146,7 +4145,7 @@ export default function KopiLaba() {
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{display}</p>
                         <p style={{ margin: 0, fontSize: 11, color: theme.textMuted }}>
-                          Qty {t.qty} · {new Date(t.created_at).toLocaleDateString("id-ID")} ·{" "}
+                          Qty {t.qty} · {formatTanggalWIB(t.created_at)} · {formatJamWIB(t.created_at)} ·{" "}
                           {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}
                         </p>
                       </div>
@@ -5150,7 +5149,7 @@ export default function KopiLaba() {
                     <div>
                       <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{display}</p>
                       <p style={{ margin: 0, fontSize: 10, color: theme.textMuted }}>
-                        {new Date(t.created_at).toLocaleDateString("id-ID")} ·{" "}
+                        {formatTanggalWIB(t.created_at)} · {formatJamWIB(t.created_at)} ·{" "}
                         {t.status === "belum_lunas" ? "🔴 Piutang" : "✅ Lunas"}
                       </p>
                     </div>
