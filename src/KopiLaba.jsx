@@ -2523,13 +2523,13 @@ export default function KopiLaba() {
       ].map(csvCell).join(",");
     });
     // BOM + CRLF improves UTF-8 and column recognition in Microsoft Excel.
-    const csv = "\\uFEFF" + [header, ...rows].join("\\r\\n");
+    const csv = "\uFEFF" + [header, ...rows].join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `laporan_keuangan_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    URL.revokeObjectURL(link.href);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     setSuccess("Laporan berhasil di-download!");
   };
 
