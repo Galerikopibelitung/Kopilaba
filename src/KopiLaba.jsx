@@ -2505,20 +2505,31 @@ export default function KopiLaba() {
   const bottom5Kategori = sortedKategori.slice(-5).reverse();
 
   const exportExcel = () => {
-    const header = "Tanggal,Item,Qty,Total,Tipe,Status\n";
-    const rows = filtered
-      .map((t) => {
-        const items = parseItems(t.item);
-        const itemDisplay = items.map((i) => `${i.nama} x${i.qty}`).join(", ");
-        return `${formatTanggalWIB(t.created_at)},${itemDisplay},${t.qty},${t.total},${t.tipe},${t.status || "lunas"}`;
-      })
-      .join("\n");
-    const csv = header + rows;
+    // Quote every CSV cell so commas in item names/details never create extra columns.
+    const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const header = ["Tanggal", "Item", "Qty", "Total", "Tipe", "Status"]
+      .map(csvCell)
+      .join(",");
+    const rows = filtered.map((t) => {
+      const items = parseItems(t.item);
+      const itemDisplay = items.map((i) => `${i.nama} x${i.qty}`).join(" | ");
+      return [
+        formatTanggalWIB(t.created_at),
+        itemDisplay,
+        t.qty,
+        t.total,
+        t.tipe,
+        t.status || "lunas",
+      ].map(csvCell).join(",");
+    });
+    // BOM + CRLF improves UTF-8 and column recognition in Microsoft Excel.
+    const csv = "\\uFEFF" + [header, ...rows].join("\\r\\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `laporan_keuangan_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
+    URL.revokeObjectURL(link.href);
     setSuccess("Laporan berhasil di-download!");
   };
 
