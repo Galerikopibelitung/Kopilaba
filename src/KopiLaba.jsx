@@ -705,6 +705,12 @@ export default function KopiLaba() {
   // STATE KASIR & JUMLAH MAP
   // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
+  const [pajakCheckoutEnabled, setPajakCheckoutEnabled] = useState(pajakEnabled);
+  useEffect(() => {
+    setPajakCheckoutEnabled(
+      typeof kafe?.pajak_enabled === "boolean" ? kafe.pajak_enabled : pajakEnabled
+    );
+  }, [kafe?.id, kafe?.pajak_enabled, pajakEnabled]);
   const [showKasir, setShowKasir] = useState(false);
   const [pembayaran, setPembayaran] = useState("tunai");
   const [bayarAmount, setBayarAmount] = useState("");
@@ -1972,7 +1978,7 @@ export default function KopiLaba() {
       }
       const subtotal = totalKeranjang;
       let pajak = 0;
-      if (pajakEnabled) {
+      if (pajakCheckoutEnabled) {
         pajak = Math.round(subtotal * (persentasePajak / 100));
       }
       const grandTotal = subtotal + pajak;
@@ -2012,7 +2018,8 @@ export default function KopiLaba() {
         status: status,
         subtotal: subtotal,
         pajak: pajak,
-        pajak_enabled: pajakEnabled,
+        pajak_enabled: pajakCheckoutEnabled,
+        pajak_persen: pajakCheckoutEnabled ? persentasePajak : 0,
       };
 
       // Simpan transaksi sekali saja; QRIS tetap dikonfirmasi manual oleh kasir.
@@ -2042,7 +2049,7 @@ export default function KopiLaba() {
         items: itemsDetail,
         subtotal,
         pajak,
-        pajakPersen: persentasePajak,
+        pajakPersen: pajakCheckoutEnabled ? persentasePajak : 0,
         total: grandTotal,
         bayar: bayarInt,
         kembalian: kembalianInt,
@@ -2065,6 +2072,7 @@ export default function KopiLaba() {
       }
 
       setKeranjang([]);
+      setPajakCheckoutEnabled(pajakEnabled);
       setBayarAmount("");
       setSplitTunaiAmount("");
       setPembayaran("tunai");
@@ -5962,12 +5970,36 @@ export default function KopiLaba() {
                         {fmt(totalKeranjang)}
                       </p>
                     </div>
-                    {pajakEnabled && (
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                        <span>Pajak {persentasePajak}%</span>
-                        <span>{fmt(Math.round((totalKeranjang * persentasePajak) / 100))}</span>
+                    <div style={{ padding: "10px 0", borderTop: `1px solid ${theme.cardBorder}`, marginTop: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Pajak transaksi</div>
+                          <div style={{ fontSize: 11, color: theme.textMuted }}>
+                            {pajakCheckoutEnabled ? `Pajak ${persentasePajak}% untuk transaksi ini` : "Tidak ada pajak untuk transaksi ini"}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={() => setPajakCheckoutEnabled(false)}
+                            aria-pressed={!pajakCheckoutEnabled}
+                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${!pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: !pajakCheckoutEnabled ? theme.gold : theme.input, color: !pajakCheckoutEnabled ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                          >Tanpa pajak</button>
+                          <button
+                            type="button"
+                            onClick={() => setPajakCheckoutEnabled(true)}
+                            aria-pressed={pajakCheckoutEnabled}
+                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: pajakCheckoutEnabled ? theme.gold : theme.input, color: pajakCheckoutEnabled ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                          >Pakai pajak</button>
+                        </div>
                       </div>
-                    )}
+                      {pajakCheckoutEnabled && (
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13 }}>
+                          <span>Pajak {persentasePajak}%</span>
+                          <span>{fmt(Math.round((totalKeranjang * persentasePajak) / 100))}</span>
+                        </div>
+                      )}
+                    </div>
                     <div
                       style={{
                         display: "flex",
@@ -5980,7 +6012,7 @@ export default function KopiLaba() {
                       <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.gold }}>
                         {fmt(
                           totalKeranjang +
-                            (pajakEnabled ? Math.round((totalKeranjang * persentasePajak) / 100) : 0)
+                            (pajakCheckoutEnabled ? Math.round((totalKeranjang * persentasePajak) / 100) : 0)
                         )}
                       </p>
                     </div>
