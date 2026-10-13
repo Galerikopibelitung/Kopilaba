@@ -3760,6 +3760,10 @@ export default function KopiLaba() {
         {/* DASHBOARD */}
         {!isSuperAdmin && tab === "dashboard" && (
           <>
+            {retentionReminder?.show && ["pemilik", "barista"].includes(profile?.role) && <div className="kl-backup-warning" role="status" style={{ marginBottom: 14 }}>
+              <b>Pengingat backup transaksi</b>
+              <p style={{ marginBottom: 0 }}>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal berikutnya {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Buka menu Backup, unduh backup lengkap di perangkat ini, lalu konfirmasikan file tersimpan. Jika backup semua perangkat belum dikonfirmasi dalam 7 hari terakhir, sistem akan melewati penghapusan.</p>
+            </div>}
             {!isBarista && (
               <div className="kl-dashboard-range" style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
                 {["hari", "minggu", "bulan", "tahun", "semua"].map((p) => (
