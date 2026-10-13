@@ -2412,11 +2412,11 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 .kl-topbar { position: sticky !important; top: 0 !important; z-index: 20 !important; }
 
 
-/* Keep the Summary expense amount on one line on narrow phones. */
-.kl-dashboard-hero > div:last-child > div + div p:last-child {
+/* Keep Summary income and expense amounts on one line with identical sizing. */
+.kl-dashboard-hero > div:last-child > div > p:last-child {
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
-  font-size: clamp(10px, 2.8vw, 15px) !important;
+  font-size: clamp(10px, 3.3vw, 14px) !important;
   letter-spacing: -0.025em !important;
 }
