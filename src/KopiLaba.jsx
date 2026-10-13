@@ -294,6 +294,7 @@ export default function KopiLaba() {
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const sidebarRef = useRef(null);
 
@@ -5963,6 +5964,24 @@ export default function KopiLaba() {
         </div>
       )}
 
+      {/* MOBILE EXTRA NAV MENU: keeps QRIS, Backup Data, and other destinations reachable on small screens */}
+      {mobileMoreOpen && (
+        <div className="kl-mobile-more-menu" role="menu" aria-label="Menu lainnya">
+          {tabs.filter((t) => !mobilePrimaryTabs.some((primary) => primary.id === t.id)).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="menuitem"
+              className={tab === t.id ? "is-active" : ""}
+              onClick={() => { setTab(t.id); setMobileMoreOpen(false); }}
+            >
+              <span className="kl-nav-icon"><AppIcon name={t.icon} size={18} /></span>
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* BOTTOM NAV */}
       <div
         className="kl-bottom-nav"
@@ -5984,12 +6003,29 @@ export default function KopiLaba() {
         }}
       >
         {tabs.map((t) => (
-          <button key={t.id} className={`kl-bottom-nav-item ${tab === t.id ? "is-active" : ""}`} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            type="button"
+            className={`kl-bottom-nav-item ${tab === t.id ? "is-active" : ""} ${mobilePrimaryTabs.some((primary) => primary.id === t.id) ? "" : "kl-mobile-extra-tab"}`}
+            aria-current={tab === t.id ? "page" : undefined}
+            onClick={() => { setTab(t.id); setMobileMoreOpen(false); }}
+          >
             <span className="kl-nav-icon"><AppIcon name={t.icon} size={20} /></span>
             <span className="kl-bottom-nav-label">{t.label}</span>
             {tab === t.id && <span className="kl-bottom-nav-dot" />}
           </button>
         ))}
+        <button
+          type="button"
+          className={`kl-bottom-nav-item kl-bottom-nav-more ${mobileMoreActive ? "is-active" : ""}`}
+          aria-expanded={mobileMoreOpen}
+          aria-label="Buka menu lainnya"
+          onClick={() => setMobileMoreOpen((open) => !open)}
+        >
+          <span className="kl-nav-icon"><AppIcon name="menu" size={20} /></span>
+          <span className="kl-bottom-nav-label">Lainnya</span>
+          {mobileMoreActive && <span className="kl-bottom-nav-dot" />}
+        </button>
       </div>
     </div>
   );
