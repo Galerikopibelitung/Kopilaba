@@ -1787,3 +1787,80 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 #root > div[data-theme] .kl-content .kl-dashboard-hero > div > div > p {
   color:#52736f !important;
 }
+
+
+/* Targeted responsive repair from mobile/tablet screenshots — preserve the current teal design. */
+@media (max-width: 999px) {
+  .kl-topbar { padding:10px 12px !important; gap:8px !important; }
+  .kl-topbar > div {
+    display:flex !important; flex-wrap:nowrap !important; align-items:center !important;
+    justify-content:space-between !important; gap:8px !important; width:100% !important;
+  }
+  .kl-topbar > div > div:first-child {
+    display:flex !important; flex:1 1 auto !important; min-width:0 !important;
+    flex-wrap:nowrap !important; gap:8px !important; align-items:center !important;
+  }
+  .kl-topbar .kl-brand-lockup { display:flex !important; flex-wrap:nowrap !important; min-width:0 !important; gap:8px !important; }
+  .kl-topbar .kl-brand-copy { min-width:0 !important; flex:1 1 auto !important; }
+  .kl-topbar h1, .kl-topbar .kl-brand-title {
+    display:block !important; white-space:nowrap !important; word-break:keep-all !important;
+    overflow-wrap:normal !important; font-size:clamp(15px,3.4vw,21px) !important;
+    line-height:1.08 !important; letter-spacing:-.035em !important;
+  }
+  .kl-topbar .kl-brand-caption { display:block !important; max-width:100% !important; font-size:clamp(7px,1.7vw,9px) !important; line-height:1.2 !important; letter-spacing:.045em !important; }
+  .kl-topbar > div > div:last-child {
+    display:flex !important; flex:0 0 auto !important; flex-wrap:nowrap !important;
+    gap:5px !important; align-items:center !important;
+  }
+  .kl-topbar > div > div:last-child button {
+    width:clamp(34px,8vw,44px) !important; min-width:34px !important;
+    height:40px !important; min-height:40px !important; padding:6px !important;
+  }
+  .kl-topbar > div > div:last-child button span { display:none; }
+  .kl-topbar > div > div:last-child button:has(svg) { flex:0 0 auto !important; }
+  .kl-content .kl-dashboard-hero { padding:clamp(16px,4vw,24px) !important; }
+  .kl-content .kl-dashboard-hero > div:last-child { display:grid !important; grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) !important; gap:12px !important; align-items:center !important; }
+  .kl-content .kl-dashboard-hero > div:last-child > div[style*="width: 1px"] {
+    display:block !important; width:1px !important; min-width:1px !important;
+    max-width:1px !important; height:38px !important; min-height:38px !important;
+    flex:none !important; align-self:center !important; background:#cfe8e3 !important;
+  }
+  .kl-content .kl-dashboard-hero p { min-width:0 !important; overflow-wrap:normal !important; }
+  .kl-bottom-nav {
+    display:flex !important; flex-wrap:nowrap !important; justify-content:flex-start !important;
+    overflow-x:auto !important; overflow-y:hidden !important; overscroll-behavior-x:contain !important;
+    scrollbar-width:none !important; -webkit-overflow-scrolling:touch !important;
+    padding-left:8px !important; padding-right:8px !important;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+  .kl-bottom-nav::-webkit-scrollbar { display:none !important; }
+  .kl-bottom-nav .kl-bottom-nav-item {
+    display:flex !important; flex:0 0 72px !important; width:72px !important;
+    min-width:72px !important; max-width:72px !important; flex-direction:column !important;
+    align-items:center !important; justify-content:center !important; gap:4px !important;
+    padding:5px 3px !important; min-height:58px !important;
+  }
+  .kl-bottom-nav .kl-bottom-nav-item .kl-nav-icon {
+    display:inline-flex !important; flex:0 0 32px !important; width:32px !important;
+    height:32px !important; align-items:center !important; justify-content:center !important;
+  }
+  .kl-bottom-nav .kl-bottom-nav-label {
+    display:block !important; width:100% !important; max-width:100% !important;
+    white-space:normal !important; overflow:visible !important; text-overflow:clip !important;
+    text-align:center !important; font-size:9px !important; line-height:1.15 !important;
+  }
+  .kl-content { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 420px) {
+  .kl-topbar .kl-brand-mark { width:34px !important; height:34px !important; flex:0 0 34px !important; }
+  .kl-topbar h1, .kl-topbar .kl-brand-title { font-size:15px !important; }
+  .kl-topbar .kl-brand-caption { font-size:7px !important; }
+  .kl-topbar > div > div:last-child { gap:3px !important; }
+  .kl-topbar > div > div:last-child button { width:32px !important; min-width:32px !important; padding:4px !important; }
+}
+@media (min-width: 1000px) {
+  .kl-topbar h1, .kl-topbar .kl-brand-title { white-space:nowrap !important; word-break:keep-all !important; }
+  .kl-topbar .kl-brand-copy { min-width:220px !important; }
+  .kl-app-shell.kl-desktop-sidebar-collapsed .kl-topbar { margin-left:0 !important; width:100% !important; }
+  .kl-app-shell.kl-desktop-sidebar-collapsed .kl-content { margin-left:0 !important; width:100% !important; }
+}
