@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 // KopiLaba styles are kept in this file so layout and behavior have one source of truth.
 
@@ -2507,6 +2507,87 @@ export default function KopiLaba() {
     },
   };
 
+  // Cache derived lists and reports so opening the drawer/cart or changing a form
+  // does not repeatedly recalculate analytics for every transaction.
+  const tabs = useMemo(() => isSuperAdmin
+    ? [
+        { id: "admin", icon: "crown", label: "Admin" },
+        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
+        { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "menu", icon: "coffee", label: "Menu" },
+        { id: "karyawan", icon: "users", label: "Karyawan" },
+        { id: "laporan", icon: "chart", label: "Laporan" },
+        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
+        { id: "struk", icon: "file", label: "Struk" },
+        { id: "qris", icon: "qr", label: "QRIS" },
+      ]
+    : [
+        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
+        { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "menu", icon: "coffee", label: "Menu" },
+        { id: "karyawan", icon: "users", label: "Karyawan" },
+        { id: "laporan", icon: "chart", label: "Laporan" },
+        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
+        { id: "struk", icon: "file", label: "Struk" },
+        { id: "qris", icon: "qr", label: "QRIS" },
+        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
+      ], [isSuperAdmin, profile?.role]);
+
+  const filteredMenu = useMemo(
+    () => selectedKategori ? menu.filter((m) => m.kategori_id === selectedKategori) : menu,
+    [selectedKategori, menu]
+  );
+  const analyticsDayKey = new Date().toDateString();
+  const {
+    transaksiMasuk, pembayaranTunaiTotal, pembayaranQrisTotal,
+    tanggalAnalitik, transaksiPerHari, transaksiPerJam, maxPerJam, garisJam
+  } = useMemo(() => {
+    const incoming = transaksi.filter((t) => t.tipe === "masuk");
+    const cashTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
+    const qrisTotal = incoming.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
+    const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit"
+    });
+    const hourFormatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23"
+    });
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      return dayFormatter.format(d);
+    });
+    const byDay = Object.fromEntries(days.map((day) => [day, { tunai: 0, qris: 0 }]));
+    const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, total: 0, count: 0 }));
+    for (const t of incoming) {
+      const date = new Date(t.created_at || Date.now());
+      const day = dayFormatter.format(date);
+      if (byDay[day]) {
+        byDay[day].tunai += Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0);
+        byDay[day].qris += Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0);
+      }
+      const hour = Number(hourFormatter.format(date));
+      if (byHour[hour]) {
+        byHour[hour].total += Number(t.total || 0);
+        byHour[hour].count += 1;
+      }
+    }
+    const perDay = days.map((day) => ({
+      day, label: day.slice(8, 10) + "/" + day.slice(5, 7),
+      tunai: byDay[day].tunai, qris: byDay[day].qris
+    }));
+    const maxHour = Math.max(1, ...byHour.map((x) => x.total));
+    const line = byHour.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxHour) * 78)).join(" ");
+    return {
+      transaksiMasuk: incoming,
+      pembayaranTunaiTotal: cashTotal,
+      pembayaranQrisTotal: qrisTotal,
+      tanggalAnalitik: days,
+      transaksiPerHari: perDay,
+      transaksiPerJam: byHour,
+      maxPerJam: maxHour,
+      garisJam: line
+    };
+  }, [transaksi, analyticsDayKey]);
+
   // ============================================================
   // RENDER LOGIN
   // ============================================================
@@ -2812,58 +2893,9 @@ export default function KopiLaba() {
   // ============================================================
   // MAIN APP
   // ============================================================
-  const tabs = isSuperAdmin
-    ? [
-        { id: "admin", icon: "crown", label: "Admin" },
-        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
-        { id: "transaksi", icon: "receipt", label: "Transaksi" },
-        { id: "menu", icon: "coffee", label: "Menu" },
-        { id: "karyawan", icon: "users", label: "Karyawan" },
-        { id: "laporan", icon: "chart", label: "Laporan" },
-        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
-        { id: "struk", icon: "file", label: "Struk" },
-        { id: "qris", icon: "qr", label: "QRIS" },
-      ]
-    : [
-        { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
-        { id: "transaksi", icon: "receipt", label: "Transaksi" },
-        { id: "menu", icon: "coffee", label: "Menu" },
-        { id: "karyawan", icon: "users", label: "Karyawan" },
-        { id: "laporan", icon: "chart", label: "Laporan" },
-        { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
-        { id: "struk", icon: "file", label: "Struk" },
-        { id: "qris", icon: "qr", label: "QRIS" },
-        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
-      ];
-
   const isPemilik = profile?.role === "pemilik" || isSuperAdmin;
   const isBarista = profile?.role === "barista";
 
-  const filteredMenu = selectedKategori
-    ? menu.filter((m) => m.kategori_id === selectedKategori)
-    : menu;
-
-  const transaksiMasuk = transaksi.filter((t) => t.tipe === "masuk");
-  const pembayaranTunaiTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0);
-  const pembayaranQrisTotal = transaksiMasuk.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0);
-  const tanggalAnalitik = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (6 - i));
-    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-  });
-  const transaksiPerHari = tanggalAnalitik.map((day) => {
-    const rows = transaksiMasuk.filter((t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t.created_at || Date.now())) === day);
-    return {
-      day, label: day.slice(8, 10) + "/" + day.slice(5, 7),
-      tunai: rows.reduce((sum, t) => sum + (Number(t.bayar_tunai || 0) || (t.metode === "tunai" ? Number(t.bayar || t.total || 0) : 0)), 0),
-      qris: rows.reduce((sum, t) => sum + (Number(t.bayar_qris || 0) || (t.metode === "qris" ? Number(t.bayar || t.total || 0) : 0)), 0),
-    };
-  });
-  const transaksiPerJam = Array.from({ length: 24 }, (_, hour) => {
-    const rows = transaksiMasuk.filter((t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", hourCycle: "h23" }).format(new Date(t.created_at || Date.now()))) === hour);
-    return { hour, total: rows.reduce((sum, t) => sum + Number(t.total || 0), 0), count: rows.length };
-  });
-  const maxPerJam = Math.max(1, ...transaksiPerJam.map((x) => x.total));
-  const garisJam = transaksiPerJam.map((x, i) => (20 + i * (260 / 23)) + "," + (100 - (x.total / maxPerJam) * 78)).join(" ");
 
   return (
     <div className={desktopSidebarCollapsed ? "kl-app-shell kl-desktop-sidebar-collapsed" : "kl-app-shell"} style={s.wrap} data-theme={darkMode ? "dark" : "light"}>
@@ -3094,15 +3126,15 @@ export default function KopiLaba() {
           position: "fixed",
           top: 0,
           left: 0,
-          height: "100%",
+          height: "100dvh",
+          maxHeight: "100dvh",
           width: "280px",
           background: theme.card,
-          backdropFilter: theme.blur,
-          WebkitBackdropFilter: theme.blur,
           borderRight: `1px solid ${theme.cardBorder}`,
           boxShadow: theme.shadow,
           transform: (typeof window !== "undefined" && window.innerWidth >= 1000 ? desktopSidebarCollapsed : !sidebarOpen) ? "translateX(-110%)" : "translateX(0)",
-          transition: "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+          transition: "transform 0.18s ease-out",
+          willChange: "transform",
           zIndex: 100,
           padding: "20px 16px",
           boxSizing: "border-box",
@@ -3231,10 +3263,8 @@ export default function KopiLaba() {
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.4)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
             zIndex: 99,
-            transition: "opacity 0.3s",
+            transition: "opacity 0.15s",
           }}
         />
       )}
