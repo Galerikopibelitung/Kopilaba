@@ -13,6 +13,51 @@ const ADMIN_EMAIL = "kopigaleri77@gmail.com";
 // ============================================================
 // HELPER: FORMAT & UTIL
 // ============================================================
+const compressImage = async (file, { maxDimension = 1280, maxBytes = 280 * 1024, quality = 0.78 } = {}) => {
+  if (!file || !file.type?.startsWith("image/")) return file;
+  if (!("createImageBitmap" in window)) return file;
+
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    let width = Math.max(1, Math.round(bitmap.width * scale));
+    let height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) { bitmap.close?.(); return file; }
+
+    let blob = null;
+    let currentQuality = quality;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      canvas.width = width;
+      canvas.height = height;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", currentQuality));
+      if (!blob) break;
+      if (blob.size <= maxBytes) break;
+      currentQuality = Math.max(0.52, currentQuality - 0.09);
+      if (attempt >= 2) {
+        width = Math.max(1, Math.round(width * 0.82));
+        height = Math.max(1, Math.round(height * 0.82));
+      }
+    }
+    bitmap.close?.();
+    if (!blob || blob.size >= file.size) return file;
+    const baseName = (file.name || "foto").replace(/\.[^.]+$/, "") || "foto";
+    return new File([blob], baseName + ".webp", {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  } catch (error) {
+    bitmap?.close?.();
+    console.warn("Kompresi gambar dilewati:", error);
+    return file;
+  }
+};
+
 const fmt = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
 const escapeHTML = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -1260,16 +1305,24 @@ export default function KopiLaba() {
         return;
       }
 
+      // Compress locally before upload to reduce mobile data and Supabase Storage usage.
+      // QRIS uses higher quality and a larger canvas to keep the code readable when scanned.
+      const uploadFile = await compressImage(file, {
+        maxDimension: 1800,
+        maxBytes: 500 * 1024,
+        quality: 0.92,
+      });
+      const qrisFileName = `${Date.now()}_${uploadFile.name || "qris.webp"}`;
       const uploadRes = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/qris/${kafeId}/${file.name}`,
+        `${SUPABASE_URL}/storage/v1/object/qris/${kafeId}/${qrisFileName}`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": file.type || "image/png",
+            "Content-Type": uploadFile.type || "image/png",
             "x-upsert": "true",
           },
-          body: file,
+          body: uploadFile,
         }
       );
 
@@ -1278,7 +1331,7 @@ export default function KopiLaba() {
         throw new Error(`Upload gagal: ${errText}`);
       }
 
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/qris/${kafeId}/${file.name}`;
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/qris/${kafeId}/${qrisFileName}`;
 
       await api(`/rest/v1/kafe?id=eq.${kafeId}`, "PATCH", { qris_url: publicUrl }, token);
       setQrisUrl(publicUrl);
@@ -1300,16 +1353,22 @@ export default function KopiLaba() {
   // ============================================================
   const uploadMenuFoto = async (file, kafeId) => {
     if (!token) throw new Error("Sesi login berakhir.");
-    const fileName = `${Date.now()}_${file.name}`;
+    // Menu photos are resized/compressed on the device before using mobile data.
+    const uploadFile = await compressImage(file, {
+      maxDimension: 1280,
+      maxBytes: 280 * 1024,
+      quality: 0.78,
+    });
+    const fileName = `${Date.now()}_${uploadFile.name || "foto.webp"}`;
     const path = `menu/${kafeId}/${fileName}`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/menu/${path}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": file.type || "image/jpeg",
+        "Content-Type": uploadFile.type || "image/jpeg",
         "x-upsert": "true",
       },
-      body: file,
+      body: uploadFile,
     });
     if (!res.ok) {
       const err = await res.text();
