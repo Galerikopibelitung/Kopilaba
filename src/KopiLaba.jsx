@@ -6115,3 +6115,5 @@ export default function KopiLaba() {
     </div>
   );
 }
+
+// Trigger production rebuild so Netlify picks up the latest approved UI changes.
