@@ -2835,6 +2835,44 @@ export default function KopiLaba() {
   return (
     <div className={desktopSidebarCollapsed ? "kl-app-shell kl-desktop-sidebar-collapsed" : "kl-app-shell"} style={s.wrap} data-theme={darkMode ? "dark" : "light"}>
       <style>{KOPILABA_STYLES}</style>
+      <style>{`
+        .kl-topbar .kl-kasir-toggle {
+          display:inline-flex !important;
+          flex-direction:row !important;
+          flex-wrap:nowrap !important;
+          align-items:center !important;
+          justify-content:center !important;
+          gap:8px !important;
+          white-space:nowrap !important;
+          word-break:keep-all !important;
+          overflow:visible !important;
+          background:#16803c !important;
+          color:#fff !important;
+          border:1px solid #126c32 !important;
+          box-sizing:border-box !important;
+        }
+        .kl-topbar .kl-kasir-toggle > span {
+          display:inline-block !important;
+          white-space:nowrap !important;
+          word-break:keep-all !important;
+          line-height:1 !important;
+        }
+        .kl-topbar .kl-kasir-toggle svg {
+          display:block !important;
+          flex:0 0 17px !important;
+          width:17px !important;
+          height:17px !important;
+        }
+        @media(max-width:560px) {
+          .kl-topbar .kl-kasir-toggle {
+            min-width:94px !important;
+            width:auto !important;
+            min-height:40px !important;
+            padding:8px 11px !important;
+            font-size:12px !important;
+          }
+        }
+      `}</style>
       {/* HEADER */}
       <div
         className="kl-topbar"
@@ -2901,19 +2939,33 @@ export default function KopiLaba() {
               <button
                 className="kl-kasir-toggle"
                 onClick={() => setShowKasir(true)}
+                aria-label="Buka Kasir"
                 style={{
                   position: "relative",
-                  background: theme.gold,
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "6px 14px",
+                  display: "inline-flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexWrap: "nowrap",
+                  gap: 8,
+                  boxSizing: "border-box",
+                  minWidth: 104,
+                  minHeight: 42,
+                  padding: "9px 14px",
+                  background: "#16803c",
+                  border: "1px solid #126c32",
+                  borderRadius: 11,
                   color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 12,
+                  fontWeight: 750,
+                  fontSize: 13,
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
                   cursor: "pointer",
+                  boxShadow: "0 3px 8px rgba(22,128,60,.18)",
                 }}
               >
-                🛒 Kasir
+                <AppIcon name="shopping-cart" size={17} />
+                <span style={{ display: "inline-block", whiteSpace: "nowrap", lineHeight: 1 }}>Kasir</span>
                 {keranjang.length > 0 && (
                   <span
                     style={{
