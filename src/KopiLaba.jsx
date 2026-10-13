@@ -5965,37 +5965,8 @@ export default function KopiLaba() {
         </div>
       )}
 
-      <style>{`
-/* Responsive horizontal feature navigation */
-.kl-bottom-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:1200!important;display:flex!important;align-items:stretch!important;gap:5px!important;width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important;padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;border-top:1px solid var(--kl-border,#e8ded2)!important;background:rgba(255,253,250,.96)!important;box-shadow:0 -8px 24px rgba(42,26,14,.09)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important}
-.kl-bottom-nav::-webkit-scrollbar{display:none!important}
-.kl-bottom-nav .kl-bottom-nav-item{display:flex!important;flex:0 0 82px!important;min-width:72px!important;max-width:100px!important;min-height:58px!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;padding:5px 4px!important;border:0!important;border-radius:12px!important;background:transparent!important;color:var(--kl-muted,#827466)!important;white-space:normal!important}
-.kl-bottom-nav .kl-bottom-nav-item.is-active{background:#f4e5d4!important;color:#6f421f!important}
-.kl-bottom-nav .kl-bottom-nav-item .kl-nav-icon{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 27px!important;width:27px!important;height:27px!important;border:0!important;background:transparent!important;color:inherit!important}
-.kl-bottom-nav .kl-bottom-nav-item .kl-nav-icon svg{width:19px!important;height:19px!important}
-.kl-bottom-nav .kl-bottom-nav-label{display:block!important;width:100%!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;text-align:center!important;font-size:10px!important;font-weight:650!important;line-height:1.15!important}
-.kl-bottom-nav .kl-bottom-nav-item.is-active .kl-nav-icon{background:#e6c99f!important;color:#4b2a18!important;border-radius:9px!important}
-.kl-content{padding-bottom:118px!important}
-@media(min-width:900px){.kl-bottom-nav{left:252px!important;width:calc(100% - 252px)!important;padding-left:18px!important;padding-right:18px!important;justify-content:center!important}.kl-bottom-nav .kl-bottom-nav-item{flex:1 1 90px!important;max-width:135px!important}}
-@media(max-width:480px){.kl-bottom-nav{gap:2px!important;padding-left:6px!important;padding-right:6px!important}.kl-bottom-nav .kl-bottom-nav-item{flex-basis:74px!important;min-width:68px!important;min-height:56px!important}.kl-bottom-nav .kl-bottom-nav-label{font-size:9px!important}.kl-content{padding-bottom:112px!important}}
-`}</style>
-      <nav className="kl-bottom-nav" aria-label="Navigasi fitur utama">
-        {tabs.map((t) => (
-          <button
-            type="button"
-            key={t.id}
-            className={"kl-bottom-nav-item" + (tab === t.id ? " is-active" : "")}
-            aria-current={tab === t.id ? "page" : undefined}
-            onClick={() => {
-              setTab(t.id);
-              setSidebarOpen(false);
-            }}
-          >
-            <span className="kl-nav-icon"><AppIcon name={t.icon} size={19} /></span>
-            <span className="kl-bottom-nav-label">{t.label === "Analitik Bayar" ? "Pembayaran" : t.label}</span>
-          </button>
-        ))}
-      </nav>
+
+
     </div>
   );
 }
