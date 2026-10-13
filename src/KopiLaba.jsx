@@ -632,7 +632,7 @@ export default function KopiLaba() {
   });
 
   const handleBackupExport = async () => {
-    if (profile?.role !== "pemilik") { setError("Hanya pemilik kafe yang boleh membuat backup."); return; }
+    if (!profile?.id || !["pemilik", "barista"].includes(profile?.role)) { setError("Sesi pengguna kafe tidak valid. Silakan masuk kembali."); return; }
     const kafeId = kafe?.id || profile?.kafe_id;
     if (!kafeId || !token) { setError("Sesi atau data kafe tidak tersedia. Silakan masuk kembali."); return; }
     setBackupBusy(true);
@@ -3752,7 +3752,7 @@ export default function KopiLaba() {
                 )}
               </section>
             </div>
-            {retentionReminder?.show && profile?.role === "pemilik" && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
+            {retentionReminder?.show && ["pemilik", "barista"].includes(profile?.role) && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
             <div className="kl-backup-warning"><b>Jadwal retensi data</b><p>Rencana penghapusan hanya pada 1 Januari dan 1 Juli. Menu, foto produk, QRIS, pengaturan pajak, dan akun tidak termasuk. Penghapusan transaksi tetap dinonaktifkan sampai proses backup semua perangkat dan pemulihan teruji aman.</p></div>
           </div>
         )}
