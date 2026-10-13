@@ -2875,6 +2875,42 @@ export default function KopiLaba() {
         }
       `}</style>
       <style>{`\n        /* Performance: avoid expensive backdrop filters on small touch devices. */\n        @media (max-width:640px) {\n          .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {\n            backdrop-filter:none !important;\n            -webkit-backdrop-filter:none !important;\n          }\n          .kl-topbar { background:rgba(255,253,250,.98) !important; }\n          .kl-bottom-nav { background:rgba(255,255,255,.98) !important; }\n        }\n      `}</style>
+      <style>{`
+        /* Lightweight header: avoid costly blur and animated layout. */
+        .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {
+          backdrop-filter:none !important;
+          -webkit-backdrop-filter:none !important;
+        }
+        .kl-topbar { transition:none !important; box-shadow:0 1px 4px rgba(45,30,18,.035) !important; }
+        .kl-topbar button, .kl-sidebar button, .kl-content button { transition:none !important; }
+        .kl-cafe-identity {
+          display:flex !important; align-items:center !important; flex-wrap:wrap !important;
+          gap:5px 7px !important; margin-top:5px !important; max-width:100%;
+          font-size:11px !important; line-height:1.25 !important; font-weight:600;
+        }
+        .kl-identity-cafe, .kl-identity-role, .kl-identity-super {
+          display:inline-flex; align-items:center; gap:4px; min-width:0;
+        }
+        .kl-identity-cafe { color:var(--kl-primary-strong,#4b2a18); max-width:100%; }
+        .kl-identity-cafe-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:min(42vw,280px); }
+        .kl-identity-role, .kl-identity-super {
+          color:var(--kl-success,#247a51); font-size:10px; font-weight:750;
+          padding:3px 7px; border:1px solid rgba(36,122,81,.18); border-radius:999px;
+          background:rgba(36,122,81,.06); white-space:nowrap;
+        }
+        .kl-identity-separator { color:var(--kl-muted,#827466); }
+        .kl-topbar .kl-brand-lockup { align-items:center; }
+        @media(max-width:560px) {
+          .kl-topbar { padding:10px 12px !important; min-height:64px !important; }
+          .kl-topbar > div { gap:8px !important; }
+          .kl-brand-lockup { gap:8px !important; }
+          .kl-brand-mark { width:36px !important; height:36px !important; border-radius:11px !important; }
+          .kl-topbar h1 { font-size:19px !important; line-height:1.05 !important; }
+          .kl-brand-caption { font-size:7px !important; letter-spacing:1px !important; margin-top:3px !important; }
+          .kl-cafe-identity { gap:4px 6px !important; font-size:10px !important; }
+          .kl-identity-cafe-name { max-width:48vw; }
+        }
+      `}</style>
       {/* HEADER */}
       <div
         className="kl-topbar"
@@ -2932,7 +2968,15 @@ export default function KopiLaba() {
               </h1><p className="kl-brand-caption">CAFE MANAGEMENT</p></div>
               </div>
               <p className="kl-cafe-identity" style={{ margin: 0, fontSize: 12, color: theme.textMuted }}>
-                {isSuperAdmin ? "👑 Super Admin" : `${kafe?.nama || "Kafe kamu"} · ${profile?.role}`}
+                {isSuperAdmin ? (
+                  <span className="kl-identity-role kl-identity-super"><AppIcon name="crown" size={13} />Super Admin</span>
+                ) : (
+                  <>
+                    <span className="kl-identity-cafe"><AppIcon name="coffee" size={13} /><span className="kl-identity-cafe-name">{kafe?.nama || "Kafe kamu"}</span></span>
+                    <span className="kl-identity-separator" aria-hidden="true">·</span>
+                    <span className="kl-identity-role"><AppIcon name="users" size={13} />{profile?.role === "pemilik" ? "Pemilik" : profile?.role === "barista" ? "Barista" : profile?.role || "Pengguna"}</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
