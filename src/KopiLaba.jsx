@@ -2852,7 +2852,7 @@ export default function KopiLaba() {
           box-sizing:border-box !important;
         }
         .kl-topbar .kl-kasir-toggle > span {
-          display:none !important;
+          display:flex !important;
           white-space:nowrap !important;
           word-break:keep-all !important;
           line-height:1 !important;
