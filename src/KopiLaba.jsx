@@ -338,35 +338,49 @@ export default function KopiLaba() {
   }, [profile, token, user, isSuperAdmin]);
 
   useEffect(() => {
-    const hash = window.location.hash || "";
-    if (!hash) return;
-    const params = new URLSearchParams(hash.replace(/^#/, ""));
-    const oauthError = params.get("error_description") || params.get("error");
+    const hashParams = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+    const queryParams = new URLSearchParams(window.location.search || "");
+    const oauthError =
+      hashParams.get("error_description") ||
+      hashParams.get("error") ||
+      queryParams.get("error_description") ||
+      queryParams.get("error");
+    const oauthToken = hashParams.get("access_token") || queryParams.get("access_token");
+
     if (oauthError) {
-      window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      window.history.replaceState({}, document.title, window.location.pathname);
       setError(oauthError.replace(/\+/g, " "));
       setScreen("login");
       setLoading(false);
+      try { sessionStorage.removeItem("kopilaba_google_auth_origin"); } catch (_) {}
       return;
     }
-    const oauthToken = params.get("access_token");
     if (!oauthToken) return;
-    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+
+    // Remove OAuth tokens from the visible URL as soon as they are captured.
+    window.history.replaceState({}, document.title, window.location.pathname);
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError("");
       try {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${oauthToken}` }
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${oauthToken}`,
+          },
         });
-        const oauthUser = await response.json();
-        if (!response.ok || !oauthUser?.id) throw new Error("Login Google gagal. Coba ulangi.");
+        const oauthUser = await response.json().catch(() => ({}));
+        if (!response.ok || !oauthUser?.id) {
+          const detail = oauthUser?.msg || oauthUser?.message || oauthUser?.error_description;
+          throw new Error(detail || "Login Google gagal. Periksa konfigurasi Google OAuth di Supabase.");
+        }
         if (!cancelled) await finishAuthenticatedSession(oauthUser, oauthToken);
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || "Login Google gagal. Pastikan Google OAuth sudah diaktifkan.");
+          setError(err.message || "Login Google gagal. Coba ulangi.");
           setScreen("login");
+          try { sessionStorage.removeItem("kopilaba_google_auth_origin"); } catch (_) {}
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -939,12 +953,23 @@ export default function KopiLaba() {
   const startGoogleAuth = () => {
     setError("");
     setSuccess("");
+    setNetworkError(false);
     setLoading(true);
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+
+    // Use the canonical site origin as the OAuth return URL.
+    // The publishable key is safe for browser use and helps gateways that
+    // require an API key on a top-level browser navigation.
+    const redirectTo = `${window.location.origin}/`;
     const authUrl = new URL(`${SUPABASE_URL}/auth/v1/authorize`);
     authUrl.searchParams.set("provider", "google");
     authUrl.searchParams.set("redirect_to", redirectTo);
+    authUrl.searchParams.set("apikey", SUPABASE_KEY);
+    authUrl.searchParams.set("flow_type", "implicit");
     authUrl.searchParams.set("prompt", "select_account");
+
+    try {
+      sessionStorage.setItem("kopilaba_google_auth_origin", screen === "register" ? "register" : "login");
+    } catch (_) {}
     window.location.assign(authUrl.toString());
   };
 
