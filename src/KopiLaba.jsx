@@ -4546,8 +4546,8 @@ export default function KopiLaba() {
               <p style={{ margin: 0, color: theme.textMuted, fontSize: 12 }}>Ringkasan transaksi masuk menurut metode pembayaran.</p>
               {isPemilik ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginTop: 12, alignItems: "end" }}>
-                  <div><label style={s.label}>Dari tanggal</label><input type="date" value={analyticsStartDate} max={analyticsEndDate || analyticsDayKey} onChange={(e) => setAnalyticsStartDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
-                  <div><label style={s.label}>Sampai tanggal</label><input type="date" value={analyticsEndDate} min={analyticsStartDate || undefined} max={analyticsDayKey} onChange={(e) => setAnalyticsEndDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
+                  <div><label style={s.label}>Dari tanggal</label><input type="date" value={analyticsStartDate} max={analyticsDayKey} onChange={(e) => setAnalyticsStartDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
+                  <div><label style={s.label}>Sampai tanggal</label><input type="date" value={analyticsEndDate} max={analyticsDayKey} onChange={(e) => setAnalyticsEndDate(e.target.value)} style={{ ...s.input, width: "100%", minWidth: 0 }} /></div>
                 </div>
               ) : (
                 <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, background: theme.input, color: theme.textMuted, fontSize: 12 }}>Data analitik hanya untuk hari ini ({analyticsDayKey}).</div>
