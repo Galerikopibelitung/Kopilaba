@@ -2336,8 +2336,7 @@ export default function KopiLaba() {
         chartData[date].keluar += Number(t.total) || 0;
       }
 
-      // On Ringkasan, keep chart totals but skip expensive item parsing used only by product reports.
-      if (menu !== "Analitik" && menu !== "Laporan" && !showLaporanStok) return;
+      // Keep product-level report data available to reports and assistant queries.
       if (t.tipe !== "masuk" || !t.item) return;
       const items = parseItems(t.item);
       items.forEach((item) => {
