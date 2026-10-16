@@ -277,7 +277,11 @@ const receiptTextForBluetooth = (data) => {
 const printReceipt = (data, printerSettings = {}) => {
   try {
     if (typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
-      window.__kopilabaBlePrint(data);
+      window.__kopilabaBlePrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth: " + (err?.message || err)));
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window.__kopilabaUsbPrint === "function") {
+      window.__kopilabaUsbPrint(data).catch((err) => alert("Gagal mencetak melalui USB: " + (err?.message || err)));
       return;
     }
     const html = buildReceiptHTML(data, printerSettings);
@@ -6980,10 +6984,49 @@ export default function KopiLaba() {
               }}>
                 🔵 Cari & Hubungkan Printer Bluetooth
               </button>
-              <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => {
-                alert("Untuk printer USB di Android: sambungkan printer dengan kabel/OTG, izinkan akses jika diminta, lalu aktifkan atau pasang layanan cetak/driver yang kompatibel. Android tidak menyediakan satu halaman pengaturan USB printer universal yang bisa dibuka oleh website.");
+              <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
+                if (!navigator.usb || !navigator.usb.requestDevice) {
+                  alert("Browser ini tidak menyediakan WebUSB. Buka KopiLaba melalui Google Chrome Android versi terbaru, pastikan alamat memakai HTTPS, lalu coba lagi.");
+                  return;
+                }
+                let device;
+                try {
+                  device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+                  await device.open();
+                  if (!device.configuration) await device.selectConfiguration(1);
+                  let output = null;
+                  let iface = null;
+                  let alternate = null;
+                  for (const itf of device.configuration.interfaces) {
+                    for (const alt of itf.alternates) {
+                      const ep = alt.endpoints.find(e => e.direction === "out" && e.type !== "isochronous");
+                      if (ep) { iface = itf; alternate = alt; output = ep; break; }
+                    }
+                    if (output) break;
+                  }
+                  if (!output) throw new Error("Printer USB terdeteksi tetapi tidak ditemukan endpoint data keluar yang didukung.");
+                  await device.claimInterface(iface.interfaceNumber);
+                  if (alternate.alternateSetting !== 0) {
+                    try { await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting); } catch (_) {}
+                  }
+                  window.__kopilabaUsbDevice = device;
+                  window.__kopilabaUsbPrint = async (data) => {
+                    if (!device.opened) await device.open();
+                    const bytes = new TextEncoder().encode("\\x1B@" + receiptTextForBluetooth(data) + "\\n\\n\\x1DVA\\x00");
+                    const chunkSize = 180;
+                    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+                      const result = await device.transferOut(output.endpointNumber, bytes.slice(offset, offset + chunkSize));
+                      if (result.status !== "ok") throw new Error("Transfer USB gagal: " + result.status);
+                    }
+                    alert("Data struk telah dikirim melalui USB. Jika kertas tidak keluar, printer mungkin membutuhkan protokol/driver khusus.");
+                  };
+                  alert("Printer USB terhubung: " + (device.productName || "Printer USB") + ". Coba Cetak Tes Printer.");
+                } catch (err) {
+                  try { if (device?.opened) await device.close(); } catch (_) {}
+                  alert("Belum berhasil menghubungkan printer USB: " + (err?.message || err) + "\\nPastikan printer tersambung lewat OTG, nyalakan printer, dan izinkan Chrome mengakses perangkat. Jika printer tidak muncul, kemungkinan perangkat tidak mengekspos antarmuka USB printer standar.");
+                }
               }}>
-                🔌 Panduan Hubungkan Printer USB
+                🔌 Cari & Hubungkan Printer USB
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
@@ -7000,7 +7043,7 @@ export default function KopiLaba() {
                 🧾 Cetak Tes Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                KopiLaba mencoba mencari printer BLE yang kompatibel melalui Chrome. Setelah terhubung, tombol Cetak Tes dan struk transaksi akan dikirim langsung. Banyak printer kasir murah memakai Bluetooth klasik (SPP), bukan BLE; untuk model tersebut dibutuhkan aplikasi Android penghubung atau versi aplikasi native. USB langsung belum diaktifkan pada mode website ini.
+                KopiLaba mencoba koneksi langsung ke printer BLE melalui Bluetooth dan printer dengan antarmuka USB standar melalui WebUSB. Setelah tersambung, Cetak Tes dan struk transaksi akan dikirim ke koneksi yang aktif. Banyak printer Bluetooth kasir memakai Bluetooth klasik (SPP), bukan BLE, dan beberapa printer USB memakai protokol khusus; model tersebut membutuhkan aplikasi Android penghubung/native.
               </div>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
@@ -7014,7 +7057,7 @@ export default function KopiLaba() {
                   <li>Jadikan printer tersebut printer pilihan/default di layanan cetak perangkat.</li>
                   <li>Kembali ke KopiLaba dan tekan <b>Cetak Tes Printer</b> untuk memastikan hasilnya.</li>
                 </ol>
-                KopiLaba memakai tata letak otomatis agar ukuran kertas mengikuti konfigurasi printer. Browser web masih dapat menampilkan dialog cetak sistem; pencetakan tanpa dialog memerlukan aplikasi/bridge native yang kompatibel dengan model printer.
+                KopiLaba memakai tata letak otomatis agar ukuran kertas mengikuti konfigurasi printer. Koneksi langsung hanya bekerja untuk model yang protokolnya kompatibel. Untuk printer Bluetooth klasik (SPP), biasanya diperlukan aplikasi/bridge Android native. Browser mungkin tetap menampilkan dialog untuk cetak standar.
               </div>
             <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas (opsional)</label>
             <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
