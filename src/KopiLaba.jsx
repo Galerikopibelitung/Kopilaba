@@ -6889,7 +6889,22 @@ export default function KopiLaba() {
                 <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
                 <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
               </ol>
-              <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => printReceipt({
+              <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => {
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                if (isAndroid) {
+                  window.location.href = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end";
+                } else {
+                  alert("Buka Pengaturan perangkat, lalu pilih Bluetooth untuk memasangkan printer. Untuk USB, sambungkan printer dan aktifkan layanan cetak/driver terlebih dahulu.");
+                }
+              }}>
+                🔵 Hubungkan Printer Bluetooth (Buka Pengaturan)
+              </button>
+              <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => {
+                alert("Untuk printer USB di Android: sambungkan printer dengan kabel/OTG, izinkan akses jika diminta, lalu aktifkan atau pasang layanan cetak/driver yang kompatibel. Android tidak menyediakan satu halaman pengaturan USB printer universal yang bisa dibuka oleh website.");
+              }}>
+                🔌 Panduan Hubungkan Printer USB
+              </button>
+              <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
                 alamatKafe: kafe?.alamat || "",
                 teleponKafe: kafe?.telepon || "",
@@ -6901,10 +6916,10 @@ export default function KopiLaba() {
                 subtotal: 1000, pajak: 0, pajakPersen: 0, total: 1000, bayar: 1000,
                 kembalian: 0, metode: "Tes", status: "tes"
               }, printerSettings)}>
-                🔌 Hubungkan / Pilih Printer
+                🧾 Cetak Tes Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Tombol ini membuka dialog cetak untuk memilih printer dan mencoba cetak struk tes. Untuk pemasangan Bluetooth/USB pertama kali, hubungkan printer dahulu lewat pengaturan Android/Windows. Setelah dipilih, simpan printer sebagai default jika sistem mendukungnya.
+                Bluetooth membuka pengaturan Android bila browser mengizinkan intent sistem. Setelah dipasangkan, kembali ke KopiLaba dan gunakan Cetak Tes Printer. Printer USB memerlukan dukungan OTG, izin, serta layanan cetak/driver yang cocok; website tidak bisa memasang driver sendiri.
               </div>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
