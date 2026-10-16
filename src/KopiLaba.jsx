@@ -3340,6 +3340,26 @@ export default function KopiLaba() {
           --kl-ink: #18251D;
           --kl-muted: #65756A;
           --kl-border: #E1E9E3;
+          --kl-surface: #FFFFFF;
+          --kl-surface-alt: #F6F8F6;
+          --kl-selected-bg: #0B5D32;
+          --kl-selected-text: #FFFFFF;
+          --kl-border-soft: #CDE8D5;
+          --kl-primary-strong: #166534;
+          --kl-success: #128C4A;
+        }
+        .kl-app-shell[data-theme="dark"] {
+          --kl-green-soft: #183D2A;
+          --kl-ink: #F5FBF7;
+          --kl-muted: #A8BDB0;
+          --kl-border: rgba(37,211,102,.20);
+          --kl-surface: #10291C;
+          --kl-surface-alt: #0B2116;
+          --kl-selected-bg: #183D2A;
+          --kl-selected-text: #D8F3E1;
+          --kl-border-soft: rgba(37,211,102,.28);
+          --kl-primary-strong: #B9E8C9;
+          --kl-success: #62D68F;
         }
         .kl-login-screen, .kl-register-screen { color: var(--kl-ink) !important; }
         .kl-login-screen input, .kl-register-screen input,
@@ -3374,10 +3394,10 @@ export default function KopiLaba() {
         .kl-app-shell .kl-topbar { border-bottom-color: var(--kl-border) !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar { background: #10291C !important; color: #F5FBF7 !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item { color: #D6E8DC !important; background: #0B2116 !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
+         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #62D68F !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #128C4A !important; }
+         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #62D68F !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover,
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover { background: #0B2116 !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-menu-toggle,
@@ -3387,7 +3407,7 @@ export default function KopiLaba() {
          .kl-app-shell .kl-dashboard-range button { border: 1px solid var(--kl-border) !important; }
          .kl-app-shell .kl-dashboard-range button:focus { outline: none !important; }
          .kl-app-shell .kl-dashboard-range button:focus-visible { outline: 2px solid var(--kl-green) !important; outline-offset: 2px !important; }
-         .kl-app-shell .kl-dashboard-actions button:first-child { background: #FFFFFF !important; border-color: var(--kl-border) !important; }
+          .kl-app-shell .kl-dashboard-actions button:first-child { background: var(--kl-surface) !important; border-color: var(--kl-border) !important; }
          .kl-app-shell .kl-dashboard-actions button:first-child p { color: var(--kl-green) !important; }
          .kl-app-shell .kl-backup-page { color: var(--kl-ink); }
          .kl-app-shell .kl-backup-page .kl-backup-card { background: #FFFFFF !important; border-color: var(--kl-border) !important; color: var(--kl-ink) !important; }
@@ -3400,12 +3420,12 @@ export default function KopiLaba() {
          .kl-app-shell .kl-backup-page .kl-backup-warning { background: var(--kl-green-soft) !important; color: var(--kl-ink) !important; border-color: #CDE8D5 !important; }
          .kl-app-shell .kl-backup-page .kl-backup-warning b { color: var(--kl-green) !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-card { background: #10291C !important; border-color: rgba(18,140,74,.32) !important; color: #F5FBF7 !important; }
-         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #128C4A !important; border-color: #128C4A !important; }
+          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #62D68F !important; border-color: #62D68F !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-status-pill,
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts span,
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning { background: #183D2A !important; color: #F5FBF7 !important; border-color: rgba(18,140,74,.32) !important; }
-         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning b,
-         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts b { color: #128C4A !important; }
+          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning b,
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts b { color: #62D68F !important; }
 
       `}
 </style>
@@ -3962,9 +3982,9 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? "#0B5D32" : (darkMode ? "#0B2116" : "#FFFFFF"),
+                      background: periodeFilter === p ? "var(--kl-selected-bg)" : "var(--kl-surface)",
                       color:
-                        periodeFilter === p ? "#FFFFFF" : theme.textMuted,
+                        periodeFilter === p ? "var(--kl-selected-text)" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
@@ -3987,7 +4007,7 @@ export default function KopiLaba() {
             <div
               className="kl-dashboard-hero"
               style={{
-                background: "#0B5D32",
+                background: darkMode ? "#183D2A" : "#0B5D32",
                 borderRadius: 24,
                 padding: 24,
                 marginBottom: 14,
@@ -3995,7 +4015,7 @@ export default function KopiLaba() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#F5FBF7" }}>Laba Bersih</p>
                 <button
                   onClick={() => setShowLaba(!showLaba)}
                   style={{
@@ -4003,7 +4023,7 @@ export default function KopiLaba() {
                     border: "none",
                     fontSize: 18,
                     cursor: "pointer",
-                    color: "rgba(255,255,255,0.8)",
+                    color: "#F5FBF7",
                     transition: "all 0.3s",
                   }}
                 >
@@ -4015,7 +4035,7 @@ export default function KopiLaba() {
                   margin: "0 0 16px",
                   fontSize: 30,
                   fontWeight: 800,
-                  color: "#fff",
+                  color: "#F5FBF7",
                   filter: showLaba ? "none" : "blur(8px)",
                   transition: "filter 0.3s",
                 }}
@@ -4024,14 +4044,14 @@ export default function KopiLaba() {
               </p>
               <div style={{ display: "flex", gap: 16 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pemasukan</p>
+                  <p style={{ margin: 0, fontSize: 10, color: darkMode ? "#B9E8C9" : "rgba(255,255,255,0.72)" }}>Pemasukan</p>
                   <p
                     className="kl-summary-money"
                     style={{
                       margin: 0,
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#fff",
+                      color: "#F5FBF7",
                       filter: showLaba ? "none" : "blur(6px)",
                       transition: "filter 0.3s",
                     }}
@@ -4041,7 +4061,7 @@ export default function KopiLaba() {
                 </div>
                 
                 <div>
-                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+                  <p style={{ margin: 0, fontSize: 10, color: darkMode ? "#B9E8C9" : "rgba(255,255,255,0.72)" }}>
                     Pengeluaran
                   </p>
                   <p
@@ -4050,7 +4070,7 @@ export default function KopiLaba() {
                       margin: 0,
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#fff",
+                      color: "#F5FBF7",
                       filter: showLaba ? "none" : "blur(6px)",
                       transition: "filter 0.3s",
                       whiteSpace: "nowrap",
