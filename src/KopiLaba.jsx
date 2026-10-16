@@ -2670,7 +2670,7 @@ export default function KopiLaba() {
         input: "#0B2116",
         inputBorder: "rgba(37, 211, 102, 0.28)",
         gold: "#128C4A",
-        success: "#128C4A",
+        success: "#62D68F",
         danger: "#F87171",
         headerBg: "#0B2418",
         shadow: "0 10px 32px rgba(0,0,0,0.22)",
@@ -3323,7 +3323,7 @@ export default function KopiLaba() {
           border-color: #CDE8D5 !important;
         }
         .kl-app-shell[data-theme="dark"] .kl-brand-mark {
-          color: #128C4A !important;
+          color: #62D68F !important;
           background: #0B2116 !important;
           border-color: rgba(37,211,102,.28) !important;
         }
@@ -3345,6 +3345,8 @@ export default function KopiLaba() {
           --kl-selected-bg: #EAF6EE;
           --kl-selected-text: #0B5D32;
           --kl-border-soft: #CDE8D5;
+          --kl-primary-strong: #166534;
+          --kl-success: #128C4A;
         }
         .kl-app-shell[data-theme="dark"] {
           --kl-green-soft: #183D2A;
@@ -3356,6 +3358,8 @@ export default function KopiLaba() {
           --kl-selected-bg: #183D2A;
           --kl-selected-text: #D8F3E1;
           --kl-border-soft: rgba(37,211,102,.28);
+          --kl-primary-strong: #B9E8C9;
+          --kl-success: #62D68F;
         }
         .kl-login-screen, .kl-register-screen { color: var(--kl-ink) !important; }
         .kl-login-screen input, .kl-register-screen input,
@@ -3390,10 +3394,10 @@ export default function KopiLaba() {
         .kl-app-shell .kl-topbar { border-bottom-color: var(--kl-border) !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar { background: #10291C !important; color: #F5FBF7 !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item { color: #D6E8DC !important; background: #0B2116 !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #62D68F !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #128C4A !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #62D68F !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover,
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover { background: #0B2116 !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-menu-toggle,
