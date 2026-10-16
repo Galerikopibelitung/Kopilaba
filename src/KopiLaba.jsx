@@ -293,18 +293,41 @@ const printReceipt = (data, printerSettings = {}) => {
       return;
     }
     const html = buildReceiptHTML(data, printerSettings);
-    const w = window.open("", "_blank", "width=420,height=680");
-    if (!w) {
-      alert("Popup diblokir oleh browser. Izinkan popup untuk mencetak struk.");
-      return;
+    // Cetak di frame tersembunyi agar KopiLaba tidak membuka halaman/tab struk baru.
+    // Browser tetap dapat menampilkan dialog cetak jika memakai jalur cetak sistem.
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.title = "Cetak struk KopiLaba";
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "1px";
+    frame.style.height = "1px";
+    frame.style.border = "0";
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    document.body.appendChild(frame);
+    const printWindow = frame.contentWindow;
+    if (!printWindow) {
+      frame.remove();
+      throw new Error("Fitur cetak tidak tersedia pada browser ini.");
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
+    printWindow.document.open();
+    printWindow.document.write(html.replace(/<script>[\\s\\S]*?<\\/script>/gi, ""));
+    printWindow.document.close();
+    const cleanup = () => setTimeout(() => frame.remove(), 1000);
+    printWindow.addEventListener("afterprint", cleanup, { once: true });
     setTimeout(() => {
-      try { w.print(); } catch (e) { console.error("Print error:", e); }
-    }, 400);
+      try {
+        printWindow.focus();
+        printWindow.print();
+        setTimeout(cleanup, 60000);
+      } catch (e) {
+        cleanup();
+        console.error("Print error:", e);
+        alert("Gagal memulai cetak. Periksa layanan cetak perangkat.");
+      }
+    }, 350);
   } catch (err) {
     console.error("printReceipt error:", err);
     alert("Gagal membuka jendela print: " + err.message);
