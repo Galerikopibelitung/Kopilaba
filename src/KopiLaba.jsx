@@ -3293,18 +3293,7 @@ export default function KopiLaba() {
           border-color: #128C4A !important;
         }
         .kl-app-shell .kl-sidebar button[aria-current="page"] { background: #128C4A !important; color: #FFFFFF !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar button[aria-current="page"] { background: #128C4A !important; color: #071C12 !important; }
-
-          color: #128C4A !important;
-          border-radius: 10px !important;
-          width: 44px !important;
-          height: 44px !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          flex: 0 0 44px !important;
-        }
-        .kl-app-shell[data-theme="dark"] .kl-menu-toggle { color: #128C4A !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar button[aria-current="page"] { background: #128C4A !important; color: #FFFFFF !important; }
         .kl-app-shell .kl-topbar .kl-kasir-toggle {
           background: #128C4A !important;
           border-color: #128C4A !important;
@@ -3396,8 +3385,9 @@ export default function KopiLaba() {
         .kl-app-shell .kl-menu-toggle { width: 44px !important; height: 44px !important; border-radius: 10px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
          /* Palet seragam untuk Ringkasan dan Backup Data */
          .kl-app-shell .kl-dashboard-range button { border: 1px solid var(--kl-border) !important; }
-         .kl-app-shell .kl-dashboard-range button:focus { background: var(--kl-green) !important; color: #fff !important; border-color: var(--kl-green) !important; }
-         .kl-app-shell .kl-dashboard-actions button:first-child { background: var(--kl-green-soft) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-dashboard-range button:focus { outline: none !important; }
+         .kl-app-shell .kl-dashboard-range button:focus-visible { outline: 2px solid var(--kl-green) !important; outline-offset: 2px !important; }
+         .kl-app-shell .kl-dashboard-actions button:first-child { background: #FFFFFF !important; border-color: var(--kl-border) !important; }
          .kl-app-shell .kl-dashboard-actions button:first-child p { color: var(--kl-green) !important; }
          .kl-app-shell .kl-backup-page { color: var(--kl-ink); }
          .kl-app-shell .kl-backup-page .kl-backup-card { background: #FFFFFF !important; border-color: var(--kl-border) !important; color: var(--kl-ink) !important; }
@@ -3410,12 +3400,12 @@ export default function KopiLaba() {
          .kl-app-shell .kl-backup-page .kl-backup-warning { background: var(--kl-green-soft) !important; color: var(--kl-ink) !important; border-color: #CDE8D5 !important; }
          .kl-app-shell .kl-backup-page .kl-backup-warning b { color: var(--kl-green) !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-card { background: #10291C !important; border-color: rgba(18,140,74,.32) !important; color: #F5FBF7 !important; }
-         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #35C977 !important; border-color: #128C4A !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #128C4A !important; border-color: #128C4A !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-status-pill,
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts span,
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning { background: #183D2A !important; color: #F5FBF7 !important; border-color: rgba(18,140,74,.32) !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning b,
-         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts b { color: #35C977 !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts b { color: #128C4A !important; }
 
       `}
 </style>
