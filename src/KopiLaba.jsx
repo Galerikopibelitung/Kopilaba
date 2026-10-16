@@ -274,21 +274,21 @@ const receiptTextForBluetooth = (data) => {
   return lines.join("\n").replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?") + "\n";
 };
 
-const printReceipt = (data, printerSettings = {}) => {
+const printReceipt = (data, printerSettings = {}, options = {}) => {
   try {
-    if (typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
+    if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
       window.__kopilabaActivePrint(data).catch((err) => alert("Gagal mencetak melalui koneksi yang dipilih: " + (err?.message || err)));
       return;
     }
-    if (typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
+    if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
       window.__kopilabaBlePrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth BLE: " + (err?.message || err)));
       return;
     }
-    if (typeof window !== "undefined" && typeof window.__kopilabaUsbPrint === "function") {
+    if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaUsbPrint === "function") {
       window.__kopilabaUsbPrint(data).catch((err) => alert("Gagal mencetak melalui USB: " + (err?.message || err)));
       return;
     }
-    if (typeof window !== "undefined" && typeof window.__kopilabaSerialPrint === "function") {
+    if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaSerialPrint === "function") {
       window.__kopilabaSerialPrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
       return;
     }
@@ -7130,6 +7130,23 @@ export default function KopiLaba() {
               }, printerSettings)}>
                 🧾 Cetak Tes Printer
               </button>
+              <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder, fontWeight: 800 }} onClick={() => printReceipt({
+                namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
+                alamatKafe: kafe?.alamat || "",
+                teleponKafe: kafe?.telepon || "",
+                nomorTrx: "TES-CETAK-SISTEM",
+                tanggal: formatDateTimeWIB(new Date()),
+                kasir: profile?.nama || "Kasir",
+                kasirRole: profile?.role || "",
+                items: [{ nama: "Tes layanan cetak perangkat", harga: 1000, qty: 1, total: 1000 }],
+                subtotal: 1000, pajak: 0, pajakPersen: 0, total: 1000, bayar: 1000,
+                kembalian: 0, metode: "Tes", status: "tes"
+              }, printerSettings, { forceSystem: true })}>
+                📱 Cetak Tes lewat Sistem Perangkat
+              </button>
+              <p style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, margin: "8px 0 0" }}>
+                Gunakan opsi ini jika printer sudah dipasangkan di Android/komputer tetapi belum bisa diakses langsung. Layanan cetak perangkat harus mendukung printer tersebut; dialog pemilihan printer mungkin tetap muncul.
+              </p>
             </div>
             </div>
             <details style={{ marginTop: 12, border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12 }}>
