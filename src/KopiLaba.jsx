@@ -149,7 +149,7 @@ const buildReceiptHTML = (data, printerSettings = {}) => {
     items, subtotal, pajak, pajakPersen,
     total, bayar, kembalian, metode, status, bayarTunai, bayarQris,
   } = data;
-  const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : "48mm";
+  const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : printerSettings.paper === "58" ? "48mm" : "100%";
   const receiptFontSize = printerSettings.fontSize === "compact" ? "10px" : printerSettings.fontSize === "large" ? "13px" : "12px";
   const printMargin = ["2", "4", "6"].includes(String(printerSettings.margin)) ? printerSettings.margin + "mm" : "4mm";
 
@@ -401,14 +401,14 @@ export default function KopiLaba() {
     try {
       const saved = JSON.parse(localStorage.getItem("kopilaba_printer_settings") || "{}");
       return {
-        paper: ["58", "80", "A4"].includes(String(saved.paper)) ? String(saved.paper) : "58",
+        paper: ["auto", "58", "80", "A4"].includes(String(saved.paper)) ? String(saved.paper) : "auto",
         fontSize: ["compact", "normal", "large"].includes(saved.fontSize) ? saved.fontSize : "normal",
         margin: ["2", "4", "6"].includes(String(saved.margin)) ? String(saved.margin) : "4",
         showAddress: saved.showAddress !== false,
         showPhone: saved.showPhone !== false,
       };
     } catch (_) {
-      return { paper: "58", fontSize: "normal", margin: "4", showAddress: true, showPhone: true };
+      return { paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true };
     }
   });
   const [loading, setLoading] = useState(false);
@@ -6875,40 +6875,11 @@ export default function KopiLaba() {
           <div style={s.card}>
             <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
             <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-              Atur format cetak struk transaksi dan antrean di perangkat ini. Pengaturan tersimpan otomatis di browser/perangkat ini.
+              Hubungkan printer di pengaturan perangkat satu kali. KopiLaba menggunakan printer pilihan sistem; tata letak otomatis menjadi pilihan awal dan tersimpan di perangkat ini.
             </p>
             <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔎 Pencarian Printer</div>
-                <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
-                  Cari perangkat terlebih dahulu. Untuk printer Bluetooth thermal klasik (SPP), lakukan pemasangan melalui Pengaturan Bluetooth Android karena pencarian dari browser tidak mendukung semua model.
-                </div>
-                <button style={{ ...s.btn, width: "100%", background: "#25D366", color: "#073B1A", marginBottom: 8 }} onClick={async () => {
-                  if (!(navigator.bluetooth && navigator.bluetooth.requestDevice)) {
-                    alert("Pencarian Bluetooth dari browser ini tidak didukung. Buka Pengaturan tablet → Bluetooth, pasangkan printer di sana, lalu kembali ke KopiLaba.");
-                    return;
-                  }
-                  try {
-                    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-                    alert("Perangkat ditemukan: " + (device.name || "Bluetooth tanpa nama") + ". Perangkat baru dipilih, belum dipastikan terhubung atau bisa mencetak. Printer thermal Bluetooth klasik/SPP perlu dipasangkan lewat Pengaturan Android.");
-                  } catch (err) {
-                    if (err?.name !== "NotFoundError" && err?.name !== "AbortError") alert("Pencarian Bluetooth gagal. Coba pasangkan printer lewat Pengaturan Android. " + (err?.message || ""));
-                  }
-                }}>🔵 Cari Printer Bluetooth</button>
-                <button style={{ ...s.btn, width: "100%", background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={async () => {
-                  if (!(navigator.usb && navigator.usb.requestDevice)) {
-                    alert("Pencarian USB dari browser ini tidak didukung. Sambungkan printer dengan kabel OTG, lalu gunakan layanan cetak Android yang kompatibel.");
-                    return;
-                  }
-                  try {
-                    const device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
-                    alert("Perangkat USB dipilih: " + (device.productName || "Printer USB") + ". Ini belum memastikan printer bisa mencetak; lanjutkan dengan layanan cetak yang kompatibel.");
-                  } catch (err) {
-                    if (err?.name !== "NotFoundError" && err?.name !== "AbortError") alert("Pencarian USB gagal. Periksa kabel OTG dan izin browser. " + (err?.message || ""));
-                  }
-                }}>🔌 Cari Printer USB</button>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
               <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
                 Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
               </p>
@@ -6930,39 +6901,28 @@ export default function KopiLaba() {
                 subtotal: 1000, pajak: 0, pajakPersen: 0, total: 1000, bayar: 1000,
                 kembalian: 0, metode: "Tes", status: "tes"
               }, printerSettings)}>
-                🖨️ Hubungkan / Pilih Printer
+                🖨️ Cetak Tes / Periksa Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Tombol akan membuka dialog cetak untuk memilih printer dan menguji hasil cetak. Jika nama printer belum tersedia, pasangkan/tambahkan printer melalui pengaturan Bluetooth, USB, atau Wi-Fi perangkat terlebih dahulu.
+                Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
               </div>
             </div>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>📱 Panduan Hubungkan Printer di Tablet</div>
-                <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.7 }}>
-                  <b style={{ color: theme.text }}>Bluetooth thermal</b>
-                  <ol style={{ paddingLeft: 20, margin: "4px 0 12px" }}>
-                    <li>Nyalakan printer dan aktifkan Bluetooth tablet.</li>
-                    <li>Buka Pengaturan Android → Bluetooth, pilih nama printer, lalu lakukan pemasangan (pairing).</li>
-                    <li>Kembali ke sini dan tekan <b>Cetak Tes Printer</b> di bawah. Di dialog cetak, pilih layanan/printer yang tersedia.</li>
-                  </ol>
-                  <b style={{ color: theme.text }}>USB / OTG</b>
-                  <ol style={{ paddingLeft: 20, margin: "4px 0 12px" }}>
-                    <li>Sambungkan printer ke tablet dengan kabel dan adaptor OTG yang sesuai.</li>
-                    <li>Pasang/aktifkan layanan cetak Android yang mendukung model printer tersebut.</li>
-                    <li>Tekan <b>Cetak Tes Printer</b> lalu pilih printer pada dialog cetak.</li>
-                  </ol>
-                  <b style={{ color: theme.text }}>Wi-Fi / LAN</b><br />
-                  Hubungkan tablet dan printer ke jaringan yang sama, lalu tambahkan printer melalui layanan cetak perangkat.
-                </div>
-                <div style={{ background: theme.card, border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 10, fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
-                  <b style={{ color: theme.text }}>Penting:</b> Website tidak dapat memasangkan Bluetooth klasik/SPP atau menjamin dukungan USB secara langsung dari semua browser. Tombol tes membuka dialog cetak sistem/browser; koneksi dan hasil cetak harus dipastikan dengan memilih printer yang sudah dipasang di tablet. Jika printer tidak muncul, pasang layanan cetak yang kompatibel dengan merek/model printer.
-                </div>
+                <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 13, color: theme.textMuted, lineHeight: 1.65 }}>
+                <b style={{ color: theme.text }}>Alur yang disarankan</b>
+                <ol style={{ paddingLeft: 20, margin: "6px 0 8px" }}>
+                  <li>Pasangkan printer Bluetooth atau sambungkan USB melalui pengaturan/layanan cetak perangkat satu kali.</li>
+                  <li>Jadikan printer tersebut printer pilihan/default di layanan cetak perangkat.</li>
+                  <li>Kembali ke KopiLaba dan tekan <b>Cetak Tes Printer</b> untuk memastikan hasilnya.</li>
+                </ol>
+                KopiLaba memakai tata letak otomatis agar ukuran kertas mengikuti konfigurasi printer. Browser web masih dapat menampilkan dialog cetak sistem; pencetakan tanpa dialog memerlukan aplikasi/bridge native yang kompatibel dengan model printer.
               </div>
-            <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas</label>
+            <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas (opsional)</label>
             <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
-              <option value="58">Thermal 58 mm (printer kasir kecil)</option>
-              <option value="80">Thermal 80 mm (printer kasir lebar)</option>
-              <option value="A4">A4 (printer biasa)</option>
+              <option value="auto">Ikuti pengaturan printer/perangkat (otomatis)</option>
+              <option value="58">Thermal 58 mm (manual)</option>
+              <option value="80">Thermal 80 mm (manual)</option>
+              <option value="A4">A4 (manual)</option>
             </select>
             <label style={s.label} htmlFor="kl-printer-font">Ukuran tulisan</label>
             <select id="kl-printer-font" value={printerSettings.fontSize} onChange={(e) => setPrinterSettings(p => ({ ...p, fontSize: e.target.value }))} style={s.input}>
@@ -6987,7 +6947,7 @@ export default function KopiLaba() {
               </label>
             </div>
             <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
-              <b style={{ color: theme.text }}>Catatan:</b> Pilihan ukuran kertas mengatur tata letak cetak, bukan koneksi printer secara langsung. Saat mencetak, pilih printer yang tersambung dari dialog cetak browser. Untuk printer Bluetooth/USB di HP, dukungan bergantung pada aplikasi/browser dan printer yang digunakan.
+              <b style={{ color: theme.text }}>Catatan:</b> Secara default KopiLaba mengikuti ukuran kertas printer/perangkat. Pilihan manual hanya diperlukan jika tata letak hasil cetak tidak sesuai. Dialog cetak atau aplikasi penghubung tetap bergantung pada browser, sistem operasi, dan model printer.
             </div>
             <button style={{ ...s.btn, background: "#25D366", color: "#073B1A" }} onClick={() => printReceipt({
               namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
@@ -7003,7 +6963,7 @@ export default function KopiLaba() {
             }, printerSettings)}>
               🧾 Cetak Tes Printer
             </button>
-            <button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "58", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
+            <button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
               Kembalikan ke Pengaturan Awal
             </button>
           </div>
