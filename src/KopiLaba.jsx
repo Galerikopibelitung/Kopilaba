@@ -7148,21 +7148,7 @@ export default function KopiLaba() {
             <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
               <b style={{ color: theme.text }}>Catatan:</b> Secara default KopiLaba mengikuti ukuran kertas printer/perangkat. Pilihan manual hanya diperlukan jika tata letak hasil cetak tidak sesuai. Dialog cetak atau aplikasi penghubung tetap bergantung pada browser, sistem operasi, dan model printer.
             </div>
-            <button style={{ ...s.btn, background: "#25D366", color: "#073B1A" }} onClick={() => printReceipt({
-              namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
-              alamatKafe: kafe?.alamat || "",
-              teleponKafe: kafe?.telepon || "",
-              nomorTrx: "TES-PRINTER",
-              tanggal: formatDateTimeWIB(new Date()),
-              kasir: profile?.nama || "Kasir",
-              kasirRole: profile?.role || "",
-              items: [{ nama: "Contoh Americano", harga: 15000, qty: 1, total: 15000 }],
-              subtotal: 15000, pajak: 0, pajakPersen: 0, total: 15000, bayar: 20000,
-              kembalian: 5000, metode: "Tunai", status: "lunas"
-            }, printerSettings)}>
-              🧾 Cetak Tes Printer
-            </button>
-            <button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
+<button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
               Kembalikan ke Pengaturan Awal
             </button>
           </div>
@@ -7172,6 +7158,4 @@ export default function KopiLaba() {
   );
 }
 
-// Trigger production rebuild so Netlify picks up the latest approved UI changes.
-
-// Deploy verification: no runtime changes.
+// Pengaturan printer diringkas; alur cetak kasir tetap dipertahankan.
