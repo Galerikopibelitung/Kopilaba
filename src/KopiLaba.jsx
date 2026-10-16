@@ -155,6 +155,7 @@ const buildReceiptHTML = (data) => {
       (it) => `
     <tr>
       <td style="padding:2px 0; vertical-align:top;">${escapeHTML(it.nama)}</td>
+      <td style="text-align:right; padding:2px 0;">${fmt(it.harga ?? (Number(it.qty) ? Number(it.total || 0) / Number(it.qty) : 0))}</td>
       <td style="text-align:center; padding:2px 0;">${escapeHTML(it.qty)}</td>
       <td style="text-align:right; padding:2px 0;">${fmt(it.total)}</td>
     </tr>`
@@ -210,6 +211,7 @@ const buildReceiptHTML = (data) => {
     <thead>
       <tr>
         <th style="text-align:left; font-weight:normal;">Item</th>
+        <th style="text-align:right; font-weight:normal;">Harga</th>
         <th style="text-align:center; font-weight:normal;">Qty</th>
         <th style="text-align:right; font-weight:normal;">Total</th>
       </tr>
@@ -2363,6 +2365,7 @@ export default function KopiLaba() {
       items: items.map((it) => ({
         nama: it.nama,
         qty: it.qty,
+        harga: Number(it.harga) || (Number(it.qty) ? Number(it.total || 0) / Number(it.qty) : 0),
         total: it.total || it.harga * it.qty || 0,
       })),
       subtotal,
@@ -2659,33 +2662,33 @@ export default function KopiLaba() {
   // ============================================================
   const theme = darkMode
     ? {
-        bg: "#062d2b",
-        card: "rgba(8, 45, 43, 0.96)",
-        cardBorder: "rgba(132, 219, 209, 0.18)",
-        text: "#F5EFE6",
-        textMuted: "#9bc7c2",
-        input: "rgba(5, 35, 34, 0.82)",
-        inputBorder: "rgba(132, 219, 209, 0.24)",
-        gold: "#35c8b7",
-        success: "#35c8b7",
+        bg: "#062e18",
+        card: "rgba(8, 48, 27, 0.96)",
+        cardBorder: "rgba(37, 211, 102, 0.22)",
+        text: "#F4FFF7",
+        textMuted: "#A8D9B7",
+        input: "rgba(5, 38, 20, 0.84)",
+        inputBorder: "rgba(37, 211, 102, 0.30)",
+        gold: "#25D366",
+        success: "#25D366",
         danger: "#EF8080",
-        headerBg: "rgba(6, 45, 43, 0.94)",
+        headerBg: "rgba(6, 46, 24, 0.96)",
         shadow: "0 10px 36px rgba(0,0,0,0.28)",
         blur: "blur(20px)",
       }
     : {
-        bg: "#effaf8",
-        card: "rgba(255, 255, 255, 0.94)",
-        cardBorder: "rgba(10, 125, 116, 0.14)",
-        text: "#123b38",
-        textMuted: "#52736f",
-        input: "rgba(255,255,255,0.92)",
-        inputBorder: "rgba(10, 125, 116, 0.18)",
-        gold: "#087f78",
-        success: "#087f78",
+        bg: "#F0FFF4",
+        card: "rgba(255, 255, 255, 0.96)",
+        cardBorder: "rgba(37, 211, 102, 0.20)",
+        text: "#123B22",
+        textMuted: "#527A60",
+        input: "rgba(255,255,255,0.96)",
+        inputBorder: "rgba(37, 211, 102, 0.24)",
+        gold: "#25D366",
+        success: "#128C4A",
         danger: "#C62828",
-        headerBg: "rgba(236, 250, 247, 0.96)",
-        shadow: "0 8px 30px rgba(8, 105, 98, 0.09)",
+        headerBg: "rgba(240, 255, 244, 0.97)",
+        shadow: "0 8px 30px rgba(18, 140, 74, 0.09)",
         blur: "blur(20px)",
       };
 
