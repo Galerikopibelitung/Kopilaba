@@ -243,6 +243,34 @@ const buildReceiptHTML = (data, printerSettings = {}) => {
 };
 
 const receiptTextForBluetooth = (data) => {
+  // Semua jenis dokumen memakai jalur printer aktif yang sama (BLE, USB, atau serial).
+  if (data?.documentType === "antrean" || data?.documentType === "pesanan") {
+    const orders = Array.isArray(data.orders) ? data.orders : [data];
+    const lines = [String(data.namaKafe || "KOPILABA"), "--------------------------------"];
+    for (const order of orders) {
+      lines.push(
+        data.documentType === "pesanan" ? "RINCIAN PESANAN" : "BUKTI ANTREAN",
+        "NO. ANTREAN: " + String(order.nomor || "-"),
+        "Pelanggan: " + String(order.nama || "Pelanggan"),
+        "Jenis: " + (order.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang"),
+        "Waktu: " + String(order.waktu || "-"),
+        "--------------------------------"
+      );
+      for (const item of (order.items || [])) {
+        lines.push(
+          String(item.nama || item.name || "Item") + " x" + (Number(item.qty) || 1),
+          "  Rp" + ((Number(item.harga) || 0) * (Number(item.qty) || 1)).toLocaleString("id-ID")
+        );
+        if (item.catatan) lines.push("  Catatan: " + String(item.catatan));
+      }
+      const total = (order.items || []).reduce((sum, item) => sum + (Number(item.harga) || 0) * (Number(item.qty) || 1), 0);
+      lines.push("--------------------------------", "TOTAL: Rp" + total.toLocaleString("id-ID"));
+      if (order.catatan) lines.push("Catatan pesanan: " + String(order.catatan));
+      lines.push("Status: " + String(order.status || "Menunggu"), "", "");
+    }
+    lines.push("Dicetak dari KopiLaba", "", "");
+    return lines.join("\n").replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?") + "\n";
+  }
   const lines = [
     String(data.namaKafe || "KOPILABA"),
     data.alamatKafe || "",
@@ -1052,10 +1080,28 @@ export default function KopiLaba() {
   };
   const cetakAntrean = (order, mode = "slip") => {
     try {
-      const w = window.open("", "_blank", "width=420,height=680");
-      if (!w) { alert("Popup diblokir. Izinkan popup untuk mencetak antrean."); return; }
       const daftar = mode === "daftar";
       const orders = daftar ? (order || []) : [order];
+      // Jika printer sudah terhubung di Pengaturan Printer, cetak langsung tanpa popup/dialog browser.
+      if (typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
+        const printData = {
+          documentType: "antrean",
+          namaKafe: kafe?.nama || "KOPILABA",
+          orders: orders.filter(Boolean).map((o) => ({
+            nomor: o.nomor,
+            nama: o.nama || "Pelanggan",
+            jenis: o.jenis,
+            waktu: o.waktu,
+            status: o.status || "Menunggu",
+            catatan: o.catatan || "",
+            items: (o.items || []).map((it) => ({ nama: it.nama, qty: it.qty, harga: it.harga, catatan: it.catatan || "" }))
+          }))
+        };
+        Promise.resolve(window.__kopilabaActivePrint(printData)).catch((err) => alert("Gagal mencetak antrean melalui printer terhubung: " + (err?.message || err)));
+        return;
+      }
+      const w = window.open("", "_blank", "width=420,height=680");
+      if (!w) { alert("Popup diblokir. Hubungkan printer di Pengaturan Printer untuk cetak langsung, atau izinkan popup untuk cetak melalui browser."); return; }
       const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
       const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : "48mm";
       const queueFont = printerSettings.fontSize === "compact" ? "10px" : printerSettings.fontSize === "large" ? "13px" : "12px";
