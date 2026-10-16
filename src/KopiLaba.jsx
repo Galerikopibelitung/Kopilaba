@@ -6915,7 +6915,7 @@ export default function KopiLaba() {
           <div style={s.card}>
             <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
             <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-              Hubungkan printer di pengaturan perangkat satu kali. KopiLaba menggunakan printer pilihan sistem; tata letak otomatis menjadi pilihan awal dan tersimpan di perangkat ini.
+              Pilih metode koneksi di bawah. Bluetooth langsung hanya mendukung perangkat BLE yang menyediakan layanan data; earphone Bluetooth biasa umumnya bukan perangkat GATT untuk cetak dan tidak membuktikan pemindaian printer gagal. Printer Bluetooth klasik (SPP) memerlukan penghubung Android/native.
             </p>
             <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
@@ -6924,8 +6924,8 @@ export default function KopiLaba() {
                 Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
               </p>
               <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: "0 0 12px" }}>
-                <li><b>Bluetooth:</b> aktifkan printer, lalu pasangkan melalui Pengaturan Bluetooth HP/komputer.</li>
-                <li><b>USB:</b> sambungkan printer dan pastikan driver/aplikasi cetaknya sudah terpasang.</li>
+                <li><b>Bluetooth:</b> aktifkan printer dan pilih tombol pencarian Bluetooth di bawah. Pemindaian web hanya menemukan perangkat BLE yang kompatibel; memasangkan printer di menu Bluetooth Android saja belum memberi website akses ke printer.</li>
+                <li><b>USB:</b> sambungkan printer lewat kabel/OTG, lalu izinkan Chrome mengakses perangkat yang dipilih.</li>
                 <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
                 <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
               </ol>
@@ -6937,12 +6937,30 @@ export default function KopiLaba() {
                 try {
                   const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ["000018f0-0000-1000-8000-00805f9b34fb", "0000ffe0-0000-1000-8000-00805f9b34fb", "0000ae30-0000-1000-8000-00805f9b34fb"]
+                    optionalServices: [
+                      "000018f0-0000-1000-8000-00805f9b34fb",
+                      "0000ffe0-0000-1000-8000-00805f9b34fb",
+                      "0000ae30-0000-1000-8000-00805f9b34fb",
+                      "0000ff00-0000-1000-8000-00805f9b34fb",
+                      "0000ff10-0000-1000-8000-00805f9b34fb",
+                      "0000fff0-0000-1000-8000-00805f9b34fb",
+                      "6e400001-b5a3-f393-e0a9-e50e24dcca9e",
+                      "49535343-fe7d-4ae5-8fa9-9fafd205e455"
+                    ]
                   });
                   if (!device.gatt) throw new Error("Perangkat ini tidak menyediakan koneksi Bluetooth BLE yang didukung browser.");
                   const server = await device.gatt.connect();
                   let writable = null;
-                  const serviceIds = ["000018f0-0000-1000-8000-00805f9b34fb", "0000ffe0-0000-1000-8000-00805f9b34fb", "0000ae30-0000-1000-8000-00805f9b34fb"];
+                  const serviceIds = [
+                    "000018f0-0000-1000-8000-00805f9b34fb",
+                    "0000ffe0-0000-1000-8000-00805f9b34fb",
+                    "0000ae30-0000-1000-8000-00805f9b34fb",
+                    "0000ff00-0000-1000-8000-00805f9b34fb",
+                    "0000ff10-0000-1000-8000-00805f9b34fb",
+                    "0000fff0-0000-1000-8000-00805f9b34fb",
+                    "6e400001-b5a3-f393-e0a9-e50e24dcca9e",
+                    "49535343-fe7d-4ae5-8fa9-9fafd205e455"
+                  ];
                   for (const id of serviceIds) {
                     try {
                       const service = await server.getPrimaryService(id);
@@ -6991,7 +7009,7 @@ export default function KopiLaba() {
                 }
                 let device;
                 try {
-                  device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+                  device = await navigator.usb.requestDevice({ acceptAllDevices: true });
                   await device.open();
                   if (!device.configuration) await device.selectConfiguration(1);
                   let output = null;
@@ -7012,7 +7030,7 @@ export default function KopiLaba() {
                   window.__kopilabaUsbDevice = device;
                   window.__kopilabaUsbPrint = async (data) => {
                     if (!device.opened) await device.open();
-                    const bytes = new TextEncoder().encode("\\x1B@" + receiptTextForBluetooth(data) + "\\n\\n\\x1DVA\\x00");
+                    const bytes = new TextEncoder().encode("\x1B@" + receiptTextForBluetooth(data) + "\n\n\x1DVA\x00");
                     const chunkSize = 180;
                     for (let offset = 0; offset < bytes.length; offset += chunkSize) {
                       const result = await device.transferOut(output.endpointNumber, bytes.slice(offset, offset + chunkSize));
@@ -7043,7 +7061,7 @@ export default function KopiLaba() {
                 🧾 Cetak Tes Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                KopiLaba mencoba koneksi langsung ke printer BLE melalui Bluetooth dan printer dengan antarmuka USB standar melalui WebUSB. Setelah tersambung, Cetak Tes dan struk transaksi akan dikirim ke koneksi yang aktif. Banyak printer Bluetooth kasir memakai Bluetooth klasik (SPP), bukan BLE, dan beberapa printer USB memakai protokol khusus; model tersebut membutuhkan aplikasi Android penghubung/native.
+                Koneksi langsung Bluetooth mencari perangkat BLE dengan beberapa layanan printer umum; earphone biasa bukan alat uji printer dan sering tidak muncul. Jalur USB sekarang menampilkan pemilih perangkat USB yang lebih luas, bukan hanya perangkat yang melaporkan kelas printer standar. Setelah koneksi berhasil, gunakan Cetak Tes. Printer Bluetooth klasik (SPP) atau USB yang tidak mendukung ESC/POS/antarmuka data browser tetap memerlukan bridge/aplikasi native.
               </div>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
