@@ -6923,13 +6923,13 @@ export default function KopiLaba() {
           <div style={s.card}>
             <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
             <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.5, marginTop: 0 }}>
-              Hubungkan printer, lalu pilih metode koneksi yang sesuai. Bluetooth klasik (SPP) biasanya memerlukan layanan cetak perangkat atau aplikasi penghubung.
+              Pilih koneksi printer, lalu cetak struk uji.
             </p>
             <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
               <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.5, margin: "0 0 10px" }}>
-                1. Nyalakan dan sambungkan printer. 2. Pilih Bluetooth atau USB. 3. Tekan <b>Cetak Tes Printer</b>.
+                Nyalakan printer, pilih koneksi, lalu tekan <b>Cetak Tes Printer</b>.
               </p>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
@@ -7006,7 +7006,7 @@ export default function KopiLaba() {
                   alert("Belum berhasil menghubungkan printer: " + (err?.message || err) + "\\nPastikan Bluetooth aktif, printer menyala, dan gunakan Chrome Android. Jika printer sudah dipasangkan tetapi tidak muncul, kemungkinan printer memakai Bluetooth klasik (SPP) yang tidak bisa diakses langsung dari website.");
                 }
               }}>
-                🔵 Cari Printer Bluetooth (BLE)
+                🔵 Hubungkan Bluetooth (BLE)
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.serial || !navigator.serial.requestPort) {
@@ -7036,7 +7036,7 @@ export default function KopiLaba() {
                   alert("Koneksi Bluetooth klasik/serial gagal: " + (err?.message || err) + ". Fitur ini tidak tersedia di Chrome Android; dukungannya terutama di Chrome desktop.");
                 }
               }}>
-                🟦 Bluetooth Klasik / SPP (Chrome desktop)
+                Bluetooth Klasik (desktop)
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.usb || !navigator.usb.requestDevice) {
@@ -7091,7 +7091,7 @@ export default function KopiLaba() {
                   alert("Belum berhasil menghubungkan printer USB: " + (err?.message || err) + "\\nPastikan printer tersambung lewat OTG, nyalakan printer, dan izinkan Chrome mengakses perangkat. Jika printer tidak muncul, kemungkinan perangkat tidak mengekspos antarmuka USB printer standar.");
                 }
               }}>
-                🔌 Cari & Hubungkan Printer USB
+                🔌 Hubungkan Printer USB
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
@@ -7107,16 +7107,12 @@ export default function KopiLaba() {
               }, printerSettings)}>
                 🧾 Cetak Tes Printer
               </button>
-              <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Koneksi langsung hanya berfungsi pada printer yang kompatibel. Jika tidak terdeteksi, gunakan layanan cetak perangkat.
-              </div>
             </div>
             </div>
-              <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 10, margin: "12px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
-                <b style={{ color: theme.text }}>Catatan</b><br />
-                Ukuran kertas otomatis menjadi pilihan awal. Dialog cetak bergantung pada browser dan sistem perangkat.
-              </div>
-            <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas (opsional)</label>
+            <details style={{ marginTop: 12, border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700, color: theme.text }}>Pengaturan lanjutan (opsional)</summary>
+              <p style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5 }}>Ubah hanya jika hasil cetak perlu disesuaikan.</p>
+            <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas</label>
             <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
               <option value="auto">Ikuti pengaturan printer/perangkat (otomatis)</option>
               <option value="58">Thermal 58 mm (manual)</option>
@@ -7145,12 +7141,10 @@ export default function KopiLaba() {
                 Tampilkan nomor telepon kafe pada struk
               </label>
             </div>
-            <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
-              <b style={{ color: theme.text }}>Catatan:</b> Secara default KopiLaba mengikuti ukuran kertas printer/perangkat. Pilihan manual hanya diperlukan jika tata letak hasil cetak tidak sesuai. Dialog cetak atau aplikasi penghubung tetap bergantung pada browser, sistem operasi, dan model printer.
-            </div>
-<button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
+            <button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "auto", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
               Kembalikan ke Pengaturan Awal
             </button>
+            </details>
           </div>
         </div>
       )}
