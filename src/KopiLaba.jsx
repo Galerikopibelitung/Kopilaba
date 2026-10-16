@@ -154,7 +154,7 @@ const buildReceiptHTML = (data) => {
     .map(
       (it) => `
     <tr>
-      <td style="padding:2px 0; vertical-align:top;">${escapeHTML(it.nama)}</td>
+      <td style="padding:2px 0; vertical-align:top;">${escapeHTML(it.nama)}${it.catatan ? `<div style="font-size:10px;color:#555">Catatan: ${escapeHTML(it.catatan)}</div>` : ""}${it.nomor_antrean ? `<div style="font-size:10px;color:#555">Antrean: ${escapeHTML(it.nomor_antrean)}</div>` : ""}</td>
       <td style="text-align:right; padding:2px 0;">${fmt(it.harga ?? (Number(it.qty) ? Number(it.total || 0) / Number(it.qty) : 0))}</td>
       <td style="text-align:center; padding:2px 0;">${escapeHTML(it.qty)}</td>
       <td style="text-align:right; padding:2px 0;">${fmt(it.total)}</td>
@@ -931,6 +931,87 @@ export default function KopiLaba() {
   // STATE KASIR & JUMLAH MAP
   // ------------------------------------------------------------
   const [keranjang, setKeranjang] = useState([]);
+  // Antrean tersimpan lokal per kafe/perangkat agar nomor dan pesanan tetap ada setelah halaman dimuat ulang.
+  const [antrean, setAntrean] = useState([]);
+  const [antreanNama, setAntreanNama] = useState("");
+  const [antreanJenis, setAntreanJenis] = useState("bawa_pulang");
+  const [antreanCatatan, setAntreanCatatan] = useState("");
+  const [antreanMenuId, setAntreanMenuId] = useState("");
+  const [antreanQty, setAntreanQty] = useState("1");
+  const [antreanItemCatatan, setAntreanItemCatatan] = useState("");
+  const [antreanItems, setAntreanItems] = useState([]);
+  const antreanStorageKey = `kopilaba_antrean_${kafe?.id || profile?.kafe_id || "default"}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(antreanStorageKey);
+      setAntrean(saved ? JSON.parse(saved) : []);
+    } catch (_) {
+      setAntrean([]);
+    }
+  }, [antreanStorageKey]);
+  const simpanAntrean = (next) => {
+    setAntrean(next);
+    try { localStorage.setItem(antreanStorageKey, JSON.stringify(next)); } catch (_) {}
+  };
+  const cetakAntrean = (order, mode = "slip") => {
+    try {
+      const w = window.open("", "_blank", "width=420,height=680");
+      if (!w) { alert("Popup diblokir. Izinkan popup untuk mencetak antrean."); return; }
+      const daftar = mode === "daftar";
+      const orders = daftar ? (order || []) : [order];
+      const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Antrean KopiLaba</title>
+      <style>body{font-family:Arial,sans-serif;color:#111;margin:12px;font-size:12px}h2,p{margin:3px 0;text-align:center}.line{border-top:1px dashed #555;margin:8px 0}.row{display:flex;justify-content:space-between;gap:8px}.big{font-size:28px;font-weight:bold;text-align:center;margin:8px 0}.muted{font-size:10px}.item{margin:5px 0}@page{margin:4mm}</style></head><body>
+      <h2>${esc(kafe?.nama || "KOPILABA")}</h2><p>${daftar ? "DAFTAR ANTREAN & PESANAN" : "BUKTI ANTREAN PESANAN"}</p><div class="line"></div>
+      ${orders.map((o) => `<section><div class="big">NO. ${esc(o.nomor)}</div><p><b>${esc(o.nama || "Pelanggan")}</b></p><p>${o.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang"}</p><p class="muted">${esc(o.waktu || "")}</p><div class="line"></div>
+      ${(o.items || []).map((it) => `<div class="item"><div class="row"><span>${esc(it.nama)} x${esc(it.qty)}</span><span>${fmt((Number(it.harga)||0)*(Number(it.qty)||0))}</span></div>${it.catatan ? `<div class="muted">Catatan: ${esc(it.catatan)}</div>` : ""}</div>`).join("")}
+      <div class="line"></div><div class="row"><b>Total</b><b>${fmt((o.items||[]).reduce((sum,it)=>sum+(Number(it.harga)||0)*(Number(it.qty)||0),0))}</b></div>
+      ${o.catatan ? `<p style="text-align:left;margin-top:8px"><b>Catatan pesanan:</b> ${esc(o.catatan)}</p>` : ""}
+      <p class="muted">Status: ${esc(o.status || "menunggu")}</p><div class="line"></div></section>`).join(daftar ? '<div style="page-break-after:always"></div>' : "")}
+      <p class="muted">Dicetak dari KopiLaba</p><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`;
+      w.document.open(); w.document.write(html); w.document.close();
+    } catch (err) { alert("Gagal mencetak antrean: " + err.message); }
+  };
+  const tambahItemAntrean = () => {
+    const item = menu.find((m) => String(m.id) === String(antreanMenuId));
+    if (!item) { setError("Pilih menu terlebih dahulu."); return; }
+    const qty = Math.max(1, parseInt(antreanQty, 10) || 1);
+    setAntreanItems((prev) => {
+      const same = prev.find((p) => String(p.id) === String(item.id) && (p.catatan || "") === antreanItemCatatan.trim());
+      return same
+        ? prev.map((p) => p === same ? { ...p, qty: p.qty + qty } : p)
+        : [...prev, { id: item.id, nama: item.nama, harga: Number(item.harga) || 0, qty, catatan: antreanItemCatatan.trim() }];
+    });
+    setAntreanMenuId("");
+    setAntreanQty("1");
+    setAntreanItemCatatan("");
+    setError("");
+  };
+  const buatAntrean = () => {
+    if (!antreanItems.length) { setError("Tambahkan minimal satu menu ke pesanan."); return; }
+    const cafeKey = kafe?.id || profile?.kafe_id || "default";
+    const todayKey = new Date().toLocaleDateString("en-CA");
+    const seqKey = `kopilaba_antrean_seq_${cafeKey}_${todayKey}`;
+    let seq = 1;
+    try { seq = (parseInt(localStorage.getItem(seqKey) || "0", 10) || 0) + 1; localStorage.setItem(seqKey, String(seq)); } catch (_) {}
+    const order = {
+      id: `antrean-${Date.now()}`,
+      nomor: `A${String(seq).padStart(3, "0")}`,
+      nama: antreanNama.trim() || "Pelanggan",
+      jenis: antreanJenis,
+      catatan: antreanCatatan.trim(),
+      items: antreanItems.map((it) => ({ ...it })),
+      waktu: new Date().toLocaleString("id-ID"),
+      status: "Menunggu",
+    };
+    simpanAntrean([order, ...antrean]);
+    setAntreanNama("");
+    setAntreanJenis("bawa_pulang");
+    setAntreanCatatan("");
+    setAntreanItems([]);
+    setError("");
+    setSuccess(`Antrean ${order.nomor} tersimpan. Periksa pesanan sebelum diteruskan ke keranjang.`);
+  };
   const [pajakCheckoutEnabled, setPajakCheckoutEnabled] = useState(pajakEnabled);
   useEffect(() => {
     setPajakCheckoutEnabled(
@@ -2223,7 +2304,7 @@ export default function KopiLaba() {
       setError(`⚠️ Stok ${item.nama} sedang 0, tetapi tetap bisa dipesan.`);
     }
     setKeranjang((prev) => {
-      const existing = prev.find((p) => p.id === item.id);
+      const existing = prev.find((p) => p.id === item.id && (p.catatan || "") === (item.catatan || "") && (p.antreanNomor || "") === (item.antreanNomor || ""));
       if (existing) {
         return prev.map((p) => (p.id === item.id ? { ...p, qty: p.qty + qty } : p));
       }
@@ -2278,6 +2359,8 @@ export default function KopiLaba() {
         qty: item.qty,
         harga: item.harga,
         total: item.harga * item.qty,
+        ...(item.catatan ? { catatan: item.catatan } : {}),
+        ...(item.antreanNomor ? { nomor_antrean: item.antreanNomor } : {}),
       }));
       const itemStr = JSON.stringify(itemsDetail);
 
@@ -2821,6 +2904,7 @@ export default function KopiLaba() {
         { id: "admin", icon: "crown", label: "Admin" },
         { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
         { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "antrean", icon: "list-ordered", label: "Antrean & Pesanan" },
         { id: "menu", icon: "coffee", label: "Menu" },
         { id: "karyawan", icon: "users", label: "Karyawan" },
         { id: "laporan", icon: "chart", label: "Laporan" },
@@ -4446,6 +4530,78 @@ export default function KopiLaba() {
               })}
             </div>
           </>
+        )}
+
+        {/* ANTREAN & PESANAN */}
+        {!isSuperAdmin && tab === "antrean" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))", gap: 14, alignItems: "start" }}>
+            <section style={s.card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div><p style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Antrean & Pesanan</p><p style={{ margin: "4px 0 0", color: theme.textMuted, fontSize: 12 }}>Buat nomor, cek ulang pesanan, lalu cetak atau kirim ke keranjang.</p></div>
+                <span style={{ background: "#25D366", color: "#073B1A", padding: "7px 10px", borderRadius: 12, fontWeight: 800 }}>#{antrean.filter((a) => a.status === "Menunggu").length}</span>
+              </div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Nama pelanggan (opsional)</label>
+              <input style={s.input} value={antreanNama} onChange={(e) => setAntreanNama(e.target.value)} placeholder="Nama pelanggan" />
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Jenis pesanan</label>
+              <select style={s.input} value={antreanJenis} onChange={(e) => setAntreanJenis(e.target.value)}>
+                <option value="bawa_pulang">Bawa pulang</option><option value="makan_di_tempat">Makan di tempat</option>
+              </select>
+              <div style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: 14, padding: 12, marginBottom: 12 }}>
+                <p style={{ margin: "0 0 10px", fontWeight: 800, fontSize: 13 }}>Tambah menu pesanan</p>
+                <select style={s.input} value={antreanMenuId} onChange={(e) => setAntreanMenuId(e.target.value)}>
+                  <option value="">Pilih menu...</option>{menu.map((m) => <option key={m.id} value={m.id}>{m.nama} — {fmt(m.harga)}</option>)}
+                </select>
+                <div style={{ display: "grid", gridTemplateColumns: "100px minmax(0,1fr)", gap: 8 }}>
+                  <input style={s.input} type="number" min="1" value={antreanQty} onChange={(e) => setAntreanQty(e.target.value)} aria-label="Jumlah menu" />
+                  <input style={s.input} value={antreanItemCatatan} onChange={(e) => setAntreanItemCatatan(e.target.value)} placeholder="Catatan menu, mis. less sugar" />
+                </div>
+                <button style={{ ...s.btnSm, width: "100%" }} onClick={tambahItemAntrean}>＋ Tambahkan ke pesanan</button>
+              </div>
+              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 800 }}>Periksa pesanan sebelum dibuat</p>
+              {antreanItems.length === 0 ? <p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada menu. Pilih menu di atas untuk mulai.</p> : antreanItems.map((it, idx) => (
+                <div key={`${it.id}-${idx}`} style={{ display: "flex", justifyContent: "space-between", gap: 8, borderBottom: `1px solid ${theme.cardBorder}`, padding: "9px 0" }}>
+                  <div style={{ minWidth: 0, flex: 1 }}><b>{it.nama} × {it.qty}</b><div style={{ color: theme.textMuted, fontSize: 12 }}>{it.catatan || "Tanpa catatan menu"}</div><div style={{ fontSize: 12 }}>{fmt(it.harga * it.qty)}</div></div>
+                  <button style={{ ...s.btnSm, alignSelf: "center", padding: "6px 10px" }} onClick={() => setAntreanItems((prev) => prev.filter((_, i) => i !== idx))}>Hapus</button>
+                </div>
+              ))}
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, margin: "12px 0 5px" }}>Catatan tambahan seluruh pesanan</label>
+              <textarea style={{ ...s.input, minHeight: 74, resize: "vertical" }} value={antreanCatatan} onChange={(e) => setAntreanCatatan(e.target.value)} placeholder="Contoh: pesanan dibungkus terpisah, alergi, atau permintaan pelanggan" />
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "10px 0", borderTop: `1px solid ${theme.cardBorder}`, fontWeight: 800 }}><span>Total pesanan</span><span>{fmt(antreanItems.reduce((sum, it) => sum + it.harga * it.qty, 0))}</span></div>
+              <button style={{ ...s.btn, background: "#25D366", color: "#073B1A" }} onClick={buatAntrean}>✓ Verifikasi & Buat Nomor Antrean</button>
+            </section>
+            <section style={s.card}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div><p style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Daftar antrean</p><p style={{ margin: "4px 0 0", fontSize: 12, color: theme.textMuted }}>Tersimpan di perangkat ini untuk kafe yang sedang aktif.</p></div>
+                <button style={s.btnSm} disabled={!antrean.length} onClick={() => cetakAntrean(antrean, "daftar")}>🖨 Cetak daftar</button>
+              </div>
+              {!antrean.length ? <div style={{ textAlign: "center", padding: 24, color: theme.textMuted }}>Belum ada antrean. Buat pesanan dari panel sebelah.</div> : antrean.map((o) => (
+                <article key={o.id} style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: 14, padding: 12, marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
+                    <div><div style={{ fontSize: 20, fontWeight: 900, color: "#128C3A" }}>{o.nomor}</div><b>{o.nama}</b><div style={{ fontSize: 11, color: theme.textMuted }}>{o.waktu} · {o.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang"}</div></div>
+                    <span style={{ borderRadius: 20, padding: "5px 8px", background: o.status === "Menunggu" ? "#E9FCEB" : "#F0F3F0", color: o.status === "Menunggu" ? "#075E2E" : "#526052", fontSize: 11, fontWeight: 800 }}>{o.status}</span>
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 13 }}>{(o.items || []).map((it, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, margin: "5px 0" }}><span>{it.nama} × {it.qty}{it.catatan ? <small style={{ display: "block", color: theme.textMuted }}>Catatan: {it.catatan}</small> : null}</span><b>{fmt(it.harga * it.qty)}</b></div>)}</div>
+                  {o.catatan && <p style={{ margin: "8px 0", fontSize: 12, color: theme.textMuted }}>Catatan pesanan: {o.catatan}</p>}
+                  <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 9, marginTop: 9, display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>Total</span><span>{fmt((o.items || []).reduce((sum, it) => sum + (Number(it.harga) || 0) * (Number(it.qty) || 0), 0))}</span></div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                    <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🖨 Cetak antrean</button>
+                    <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🧾 Cetak pesanan</button>
+                    {o.status === "Menunggu" && <button style={{ ...s.btnSm, background: "#25D366", color: "#073B1A" }} onClick={() => {
+                      (o.items || []).forEach((it) => {
+                        const source = menu.find((m) => String(m.id) === String(it.id)) || it;
+                        tambahKeKeranjang({ ...source, catatan: it.catatan || "", antreanNomor: o.nomor }, it.qty);
+                      });
+                      simpanAntrean(antrean.map((a) => a.id === o.id ? { ...a, status: "Masuk keranjang" } : a));
+                      setLastReceipt(null);
+                      setShowKasir(true);
+                    }}>→ Lanjut ke keranjang</button>}
+                    {o.status !== "Selesai" && <button style={s.btnSm} onClick={() => simpanAntrean(antrean.map((a) => a.id === o.id ? { ...a, status: "Selesai" } : a))}>Tandai selesai</button>}
+                    <button style={{ ...s.btnSm, color: "#B83E35" }} onClick={() => { if (window.confirm(`Hapus antrean ${o.nomor}?`)) simpanAntrean(antrean.filter((a) => a.id !== o.id)); }}>Hapus</button>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </div>
         )}
 
         {/* MENU */}
