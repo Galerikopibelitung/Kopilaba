@@ -6877,6 +6877,35 @@ export default function KopiLaba() {
             <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
               Atur format cetak struk transaksi dan antrean di perangkat ini. Pengaturan tersimpan otomatis di browser/perangkat ini.
             </p>
+            <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
+              <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
+                Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
+              </p>
+              <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: "0 0 12px" }}>
+                <li><b>Bluetooth:</b> aktifkan printer, lalu pasangkan melalui Pengaturan Bluetooth HP/komputer.</li>
+                <li><b>USB:</b> sambungkan printer dan pastikan driver/aplikasi cetaknya sudah terpasang.</li>
+                <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
+                <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
+              </ol>
+              <button style={{ ...s.btn, width: "100%", background: "#16803D", color: "#fff" }} onClick={() => printReceipt({
+                namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
+                alamatKafe: kafe?.alamat || "",
+                teleponKafe: kafe?.telepon || "",
+                nomorTrx: "TES-KONEKSI-PRINTER",
+                tanggal: formatDateTimeWIB(new Date()),
+                kasir: profile?.nama || "Kasir",
+                kasirRole: profile?.role || "",
+                items: [{ nama: "Tes koneksi printer", harga: 1000, qty: 1, total: 1000 }],
+                subtotal: 1000, pajak: 0, pajakPersen: 0, total: 1000, bayar: 1000,
+                kembalian: 0, metode: "Tes", status: "tes"
+              }, printerSettings)}>
+                🖨️ Hubungkan / Pilih Printer
+              </button>
+              <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
+                Tombol akan membuka dialog cetak untuk memilih printer dan menguji hasil cetak. Jika nama printer belum tersedia, pasangkan/tambahkan printer melalui pengaturan Bluetooth, USB, atau Wi-Fi perangkat terlebih dahulu.
+              </div>
+            </div>
             <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas</label>
             <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
               <option value="58">Thermal 58 mm (printer kasir kecil)</option>
