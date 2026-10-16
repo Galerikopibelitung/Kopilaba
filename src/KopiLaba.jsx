@@ -3962,7 +3962,7 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? "#128C4A" : (darkMode ? "#0B2116" : "#FFFFFF"),
+                      background: periodeFilter === p ? "#0B5D32" : (darkMode ? "#0B2116" : "#FFFFFF"),
                       color:
                         periodeFilter === p ? "#FFFFFF" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
@@ -3987,7 +3987,7 @@ export default function KopiLaba() {
             <div
               className="kl-dashboard-hero"
               style={{
-                background: `linear-gradient(135deg,${theme.gold},${darkMode ? "#128C4A" : "#128C4A"})`,
+                background: "#0B5D32",
                 borderRadius: 24,
                 padding: 24,
                 marginBottom: 14,
@@ -4092,7 +4092,7 @@ export default function KopiLaba() {
                 }}
               >
                 <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#128C4A" }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#0B5D32" }}>
                   Catat Pemasukan
                 </p>
               </button>
