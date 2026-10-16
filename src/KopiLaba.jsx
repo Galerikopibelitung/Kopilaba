@@ -7024,7 +7024,7 @@ export default function KopiLaba() {
                       if (writable.properties.writeWithoutResponse && writable.writeValueWithoutResponse) await writable.writeValueWithoutResponse(part);
                       else await writable.writeValue(part);
                     }
-                    alert("Struk dikirim ke printer Bluetooth BLE. Jika kertas tidak keluar, printer mungkin tidak kompatibel dengan mode BLE/ESC-POS ini.");
+                    // Hindari popup setiap transaksi agar alur kasir tetap cepat.
                   };
                   window.__kopilabaActivePrint = window.__kopilabaBlePrint;
                   alert("Perangkat BLE terhubung: " + (device.name || "Bluetooth") + ". Untuk mencetak, perangkat harus menyediakan layanan BLE tulis yang kompatibel ESC/POS. Earphone hanya untuk audio, bukan printer.");
@@ -7053,7 +7053,7 @@ export default function KopiLaba() {
                       const bytes = new TextEncoder().encode("\x1B@" + receiptTextForBluetooth(data) + "\n\n\x1DVA\x00");
                       await writer.write(bytes);
                     } finally { writer.releaseLock(); }
-                    alert("Struk dikirim melalui port serial. Jika tidak tercetak, periksa baud rate/protokol printer.");
+                    // Hindari popup setiap transaksi agar alur kasir tetap cepat.
                   };
                   window.__kopilabaActivePrint = window.__kopilabaSerialPrint;
                   alert("Port serial terhubung. Pilih printer Bluetooth SPP/serial, bukan perangkat audio seperti earphone.");
@@ -7108,7 +7108,7 @@ export default function KopiLaba() {
                       const result = await device.transferOut(output.endpointNumber, bytes.slice(offset, offset + chunkSize));
                       if (result.status !== "ok") throw new Error("Transfer USB gagal: " + result.status);
                     }
-                    alert("Data struk telah dikirim melalui USB. Jika kertas tidak keluar, printer mungkin membutuhkan protokol/driver khusus.");
+                    // Hindari popup setiap transaksi agar alur kasir tetap cepat.
                   };
                   window.__kopilabaActivePrint = window.__kopilabaUsbPrint;
                   alert("Printer USB terhubung: " + (device.productName || "Printer USB") + ". Coba Cetak Tes Printer.");
