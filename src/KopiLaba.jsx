@@ -3972,7 +3972,7 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? "#128C4A" : theme.input,
+                      background: periodeFilter === p ? "#128C4A" : (darkMode ? "#0B2116" : "#FFFFFF"),
                       color:
                         periodeFilter === p ? "#FFFFFF" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
@@ -4945,7 +4945,7 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? "#128C4A" : theme.input,
+                      background: periodeFilter === p ? "#128C4A" : (darkMode ? "#0B2116" : "#FFFFFF"),
                       color:
                         periodeFilter === p ? "#FFFFFF" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
