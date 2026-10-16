@@ -313,7 +313,7 @@ const printReceipt = (data, printerSettings = {}) => {
       throw new Error("Fitur cetak tidak tersedia pada browser ini.");
     }
     printWindow.document.open();
-    printWindow.document.write(html.replace(/<script>[\\s\\S]*?<\\/script>/gi, ""));
+    printWindow.document.write(html);
     printWindow.document.close();
     const cleanup = () => setTimeout(() => frame.remove(), 1000);
     printWindow.addEventListener("afterprint", cleanup, { once: true });
