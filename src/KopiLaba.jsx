@@ -2669,8 +2669,8 @@ export default function KopiLaba() {
         textMuted: "#A8BDB0",
         input: "#0B2116",
         inputBorder: "rgba(37, 211, 102, 0.28)",
-        gold: "#25D366",
-        success: "#25D366",
+        gold: "#128C4A",
+        success: "#128C4A",
         danger: "#F87171",
         headerBg: "#0B2418",
         shadow: "0 10px 32px rgba(0,0,0,0.22)",
@@ -2740,7 +2740,7 @@ export default function KopiLaba() {
       borderRadius: 14,
       border: "none",
       background: theme.gold,
-      color: darkMode ? "#fff" : "#1A1208",
+      color: darkMode ? "#fff" : "#18251D",
       fontSize: 15,
       fontWeight: 700,
       cursor: "pointer",
@@ -2752,7 +2752,7 @@ export default function KopiLaba() {
       borderRadius: 10,
       border: "none",
       background: theme.gold,
-      color: darkMode ? "#fff" : "#1A1208",
+      color: darkMode ? "#fff" : "#18251D",
       fontSize: 13,
       fontWeight: 600,
       cursor: "pointer",
@@ -3000,7 +3000,7 @@ export default function KopiLaba() {
           <button style={s.btn} onClick={handleLogin} disabled={loading}>
             {loading ? "Masuk..." : "Masuk"}
           </button>
-          <button type="button" className="kl-google-button" style={{ ...s.btn, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12, color: darkMode ? "#fff" : "#1A1208" }} onClick={startGoogleAuth} disabled={loading}>
+          <button type="button" className="kl-google-button" style={{ ...s.btn, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12, color: darkMode ? "#fff" : "#18251D" }} onClick={startGoogleAuth} disabled={loading}>
             <svg style={{ width: 20, height: 20, minWidth: 20, flex: "0 0 20px", display: "block" }} viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.89 13.72 17.48 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.98 46.98 31.96 46.98 24.55Z"/><path fill="#FBBC05" d="M9.99 28.59A14.4 14.4 0 0 1 9.2 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.01 10.78l7.98-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.52 0-12.11-4.22-14.01-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
             Lanjutkan dengan Google
           </button>
@@ -3153,7 +3153,7 @@ export default function KopiLaba() {
             value={regForm.alamatKafe}
             onChange={(e) => setRegForm({ ...regForm, alamatKafe: e.target.value })}
           />
-          <button type="button" className="kl-google-button kl-google-register" style={{ ...s.btn, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12, color: darkMode ? "#fff" : "#1A1208" }} onClick={startGoogleAuth} disabled={loading}>
+          <button type="button" className="kl-google-button kl-google-register" style={{ ...s.btn, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12, color: darkMode ? "#fff" : "#18251D" }} onClick={startGoogleAuth} disabled={loading}>
             <svg style={{ width: 20, height: 20, minWidth: 20, flex: "0 0 20px", display: "block" }} viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.89 13.72 17.48 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.98 46.98 31.96 46.98 24.55Z"/><path fill="#FBBC05" d="M9.99 28.59A14.4 14.4 0 0 1 9.2 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.01 10.78l7.98-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.9 2.3-8.18 2.3-6.52 0-12.11-4.22-14.01-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
             Daftar dengan Google
           </button>
@@ -3289,11 +3289,11 @@ export default function KopiLaba() {
         }
         .kl-app-shell[data-theme="dark"] .kl-menu-toggle {
           color: #071C12 !important;
-          background: #25D366 !important;
-          border-color: #25D366 !important;
+          background: #128C4A !important;
+          border-color: #128C4A !important;
         }
         .kl-app-shell .kl-sidebar button[aria-current="page"] { background: #128C4A !important; color: #FFFFFF !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar button[aria-current="page"] { background: #25D366 !important; color: #071C12 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar button[aria-current="page"] { background: #128C4A !important; color: #071C12 !important; }
 
           color: #128C4A !important;
           border-radius: 10px !important;
@@ -3304,7 +3304,7 @@ export default function KopiLaba() {
           justify-content: center !important;
           flex: 0 0 44px !important;
         }
-        .kl-app-shell[data-theme="dark"] .kl-menu-toggle { color: #25D366 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-menu-toggle { color: #128C4A !important; }
         .kl-app-shell .kl-topbar .kl-kasir-toggle {
           background: #128C4A !important;
           border-color: #128C4A !important;
@@ -3312,8 +3312,8 @@ export default function KopiLaba() {
           box-shadow: 0 3px 8px rgba(18,140,74,.20) !important;
         }
         .kl-app-shell[data-theme="dark"] .kl-topbar .kl-kasir-toggle {
-          background: #25D366 !important;
-          border-color: #25D366 !important;
+          background: #128C4A !important;
+          border-color: #128C4A !important;
           color: #071C12 !important;
         }
         .kl-app-shell .kl-topbar .kl-kasir-toggle svg { color: inherit !important; stroke: currentColor !important; }
@@ -3334,7 +3334,7 @@ export default function KopiLaba() {
           border-color: #CDE8D5 !important;
         }
         .kl-app-shell[data-theme="dark"] .kl-brand-mark {
-          color: #25D366 !important;
+          color: #128C4A !important;
           background: #0B2116 !important;
           border-color: rgba(37,211,102,.28) !important;
         }
@@ -3343,22 +3343,58 @@ export default function KopiLaba() {
           .kl-app-shell[data-theme="light"] .kl-topbar { background: rgba(246,248,246,.98) !important; }
           .kl-app-shell[data-theme="dark"] .kl-topbar { background: rgba(11,36,24,.98) !important; }
         }
-      `}
-        /* Samakan seluruh warna navigasi di dalam burger dengan tema hijau KopiLaba. */
+
+        /* Palet tunggal KopiLaba: WhatsApp green, netral terang, dan hijau gelap. */
+        .kl-app-shell, .kl-login-screen, .kl-register-screen {
+          --kl-green: #128C4A;
+          --kl-green-soft: #EAF6EE;
+          --kl-ink: #18251D;
+          --kl-muted: #65756A;
+          --kl-border: #E1E9E3;
+        }
+        .kl-login-screen, .kl-register-screen { color: var(--kl-ink) !important; }
+        .kl-login-screen input, .kl-register-screen input,
+        .kl-app-shell input, .kl-app-shell textarea, .kl-app-shell select {
+          accent-color: var(--kl-green);
+        }
+        .kl-login-screen button:not(.kl-google-button),
+        .kl-register-screen button,
+        .kl-app-shell .kl-menu-toggle,
+        .kl-app-shell .kl-topbar .kl-kasir-toggle {
+          background-color: var(--kl-green) !important;
+          border-color: var(--kl-green) !important;
+        }
+        .kl-login-screen button:not(.kl-google-button),
+        .kl-register-screen button,
+        .kl-app-shell .kl-menu-toggle,
+        .kl-app-shell .kl-topbar .kl-kasir-toggle { color: #FFFFFF !important; }
+        .kl-login-screen .kl-google-button {
+          background: #FFFFFF !important;
+          border: 1px solid var(--kl-border) !important;
+          color: var(--kl-ink) !important;
+        }
+        .kl-app-shell .kl-sidebar { background: #FFFFFF !important; color: var(--kl-ink) !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item { color: #385447 !important; background: transparent !important; }
-        .kl-app-shell .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #128C4A !important; }
-        .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active { background: #128C4A !important; color: #FFFFFF !important; font-weight: 750 !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; font-weight: 750 !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
-        .kl-app-shell .kl-sidebar .kl-sidebar-logout { color: #128C4A !important; }
-        .kl-app-shell .kl-sidebar .kl-sidebar-logout:hover,
-        .kl-app-shell .kl-sidebar .kl-sidebar-item:hover { background: #EAF6EE !important; color: #128C4A !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-logout { color: var(--kl-green) !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item:hover,
+        .kl-app-shell .kl-sidebar .kl-sidebar-logout:hover { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; }
+        .kl-app-shell .kl-brand-mark { color: var(--kl-green) !important; }
+        .kl-app-shell .kl-topbar { border-bottom-color: var(--kl-border) !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar { background: #10291C !important; color: #F5FBF7 !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item { color: #D6E8DC !important; background: transparent !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #25D366 !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: #25D366 !important; color: #071C12 !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #071C12 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #25D366 !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover,
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover { background: #183D2A !important; color: #25D366 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover,
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover { background: #183D2A !important; color: #FFFFFF !important; }
+        .kl-app-shell[data-theme="dark"] .kl-menu-toggle,
+        .kl-app-shell[data-theme="dark"] .kl-topbar .kl-kasir-toggle { background: var(--kl-green) !important; color: #FFFFFF !important; border-color: var(--kl-green) !important; }
+        .kl-app-shell .kl-menu-toggle { width: 44px !important; height: 44px !important; border-radius: 10px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+      `}
 </style>
       {/* HEADER */}
       <div
@@ -3566,7 +3602,7 @@ export default function KopiLaba() {
                 borderRadius: 12,
                 border: "none",
                 background: tab === t.id ? theme.gold : "transparent",
-                color: tab === t.id ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                color: tab === t.id ? "#FFFFFF" : theme.textMuted,
                 fontWeight: tab === t.id ? 700 : 400,
                 fontSize: 15,
                 cursor: "pointer",
@@ -3716,7 +3752,7 @@ export default function KopiLaba() {
               border: "none",
               borderRadius: 8,
               padding: "4px 12px",
-              color: darkMode ? "#fff" : "#1A1208",
+              color: darkMode ? "#fff" : "#18251D",
               fontWeight: 600,
               cursor: "pointer",
               fontSize: 12,
@@ -3915,7 +3951,7 @@ export default function KopiLaba() {
                       border: "none",
                       background: periodeFilter === p ? theme.gold : theme.input,
                       color:
-                        periodeFilter === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                        periodeFilter === p ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
@@ -3939,7 +3975,7 @@ export default function KopiLaba() {
               className="kl-dashboard-hero"
               style={{
                 background: `linear-gradient(135deg,${theme.gold},${
-                  darkMode ? "#8B5A1A" : "#B8860B"
+                  darkMode ? "#128C4A" : "#128C4A"
                 })`,
                 borderRadius: 24,
                 padding: 24,
@@ -4211,7 +4247,7 @@ export default function KopiLaba() {
                     borderRadius: 10,
                     border: "none",
                     background: filterStatus === f ? theme.gold : theme.input,
-                    color: filterStatus === f ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                    color: filterStatus === f ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
                     fontWeight: filterStatus === f ? 700 : 400,
                     cursor: "pointer",
                     fontSize: 12,
@@ -4393,7 +4429,7 @@ export default function KopiLaba() {
                   borderRadius: 20,
                   border: "none",
                   background: selectedKategori === "" ? theme.gold : theme.input,
-                  color: selectedKategori === "" ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                  color: selectedKategori === "" ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
                   fontWeight: selectedKategori === "" ? 700 : 400,
                   cursor: "pointer",
                   fontSize: 13,
@@ -4888,7 +4924,7 @@ export default function KopiLaba() {
                       border: "none",
                       background: periodeFilter === p ? theme.gold : theme.input,
                       color:
-                        periodeFilter === p ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted,
+                        periodeFilter === p ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
@@ -5824,8 +5860,8 @@ export default function KopiLaba() {
                 background:
                   addType === "masuk"
                     ? darkMode
-                      ? "#2D5A2D"
-                      : "#2E7D32"
+                      ? "#128C4A"
+                      : "#128C4A"
                     : darkMode
                     ? "#5A2D2D"
                     : "#C62828",
@@ -6460,13 +6496,13 @@ export default function KopiLaba() {
                             type="button"
                             onClick={() => setPajakCheckoutEnabled(false)}
                             aria-pressed={!pajakCheckoutEnabled}
-                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${!pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: !pajakCheckoutEnabled ? theme.gold : theme.input, color: !pajakCheckoutEnabled ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${!pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: !pajakCheckoutEnabled ? theme.gold : theme.input, color: !pajakCheckoutEnabled ? (darkMode ? "#fff" : "#18251D") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                           >Tanpa pajak</button>
                           <button
                             type="button"
                             onClick={() => setPajakCheckoutEnabled(true)}
                             aria-pressed={pajakCheckoutEnabled}
-                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: pajakCheckoutEnabled ? theme.gold : theme.input, color: pajakCheckoutEnabled ? (darkMode ? "#fff" : "#1A1208") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                            style={{ padding: "7px 10px", borderRadius: 9, border: `1px solid ${pajakCheckoutEnabled ? theme.gold : theme.cardBorder}`, background: pajakCheckoutEnabled ? theme.gold : theme.input, color: pajakCheckoutEnabled ? (darkMode ? "#fff" : "#18251D") : theme.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                           >Pakai pajak</button>
                         </div>
                       </div>
@@ -6508,7 +6544,7 @@ export default function KopiLaba() {
                               pembayaran === p
                                 ? darkMode
                                   ? "#fff"
-                                  : "#1A1208"
+                                  : "#18251D"
                                 : theme.textMuted,
                             fontWeight: pembayaran === p ? 700 : 400,
                             cursor: "pointer",
