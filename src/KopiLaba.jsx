@@ -3343,7 +3343,23 @@ export default function KopiLaba() {
           .kl-app-shell[data-theme="light"] .kl-topbar { background: rgba(246,248,246,.98) !important; }
           .kl-app-shell[data-theme="dark"] .kl-topbar { background: rgba(11,36,24,.98) !important; }
         }
-      `}</style>
+      `}
+        /* Samakan seluruh warna navigasi di dalam burger dengan tema hijau KopiLaba. */
+        .kl-app-shell .kl-sidebar .kl-sidebar-item { color: #385447 !important; background: transparent !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #128C4A !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active { background: #128C4A !important; color: #FFFFFF !important; font-weight: 750 !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-logout { color: #128C4A !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-logout:hover,
+        .kl-app-shell .kl-sidebar .kl-sidebar-item:hover { background: #EAF6EE !important; color: #128C4A !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item { color: #D6E8DC !important; background: transparent !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: #25D366 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: #25D366 !important; color: #071C12 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #071C12 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #25D366 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover,
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover { background: #183D2A !important; color: #25D366 !important; }
+</style>
       {/* HEADER */}
       <div
         className="kl-topbar"
@@ -3537,6 +3553,7 @@ export default function KopiLaba() {
           {tabs.map((t) => (
             <button
               key={t.id}
+              className={`kl-sidebar-item ${tab === t.id ? "is-active" : ""}`}
               onClick={() => {
                 setTab(t.id);
                 setSidebarOpen(false);
@@ -3570,6 +3587,7 @@ export default function KopiLaba() {
           }}
         >
           <button
+            className="kl-sidebar-logout"
             onClick={() => {
               localStorage.removeItem("kopilaba_session");
               setUser(null);
