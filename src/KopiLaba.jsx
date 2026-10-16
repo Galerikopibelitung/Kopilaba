@@ -481,7 +481,7 @@ export default function KopiLaba() {
     document.body.style.margin = "0";
     document.body.style.padding = "0";
     document.body.style.overflowX = "hidden";
-    document.body.style.background = darkMode ? "#0F0A06" : "#F8F4F0";
+    document.body.style.background = darkMode ? "#071C12" : "#F6F8F6";
     return () => {
       document.body.style.margin = "";
       document.body.style.padding = "";
@@ -2662,33 +2662,33 @@ export default function KopiLaba() {
   // ============================================================
   const theme = darkMode
     ? {
-        bg: "#062e18",
-        card: "rgba(8, 48, 27, 0.96)",
-        cardBorder: "rgba(37, 211, 102, 0.22)",
-        text: "#F4FFF7",
-        textMuted: "#A8D9B7",
-        input: "rgba(5, 38, 20, 0.84)",
-        inputBorder: "rgba(37, 211, 102, 0.30)",
+        bg: "#071C12",
+        card: "#10291C",
+        cardBorder: "rgba(37, 211, 102, 0.20)",
+        text: "#F5FBF7",
+        textMuted: "#A8BDB0",
+        input: "#0B2116",
+        inputBorder: "rgba(37, 211, 102, 0.28)",
         gold: "#25D366",
         success: "#25D366",
-        danger: "#EF8080",
-        headerBg: "rgba(6, 46, 24, 0.96)",
-        shadow: "0 10px 36px rgba(0,0,0,0.28)",
+        danger: "#F87171",
+        headerBg: "#0B2418",
+        shadow: "0 10px 32px rgba(0,0,0,0.22)",
         blur: "blur(20px)",
       }
     : {
-        bg: "#F0FFF4",
-        card: "rgba(255, 255, 255, 0.96)",
-        cardBorder: "rgba(37, 211, 102, 0.20)",
-        text: "#123B22",
-        textMuted: "#527A60",
-        input: "rgba(255,255,255,0.96)",
-        inputBorder: "rgba(37, 211, 102, 0.24)",
-        gold: "#25D366",
+        bg: "#F6F8F6",
+        card: "#FFFFFF",
+        cardBorder: "#E1E9E3",
+        text: "#18251D",
+        textMuted: "#65756A",
+        input: "#FFFFFF",
+        inputBorder: "#D6E2D9",
+        gold: "#128C4A",
         success: "#128C4A",
         danger: "#C62828",
-        headerBg: "rgba(240, 255, 244, 0.97)",
-        shadow: "0 8px 30px rgba(18, 140, 74, 0.09)",
+        headerBg: "rgba(255, 255, 255, 0.97)",
+        shadow: "0 6px 24px rgba(19, 54, 32, 0.07)",
         blur: "blur(20px)",
       };
 
@@ -2890,7 +2890,7 @@ export default function KopiLaba() {
           minHeight: "100vh",
           padding: "20px",
           margin: 0,
-          background: darkMode ? "#0F0A06" : "#F8F4F0",
+          background: darkMode ? "#071C12" : "#F6F8F6",
           width: "100%",
         }}
       >
@@ -3198,9 +3198,9 @@ export default function KopiLaba() {
           white-space:nowrap !important;
           word-break:keep-all !important;
           overflow:visible !important;
-          background:var(--kl-accent,#dba35b) !important;
+          background:var(--kl-accent,#128C4A) !important;
           color:var(--kl-ink,#24180f) !important;
-          border:1px solid var(--kl-accent,#dba35b) !important;
+          border:1px solid var(--kl-accent,#128C4A) !important;
           box-sizing:border-box !important;
         }
         .kl-topbar .kl-kasir-toggle > span {
@@ -3243,14 +3243,14 @@ export default function KopiLaba() {
         .kl-identity-cafe, .kl-identity-role, .kl-identity-super {
           display:inline-flex; align-items:center; gap:4px; min-width:0;
         }
-        .kl-identity-cafe { color:var(--kl-primary-strong,#4b2a18); max-width:100%; }
+        .kl-identity-cafe { color:var(--kl-primary-strong,#166534); max-width:100%; }
         .kl-identity-cafe-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:min(42vw,280px); }
         .kl-identity-role, .kl-identity-super {
-          color:var(--kl-success,#247a51); font-size:10px; font-weight:750;
+          color:var(--kl-success,#128C4A); font-size:10px; font-weight:750;
           padding:3px 7px; border:1px solid rgba(36,122,81,.18); border-radius:999px;
           background:rgba(36,122,81,.06); white-space:nowrap;
         }
-        .kl-identity-separator { color:var(--kl-muted,#827466); }
+        .kl-identity-separator { color:var(--kl-muted,#65756A); }
         .kl-topbar .kl-brand-lockup { align-items:center; }
         @media(max-width:560px) {
           .kl-topbar { padding:10px 12px !important; min-height:64px !important; }
