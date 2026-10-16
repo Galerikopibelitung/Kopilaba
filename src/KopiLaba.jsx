@@ -6889,7 +6889,7 @@ export default function KopiLaba() {
                 <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
                 <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
               </ol>
-              <button style={{ ...s.btn, width: "100%", background: "#16803D", color: "#fff" }} onClick={() => printReceipt({
+              <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
                 alamatKafe: kafe?.alamat || "",
                 teleponKafe: kafe?.telepon || "",
@@ -6901,8 +6901,11 @@ export default function KopiLaba() {
                 subtotal: 1000, pajak: 0, pajakPersen: 0, total: 1000, bayar: 1000,
                 kembalian: 0, metode: "Tes", status: "tes"
               }, printerSettings)}>
-                🖨️ Cetak Tes / Periksa Printer
+                🔌 Hubungkan / Pilih Printer
               </button>
+              <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
+                Tombol ini membuka dialog cetak untuk memilih printer dan mencoba cetak struk tes. Untuk pemasangan Bluetooth/USB pertama kali, hubungkan printer dahulu lewat pengaturan Android/Windows. Setelah dipilih, simpan printer sebagai default jika sistem mendukungnya.
+              </div>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
               </div>
