@@ -6907,50 +6907,25 @@ export default function KopiLaba() {
               </div>
             </div>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>📱 Koneksi untuk Tablet</div>
-                <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>
-                  Pilih cara pemasangan yang sesuai. Printer Bluetooth thermal yang memakai Bluetooth klasik (SPP) biasanya harus dipasangkan lewat Pengaturan Bluetooth Android; tidak semua printer bisa ditemukan melalui koneksi Bluetooth dari browser.
-                </div>
-                <div style={{ fontWeight: 700, color: theme.text, marginBottom: 6 }}>1. Printer Bluetooth Thermal</div>
-                <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.65, paddingLeft: 20, margin: "0 0 10px" }}>
-                  <li>Nyalakan printer dan isi kertas thermal.</li>
-                  <li>Buka Pengaturan tablet → Bluetooth, aktifkan Bluetooth, lalu pilih nama printer untuk memasangkan.</li>
-                  <li>Kembali ke KopiLaba dan tekan <b>Cetak Tes Printer</b>. Pada dialog cetak, pilih layanan/printer yang tersedia di tablet.</li>
-                </ol>
-                <button style={{ ...s.btn, width: "100%", background: "#16803D", color: "#fff" }} onClick={async () => {
-                  if (!("bluetooth" in navigator) || !navigator.bluetooth?.requestDevice) {
-                    alert("Browser tablet ini tidak mendukung pemilihan Bluetooth dari website. Pasangkan printer melalui Pengaturan → Bluetooth di tablet, lalu kembali ke KopiLaba untuk mencoba cetak.");
-                    return;
-                  }
-                  try {
-                    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-                    alert("Perangkat terdeteksi: " + (device.name || "Bluetooth tanpa nama") + ". Ini baru pemilihan perangkat BLE, belum menjamin printer dapat mencetak. Untuk printer thermal Bluetooth klasik/SPP, pasangkan melalui Pengaturan Bluetooth tablet dan gunakan layanan cetak yang kompatibel.");
-                  } catch (err) {
-                    if (err?.name !== "NotFoundError") alert("Bluetooth tidak dapat dipilih. Coba pasangkan printer dari Pengaturan Bluetooth tablet. " + (err?.message || ""));
-                  }
-                }}>🔵 Cari Perangkat Bluetooth (BLE)</button>
-                <div style={{ borderTop: "1px solid " + theme.cardBorder, margin: "14px 0", paddingTop: 12 }}>
-                  <div style={{ fontWeight: 700, color: theme.text, marginBottom: 6 }}>2. Printer USB</div>
-                  <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.65, paddingLeft: 20, margin: "0 0 10px" }}>
-                    <li>Sambungkan printer ke tablet memakai kabel/adapter OTG yang sesuai.</li>
-                    <li>Pastikan Android dan aplikasi/layanan cetak mendukung printer tersebut.</li>
-                    <li>Gunakan <b>Cetak Tes Printer</b> untuk membuka pilihan cetak yang tersedia.</li>
+                <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>📱 Panduan Hubungkan Printer di Tablet</div>
+                <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.7 }}>
+                  <b style={{ color: theme.text }}>Bluetooth thermal</b>
+                  <ol style={{ paddingLeft: 20, margin: "4px 0 12px" }}>
+                    <li>Nyalakan printer dan aktifkan Bluetooth tablet.</li>
+                    <li>Buka Pengaturan Android → Bluetooth, pilih nama printer, lalu lakukan pemasangan (pairing).</li>
+                    <li>Kembali ke sini dan tekan <b>Cetak Tes Printer</b> di bawah. Di dialog cetak, pilih layanan/printer yang tersedia.</li>
                   </ol>
-                  <button style={{ ...s.btn, width: "100%", background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={async () => {
-                    if (!("usb" in navigator) || !navigator.usb?.requestDevice) {
-                      alert("Browser tablet ini tidak mendukung pemilihan USB dari website. Sambungkan printer dengan adapter OTG, lalu gunakan layanan/aplikasi cetak Android yang cocok dan coba Cetak Tes Printer.");
-                      return;
-                    }
-                    try {
-                      const device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
-                      alert("Perangkat USB dipilih: " + (device.productName || "Printer USB") + ". Pemilihan ini belum menjamin kompatibilitas cetak. Dukungan cetak langsung bergantung pada protokol printer dan browser; coba Cetak Tes Printer atau gunakan layanan cetak Android.");
-                    } catch (err) {
-                      if (err?.name !== "NotFoundError") alert("Printer USB tidak dapat dipilih. Periksa kabel OTG, izin browser, dan dukungan printer. " + (err?.message || ""));
-                    }
-                  }}>🔌 Cari Printer USB</button>
+                  <b style={{ color: theme.text }}>USB / OTG</b>
+                  <ol style={{ paddingLeft: 20, margin: "4px 0 12px" }}>
+                    <li>Sambungkan printer ke tablet dengan kabel dan adaptor OTG yang sesuai.</li>
+                    <li>Pasang/aktifkan layanan cetak Android yang mendukung model printer tersebut.</li>
+                    <li>Tekan <b>Cetak Tes Printer</b> lalu pilih printer pada dialog cetak.</li>
+                  </ol>
+                  <b style={{ color: theme.text }}>Wi-Fi / LAN</b><br />
+                  Hubungkan tablet dan printer ke jaringan yang sama, lalu tambahkan printer melalui layanan cetak perangkat.
                 </div>
-                <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.6 }}>
-                  <b style={{ color: theme.text }}>Catatan kompatibilitas:</b> tombol pencarian hanya tersedia pada browser yang mendukung API terkait. Banyak printer thermal Bluetooth menggunakan Bluetooth klasik, bukan BLE. KopiLaba tidak akan menampilkan status “terhubung” jika perangkat hanya terpilih; pencetakan langsung perlu dukungan protokol printer yang sesuai.
+                <div style={{ background: theme.card, border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 10, fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
+                  <b style={{ color: theme.text }}>Penting:</b> Website tidak dapat memasangkan Bluetooth klasik/SPP atau menjamin dukungan USB secara langsung dari semua browser. Tombol tes membuka dialog cetak sistem/browser; koneksi dan hasil cetak harus dipastikan dengan memilih printer yang sudah dipasang di tablet. Jika printer tidak muncul, pasang layanan cetak yang kompatibel dengan merek/model printer.
                 </div>
               </div>
             <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas</label>
