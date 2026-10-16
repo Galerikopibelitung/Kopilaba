@@ -6922,21 +6922,15 @@ export default function KopiLaba() {
         <div className="kl-printer-settings" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
           <div style={s.card}>
             <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
-            <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-              Pilih metode koneksi di bawah. Bluetooth langsung hanya mendukung perangkat BLE yang menyediakan layanan data; earphone Bluetooth biasa umumnya bukan perangkat GATT untuk cetak dan tidak membuktikan pemindaian printer gagal. Printer Bluetooth klasik (SPP) memerlukan penghubung Android/native.
+            <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.5, marginTop: 0 }}>
+              Hubungkan printer, lalu pilih metode koneksi yang sesuai. Bluetooth klasik (SPP) biasanya memerlukan layanan cetak perangkat atau aplikasi penghubung.
             </p>
             <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
-              <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
-                Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
+              <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.5, margin: "0 0 10px" }}>
+                1. Nyalakan dan sambungkan printer. 2. Pilih Bluetooth atau USB. 3. Tekan <b>Cetak Tes Printer</b>.
               </p>
-              <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: "0 0 12px" }}>
-                <li><b>Bluetooth:</b> aktifkan printer dan pilih tombol pencarian Bluetooth di bawah. Pemindaian web hanya menemukan perangkat BLE yang kompatibel; memasangkan printer di menu Bluetooth Android saja belum memberi website akses ke printer.</li>
-                <li><b>USB:</b> sambungkan printer lewat kabel/OTG, lalu izinkan Chrome mengakses perangkat yang dipilih.</li>
-                <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
-                <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
-              </ol>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
                   alert("Browser ini belum mendukung koneksi printer Bluetooth langsung. Coba Google Chrome terbaru di Android. Printer Bluetooth klasik (SPP) umumnya perlu aplikasi Android penghubung; website hanya bisa mencoba printer Bluetooth BLE yang kompatibel.");
@@ -7042,7 +7036,7 @@ export default function KopiLaba() {
                   alert("Koneksi Bluetooth klasik/serial gagal: " + (err?.message || err) + ". Fitur ini tidak tersedia di Chrome Android; dukungannya terutama di Chrome desktop.");
                 }
               }}>
-                🟦 Bluetooth Klasik / SPP (perangkat yang mendukung)
+                🟦 Bluetooth Klasik / SPP (Chrome desktop)
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.usb || !navigator.usb.requestDevice) {
@@ -7114,21 +7108,13 @@ export default function KopiLaba() {
                 🧾 Cetak Tes Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Koneksi langsung Bluetooth mencari perangkat BLE dengan beberapa layanan printer umum; earphone biasa bukan alat uji printer dan sering tidak muncul. Jalur USB sekarang menampilkan pemilih perangkat USB yang lebih luas, bukan hanya perangkat yang melaporkan kelas printer standar. Setelah koneksi berhasil, gunakan Cetak Tes. Printer Bluetooth klasik (SPP) atau USB yang tidak mendukung ESC/POS/antarmuka data browser tetap memerlukan bridge/aplikasi native.
-              </div>
-              <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
+                Koneksi langsung hanya berfungsi pada printer yang kompatibel. Jika tidak terdeteksi, gunakan layanan cetak perangkat.
               </div>
             </div>
             </div>
-              <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 13, color: theme.textMuted, lineHeight: 1.65 }}>
-                <b style={{ color: theme.text }}>Alur yang disarankan</b>
-                <ol style={{ paddingLeft: 20, margin: "6px 0 8px" }}>
-                  <li>Pasangkan printer Bluetooth atau sambungkan USB melalui pengaturan/layanan cetak perangkat satu kali.</li>
-                  <li>Jadikan printer tersebut printer pilihan/default di layanan cetak perangkat.</li>
-                  <li>Kembali ke KopiLaba dan tekan <b>Cetak Tes Printer</b> untuk memastikan hasilnya.</li>
-                </ol>
-                KopiLaba memakai tata letak otomatis agar ukuran kertas mengikuti konfigurasi printer. Koneksi langsung hanya bekerja untuk model yang protokolnya kompatibel. Untuk printer Bluetooth klasik (SPP), biasanya diperlukan aplikasi/bridge Android native. Browser mungkin tetap menampilkan dialog untuk cetak standar.
+              <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 10, margin: "12px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
+                <b style={{ color: theme.text }}>Catatan</b><br />
+                Ukuran kertas otomatis menjadi pilihan awal. Dialog cetak bergantung pada browser dan sistem perangkat.
               </div>
             <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas (opsional)</label>
             <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
