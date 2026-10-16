@@ -2745,7 +2745,7 @@ export default function KopiLaba() {
       fontWeight: 700,
       cursor: "pointer",
       transition: "all 0.3s ease",
-      boxShadow: "0 4px 12px rgba(200,130,42,0.3)",
+      boxShadow: "0 4px 12px rgba(18,140,74,0.22)",
     },
     btnSm: {
       padding: "8px 16px",
@@ -2922,8 +2922,8 @@ export default function KopiLaba() {
               style={{
                 color: theme.gold,
                 textShadow: darkMode
-                  ? "0 0 40px rgba(200,130,42,0.3)"
-                  : "0 0 40px rgba(184,134,11,0.15)",
+                  ? "0 0 40px rgba(18,140,74,0.3)"
+                  : "0 0 40px rgba(18,140,74,0.15)",
               }}
             >
               KOPI
@@ -2934,7 +2934,7 @@ export default function KopiLaba() {
             style={{
               width: 80,
               height: 3,
-              background: `linear-gradient(90deg, transparent, ${theme.gold}, transparent)`,
+              background: `linear-gradient(90deg, transparent, #128C4A, transparent)`,
               margin: "8px auto 16px",
               borderRadius: 2,
             }}
@@ -3022,9 +3022,9 @@ export default function KopiLaba() {
               style={{
                 padding: "6px 20px",
                 borderRadius: 20,
-                border: darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
+                border: darkMode ? "2px solid #128C4A" : `1px solid ${theme.textMuted}`,
                 background: "transparent",
-                color: darkMode ? theme.gold : theme.textMuted,
+                color: darkMode ? "#128C4A" : theme.textMuted,
                 cursor: "pointer",
                 fontSize: 13,
               }}
@@ -3036,9 +3036,9 @@ export default function KopiLaba() {
               style={{
                 padding: "6px 20px",
                 borderRadius: 20,
-                border: !darkMode ? `2px solid ${theme.gold}` : `1px solid ${theme.textMuted}`,
+                border: !darkMode ? "2px solid #128C4A" : `1px solid ${theme.textMuted}`,
                 background: "transparent",
-                color: !darkMode ? theme.gold : theme.textMuted,
+                color: !darkMode ? "#128C4A" : theme.textMuted,
                 cursor: "pointer",
                 fontSize: 13,
               }}
@@ -3972,9 +3972,9 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? theme.gold : theme.input,
+                      background: periodeFilter === p ? "#128C4A" : theme.input,
                       color:
-                        periodeFilter === p ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
+                        periodeFilter === p ? "#FFFFFF" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
