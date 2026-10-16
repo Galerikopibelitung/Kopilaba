@@ -3226,7 +3226,7 @@ export default function KopiLaba() {
           }
         }
       `}</style>
-      <style>{`\n        /* Performance: avoid expensive backdrop filters on small touch devices. */\n        @media (max-width:640px) {\n          .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {\n            backdrop-filter:none !important;\n            -webkit-backdrop-filter:none !important;\n          }\n          .kl-topbar { background:rgba(255,253,250,.98) !important; }\n          .kl-bottom-nav { background:rgba(255,255,255,.98) !important; }\n        }\n      `}</style>
+      <style>{`\n        /* Performance: avoid expensive backdrop filters on small touch devices. */\n        @media (max-width:640px) {\n          .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {\n            backdrop-filter:none !important;\n            -webkit-backdrop-filter:none !important;\n          }\n          .kl-app-shell[data-theme="light"] .kl-topbar { background:rgba(246,248,246,.98) !important; } .kl-app-shell[data-theme="dark"] .kl-topbar { background:rgba(11,36,24,.98) !important; color:#F5FBF7 !important; }\n          .kl-app-shell[data-theme="light"] .kl-bottom-nav { background:rgba(255,255,255,.98) !important; } .kl-app-shell[data-theme="dark"] .kl-bottom-nav { background:rgba(11,36,24,.98) !important; color:#F5FBF7 !important; border-top-color:rgba(37,211,102,.20) !important; }\n        }\n      `}</style>
       <style>{`
         /* Lightweight header: avoid costly blur and animated layout. */
         .kl-topbar, .kl-bottom-nav, .kl-kasir-overlay, .kl-login-screen > div {
@@ -4003,7 +4003,7 @@ export default function KopiLaba() {
                     border: "none",
                     fontSize: 18,
                     cursor: "pointer",
-                    color: "#0B5D32",
+                    color: darkMode ? "#F5FBF7" : "#0B5D32",
                     transition: "all 0.3s",
                   }}
                 >
@@ -4015,7 +4015,7 @@ export default function KopiLaba() {
                   margin: "0 0 16px",
                   fontSize: 30,
                   fontWeight: 800,
-                  color: "#0B5D32",
+                  color: darkMode ? "#F5FBF7" : "#0B5D32",
                   filter: showLaba ? "none" : "blur(8px)",
                   transition: "filter 0.3s",
                 }}
