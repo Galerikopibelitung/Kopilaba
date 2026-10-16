@@ -2544,7 +2544,10 @@ export default function KopiLaba() {
       setBayarAmount("");
       setSplitTunaiAmount("");
       setPembayaran("tunai");
-      setSuccess("Transaksi berhasil!");
+      setSuccess("Transaksi berhasil! Struk sedang dicetak...");
+      // Cetak otomatis setiap checkout yang berhasil disimpan, tanpa membuka halaman struk baru.
+      // Jika printer langsung sudah terhubung, gunakan jalur tersebut; jika tidak, gunakan dialog cetak sistem.
+      printReceipt(receipt, printerSettings);
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
     } catch (err) {
