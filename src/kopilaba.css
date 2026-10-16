@@ -3115,3 +3115,91 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   #root > div[data-theme="dark"] .kl-content button { max-width:100%; }
   #root > div[data-theme="dark"] .kl-backup-grid { grid-template-columns:minmax(0,1fr); }
 }
+
+
+/* FINAL DARK-MODE READABILITY + ICON COLOR REFINEMENT */
+#root > div[data-theme="dark"] .kl-content,
+#root > div[data-theme="dark"] .kl-content *:not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon):not(ellipse) {
+  color:#e8fffb !important;
+  -webkit-text-fill-color:#e8fffb !important;
+}
+/* Keep semantic colored text readable on dark surfaces */
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(0, 0, 0)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: black"] {
+  color:#e8fffb !important;
+  -webkit-text-fill-color:#e8fffb !important;
+}
+#root > div[data-theme="dark"] .kl-content button,
+#root > div[data-theme="dark"] .kl-content button *,
+#root > div[data-theme="dark"] .kl-content [role="button"],
+#root > div[data-theme="dark"] .kl-content [role="button"] * {
+  color:#062b27 !important;
+  -webkit-text-fill-color:#062b27 !important;
+}
+#root > div[data-theme="dark"] .kl-content .kl-secondary-action,
+#root > div[data-theme="dark"] .kl-content .kl-secondary-action * {
+  color:#baf7ed !important;
+  -webkit-text-fill-color:#baf7ed !important;
+}
+/* SVG icons use context-aware color; do not force every logo to black */
+#root svg,
+#root svg * {
+  stroke:currentColor !important;
+}
+#root svg path:not([fill="none"]),
+#root svg circle:not([fill="none"]),
+#root svg rect:not([fill="none"]),
+#root svg polygon:not([fill="none"]),
+#root svg ellipse:not([fill="none"]) {
+  fill:currentColor !important;
+}
+#root svg path[fill="none"],
+#root svg circle[fill="none"],
+#root svg rect[fill="none"],
+#root svg polygon[fill="none"],
+#root svg ellipse[fill="none"] {
+  fill:none !important;
+}
+#root .kl-topbar svg,
+#root .kl-sidebar svg {
+  color:#0f8f83 !important;
+  stroke:#0f8f83 !important;
+}
+#root .kl-content button svg,
+#root .kl-content [role="button"] svg {
+  color:#062b27 !important;
+  stroke:#062b27 !important;
+}
+#root > div[data-theme="dark"] .kl-content svg,
+#root > div[data-theme="dark"] .kl-sidebar svg,
+#root > div[data-theme="dark"] .kl-topbar svg {
+  color:#75dfd1 !important;
+  stroke:#75dfd1 !important;
+}
+#root > div[data-theme="dark"] .kl-content button svg,
+#root > div[data-theme="dark"] .kl-content button *,
+#root > div[data-theme="dark"] .kl-content [role="button"] svg,
+#root > div[data-theme="dark"] .kl-content [role="button"] * {
+  color:#062b27 !important;
+  stroke:#062b27 !important;
+}
+#root > div[data-theme="dark"] .kl-content .kl-secondary-action svg,
+#root > div[data-theme="dark"] .kl-content .kl-secondary-action * {
+  color:#baf7ed !important;
+  stroke:#baf7ed !important;
+}
+/* Summary cards: override legacy inline black text and light surfaces */
+#root > div[data-theme="dark"] .kl-content [style*="background: white"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: white"],
+#root > div[data-theme="dark"] .kl-content [style*="background: #fff"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: #fff"] {
+  background:#123b36 !important;
+  border-color:#28564f !important;
+}
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(17, 24, 39)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(31, 41, 55)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(55, 65, 81)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(75, 85, 99)"] {
+  color:#e8fffb !important;
+  -webkit-text-fill-color:#e8fffb !important;
+}
