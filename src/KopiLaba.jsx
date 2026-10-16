@@ -6878,16 +6878,6 @@ export default function KopiLaba() {
               Atur format cetak struk transaksi dan antrean di perangkat ini. Pengaturan tersimpan otomatis di browser/perangkat ini.
             </p>
             <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
-              <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
-                Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
-              </p>
-              <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: "0 0 12px" }}>
-                <li><b>Bluetooth:</b> aktifkan printer, lalu pasangkan melalui Pengaturan Bluetooth HP/komputer.</li>
-                <li><b>USB:</b> sambungkan printer dan pastikan driver/aplikasi cetaknya sudah terpasang.</li>
-                <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
-                <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
-              </ol>
               <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔎 Pencarian Printer</div>
                 <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
@@ -6918,6 +6908,16 @@ export default function KopiLaba() {
                   }
                 }}>🔌 Cari Printer USB</button>
               </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔌 Hubungkan ke Printer</div>
+              <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px" }}>
+                Sambungkan printer ke HP/komputer terlebih dahulu. KopiLaba menggunakan dialog cetak perangkat untuk memilih printer yang tersedia; browser tidak bisa membaca status koneksi printer secara langsung.
+              </p>
+              <ol style={{ color: theme.text, fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: "0 0 12px" }}>
+                <li><b>Bluetooth:</b> aktifkan printer, lalu pasangkan melalui Pengaturan Bluetooth HP/komputer.</li>
+                <li><b>USB:</b> sambungkan printer dan pastikan driver/aplikasi cetaknya sudah terpasang.</li>
+                <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
+                <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
+              </ol>
               <button style={{ ...s.btn, width: "100%", background: "#16803D", color: "#fff" }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
                 alamatKafe: kafe?.alamat || "",
