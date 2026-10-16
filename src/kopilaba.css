@@ -2742,3 +2742,84 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 .kl-content table thead th {background:var(--kl-ref-bg-2)!important;color:var(--kl-muted)!important}
 .kl-content table tbody td {color:var(--kl-ink)!important;border-bottom-color:var(--kl-border)!important}
 .kl-content table tbody tr:hover {background:var(--kl-ref-bg-2)!important}
+
+
+/* FINAL BUTTON COLOR AUDIT — normalize remaining legacy button colors */
+#root button,
+#root [role="button"],
+#root input[type="button"],
+#root input[type="submit"],
+#root input[type="reset"] {
+  accent-color:#0f8f83 !important;
+  border-color:#0f8f83 !important;
+}
+#root .kl-content button,
+#root .kl-content [role="button"],
+#root .kl-content input[type="button"],
+#root .kl-content input[type="submit"],
+#root .kl-content input[type="reset"] {
+  background-color:#0f8f83 !important;
+  border-color:#0f8f83 !important;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  box-shadow:none !important;
+}
+#root > div[data-theme="dark"] .kl-content button,
+#root > div[data-theme="dark"] .kl-content [role="button"],
+#root > div[data-theme="dark"] .kl-content input[type="button"],
+#root > div[data-theme="dark"] .kl-content input[type="submit"],
+#root > div[data-theme="dark"] .kl-content input[type="reset"] {
+  background-color:#40c4b2 !important;
+  border-color:#40c4b2 !important;
+  color:#092d2a !important;
+  -webkit-text-fill-color:#092d2a !important;
+}
+#root .kl-content button:hover,
+#root .kl-content [role="button"]:hover,
+#root .kl-content input[type="button"]:hover,
+#root .kl-content input[type="submit"]:hover,
+#root .kl-content input[type="reset"]:hover {
+  background-color:#086b63 !important;
+  border-color:#086b63 !important;
+  filter:none !important;
+}
+#root > div[data-theme="dark"] .kl-content button:hover,
+#root > div[data-theme="dark"] .kl-content [role="button"]:hover,
+#root > div[data-theme="dark"] .kl-content input[type="button"]:hover,
+#root > div[data-theme="dark"] .kl-content input[type="submit"]:hover,
+#root > div[data-theme="dark"] .kl-content input[type="reset"]:hover {
+  background-color:#72ddcf !important;
+  border-color:#72ddcf !important;
+}
+#root .kl-sidebar button,
+#root .kl-topbar button {
+  background-color:transparent !important;
+  border-color:transparent !important;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+}
+#root > div[data-theme="dark"] .kl-topbar button {
+  color:#e5f7f3 !important;
+  -webkit-text-fill-color:#e5f7f3 !important;
+}
+#root .kl-content .kl-secondary-action {
+  background-color:var(--kl-ref-bg-2) !important;
+  border:1px solid var(--kl-primary) !important;
+  color:var(--kl-primary) !important;
+  -webkit-text-fill-color:var(--kl-primary) !important;
+}
+#root .kl-content button:disabled,
+#root .kl-content [role="button"][aria-disabled="true"] {
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+}
+#root input[type="checkbox"],
+#root input[type="radio"],
+#root input[type="range"] {
+  accent-color:#0f8f83 !important;
+}
+#root > div[data-theme="dark"] input[type="checkbox"],
+#root > div[data-theme="dark"] input[type="radio"],
+#root > div[data-theme="dark"] input[type="range"] {
+  accent-color:#40c4b2 !important;
+}
