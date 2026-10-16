@@ -2823,3 +2823,65 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
 #root > div[data-theme="dark"] input[type="range"] {
   accent-color:#40c4b2 !important;
 }
+
+
+/* ACCESSIBILITY FIX: make all readable text black while keeping teal accents */
+#root,
+#root *,
+#root *::before,
+#root *::after {
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
+#root svg text { fill:#000000 !important; }
+#root .kl-sidebar,
+#root .kl-sidebar *,
+#root .kl-topbar,
+#root .kl-topbar *,
+#root .kl-content button,
+#root .kl-content [role="button"],
+#root .kl-content input[type="button"],
+#root .kl-content input[type="submit"],
+#root .kl-content input[type="reset"] {
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
+#root .kl-content input::placeholder,
+#root .kl-content textarea::placeholder {
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+  opacity:1 !important;
+}
+/* Keep form surfaces and cards light enough for black text in either theme */
+#root > div[data-theme="dark"],
+#root > div[data-theme="dark"] .kl-app,
+#root > div[data-theme="dark"] .kl-main,
+#root > div[data-theme="dark"] .kl-content,
+#root > div[data-theme="dark"] .kl-content section,
+#root > div[data-theme="dark"] .kl-content article,
+#root > div[data-theme="dark"] .kl-content [class*="card"],
+#root > div[data-theme="dark"] .kl-content input:not([type="checkbox"]):not([type="radio"]),
+#root > div[data-theme="dark"] .kl-content select,
+#root > div[data-theme="dark"] .kl-content textarea,
+#root > div[data-theme="dark"] .kl-topbar {
+  background-color:#ffffff !important;
+  border-color:#cfe7e2 !important;
+}
+#root .kl-sidebar {
+  background:linear-gradient(180deg,#40c4b2 0%,#0f8f83 100%) !important;
+}
+#root .kl-content button,
+#root .kl-content [role="button"],
+#root .kl-content input[type="button"],
+#root .kl-content input[type="submit"],
+#root .kl-content input[type="reset"] {
+  background-color:#40c4b2 !important;
+  border-color:#0f8f83 !important;
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
+#root .kl-content button:hover,
+#root .kl-content [role="button"]:hover {
+  background-color:#8de5d9 !important;
+  border-color:#0f8f83 !important;
+}
