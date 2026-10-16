@@ -279,11 +279,29 @@ const api = async (endpoint, method = "GET", body = null, token = null) => {
       const errText = await res.text();
       throw new Error(`HTTP ${res.status}: ${errText || res.statusText}`);
     }
-    return await res.json();
+    if (res.status === 204) return [];
+    const responseText = await res.text();
+    if (!responseText) return [];
+    try {
+      return JSON.parse(responseText);
+    } catch (_) {
+      throw new Error("Respons server tidak valid. Muat ulang aplikasi lalu coba lagi.");
+    }
   } catch (error) {
     console.error("API Error:", error);
     throw error;
   }
+};
+
+const getApiErrorMessage = (error, fallback) => {
+  const raw = String(error?.message || "").replace(/^HTTP \d+:\s*/, "").trim();
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    const detail = parsed?.message || parsed?.details || parsed?.hint || parsed?.error_description || parsed?.error;
+    if (detail) return String(detail).slice(0, 220);
+  } catch (_) {}
+  return raw.slice(0, 220);
 };
 
 const getRetentionBrowserId = () => {
@@ -382,6 +400,7 @@ export default function KopiLaba() {
   const [darkMode, setDarkMode] = useState(false);
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const canManageCatalog = profile?.role === "pemilik" || isSuperAdmin;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const sidebarRef = useRef(null);
@@ -1743,7 +1762,7 @@ export default function KopiLaba() {
   // CRUD MENU
   // ============================================================
   const handleTambahMenu = async () => {
-    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+    if (!canManageCatalog) {
       setError("Hanya pemilik atau admin yang bisa menambah menu.");
       return;
     }
@@ -1769,21 +1788,29 @@ export default function KopiLaba() {
       }
 
       const payload = {
-        kafe_id: kafeId,
-        nama: menuForm.nama,
-        harga: parseInt(menuForm.harga),
-        hpp: parseInt(menuForm.hpp),
+        nama: menuForm.nama.trim(),
+        harga: Number.parseInt(menuForm.harga, 10),
+        hpp: Number.parseInt(menuForm.hpp, 10),
         stok: stokValue + qtyValue,
         kategori_id: menuForm.kategori_id || null,
         foto: fotoUrl,
       };
       if (editMenuId) {
-        await api(`/rest/v1/menu?id=eq.${editMenuId}`, "PATCH", payload, token);
-        setSuccess("Menu diupdate!");
+        const menuScope = kafeId ? `&kafe_id=eq.${encodeURIComponent(kafeId)}` : "";
+        const updated = await api(`/rest/v1/menu?id=eq.${encodeURIComponent(editMenuId)}${menuScope}`, "PATCH", payload, token);
+        if (!Array.isArray(updated) || updated.length === 0) {
+          throw new Error("Menu tidak berubah. Periksa hak akses pemilik kafe dan pastikan menu masih ada.");
+        }
+        setSuccess("Menu berhasil diperbarui.");
         setEditMenuId(null);
       } else {
-        await api("/rest/v1/menu", "POST", payload, token);
-        setSuccess("Menu ditambahkan!");
+        if (kafeId) payload.kafe_id = kafeId;
+        else if (profile?.role !== "super_admin") throw new Error("Kafe tidak ditemukan. Muat ulang lalu login kembali.");
+        const created = await api("/rest/v1/menu", "POST", payload, token);
+        if (!Array.isArray(created) || created.length === 0) {
+          throw new Error("Menu tidak tersimpan. Periksa hak akses dan data kafe.");
+        }
+        setSuccess("Menu berhasil ditambahkan.");
       }
       setMenuForm({ nama: "", harga: "", hpp: "", stok: "", kategori_id: "", foto: "", qty: "" });
       setMenuFile(null);
@@ -1791,14 +1818,14 @@ export default function KopiLaba() {
       await loadMenu(token, kafeId);
     } catch (err) {
       console.error("Menu error:", err);
-      setError("Gagal menyimpan menu.");
+      setError("Gagal menyimpan menu: " + getApiErrorMessage(err, "Periksa koneksi dan izin akun."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleEditMenu = (m) => {
-    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+    if (!canManageCatalog) {
       setError("Hanya pemilik atau admin yang bisa mengedit menu.");
       return;
     }
@@ -1817,7 +1844,7 @@ export default function KopiLaba() {
   };
 
   const handleHapusMenu = async (id) => {
-    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+    if (!canManageCatalog) {
       setError("Hanya pemilik atau admin yang bisa menghapus menu.");
       return;
     }
@@ -1835,7 +1862,7 @@ export default function KopiLaba() {
   // CRUD KATEGORI
   // ============================================================
   const handleTambahKategori = async () => {
-    if (profile?.role !== "pemilik" && profile?.role !== "super_admin") {
+    if (!canManageCatalog) {
       setError("Hanya pemilik atau admin yang bisa menambah kategori.");
       return;
     }
@@ -1847,24 +1874,30 @@ export default function KopiLaba() {
     setError("");
     try {
       if (editKategoriId) {
-        await api(
-          `/rest/v1/kategori?id=eq.${editKategoriId}`,
+        const updated = await api(
+          `/rest/v1/kategori?id=eq.${encodeURIComponent(editKategoriId)}${(kafe?.id || profile?.kafe_id) ? `&kafe_id=eq.${encodeURIComponent(kafe?.id || profile?.kafe_id)}` : ""}`,
           "PATCH",
-          { nama: kategoriForm.nama },
+          { nama: kategoriForm.nama.trim() },
           token
         );
-        setSuccess("Kategori diupdate!");
+        if (!Array.isArray(updated) || updated.length === 0) {
+          throw new Error("Kategori tidak berubah. Periksa hak akses pemilik kafe dan pastikan kategori masih ada.");
+        }
+        setSuccess("Kategori berhasil diperbarui.");
         setEditKategoriId(null);
       } else {
-        await api("/rest/v1/kategori", "POST", { nama: kategoriForm.nama, kafe_id: kafe?.id || profile?.kafe_id || null }, token);
-        setSuccess("Kategori ditambahkan!");
+        const kafeId = kafe?.id || profile?.kafe_id || null;
+        if (!kafeId && !isSuperAdmin) throw new Error("Kafe tidak ditemukan. Muat ulang lalu login kembali.");
+        const created = await api("/rest/v1/kategori", "POST", { nama: kategoriForm.nama.trim(), kafe_id: kafeId }, token);
+        if (!Array.isArray(created) || created.length === 0) throw new Error("Kategori tidak tersimpan. Periksa hak akses dan data kafe.");
+        setSuccess("Kategori berhasil ditambahkan.");
       }
       setKategoriForm({ nama: "" });
       setShowAddKategori(false);
       await loadKategori(token, kafe?.id || profile?.kafe_id);
     } catch (err) {
       console.error("Kategori error:", err);
-      setError("Gagal menyimpan kategori.");
+      setError("Gagal menyimpan kategori: " + getApiErrorMessage(err, "Periksa koneksi dan izin akun."));
     } finally {
       setLoading(false);
     }
