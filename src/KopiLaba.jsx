@@ -3987,9 +3987,7 @@ export default function KopiLaba() {
             <div
               className="kl-dashboard-hero"
               style={{
-                background: `linear-gradient(135deg,${theme.gold},${
-                  darkMode ? "#128C4A" : "#128C4A"
-                })`,
+                background: "#128C4A",
                 borderRadius: 24,
                 padding: 24,
                 marginBottom: 14,
@@ -4084,11 +4082,8 @@ export default function KopiLaba() {
                   setAddForm({ item: "", qty: "1", total: "", kategori_id: "", menu_id: "" });
                 }}
                 style={{
-                  background: darkMode ? "rgba(26,42,26,0.5)" : "rgba(232,245,233,0.5)",
-                  backdropFilter: "blur(10px)",
-                  border: `1px solid ${
-                    darkMode ? "rgba(42,74,42,0.3)" : "rgba(165,214,167,0.3)"
-                  }`,
+                  background: darkMode ? "#10291C" : "#FFFFFF",
+                  border: `1px solid ${darkMode ? "#284B36" : "#E1E9E3"}`,
                   borderRadius: 14,
                   padding: 16,
                   cursor: "pointer",
@@ -4096,7 +4091,7 @@ export default function KopiLaba() {
                 }}
               >
                 <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: theme.success }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#128C4A" }}>
                   Catat Pemasukan
                 </p>
               </button>
