@@ -253,10 +253,10 @@ const receiptTextForBluetooth = (data) => {
     "Kasir: " + (data.kasir || "-"),
     "--------------------------------",
     ...(data.items || []).map((it) => {
-      const name = String(it.nama || it.name || "Item").replace(/[^\\x20-\\x7E]/g, "?");
+      const name = String(it.nama || it.name || "Item").replace(/[^\x20-\x7E]/g, "?");
       const qty = Number(it.qty || 1);
       const price = Number(it.total ?? (Number(it.harga || 0) * qty));
-      return [name, "  " + qty + " x Rp" + Number(it.harga || 0).toLocaleString("id-ID"), "  = Rp" + price.toLocaleString("id-ID")].join("\\n");
+      return [name, "  " + qty + " x Rp" + Number(it.harga || 0).toLocaleString("id-ID"), "  = Rp" + price.toLocaleString("id-ID")].join("\n");
     }),
     "--------------------------------",
     "Subtotal: Rp" + Number(data.subtotal || 0).toLocaleString("id-ID"),
@@ -271,7 +271,7 @@ const receiptTextForBluetooth = (data) => {
     "",
     ""
   ];
-  return lines.join("\\n").replace(/[^\\x09\\x0A\\x0D\\x20-\\x7E]/g, "?") + "\\n";
+  return lines.join("\n").replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?") + "\n";
 };
 
 const printReceipt = (data, printerSettings = {}) => {
@@ -6964,7 +6964,7 @@ export default function KopiLaba() {
                   window.__kopilabaBleDevice = device;
                   window.__kopilabaBlePrint = async (data) => {
                     if (!device.gatt.connected) await device.gatt.connect();
-                    const bytes = new TextEncoder().encode("\\x1B@"+receiptTextForBluetooth(data)+"\\n\\n\\x1DVA\\x00");
+                    const bytes = new TextEncoder().encode("\x1B@"+receiptTextForBluetooth(data)+"\n\n\x1DVA\x00");
                     const chunkSize = 180;
                     for (let i = 0; i < bytes.length; i += chunkSize) {
                       const part = bytes.slice(i, i + chunkSize);
