@@ -3962,9 +3962,9 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? "#0B5D32" : (darkMode ? "#0B2116" : "#FFFFFF"),
+                      background: periodeFilter === p ? "#EAF6EE" : (darkMode ? "#0B2116" : "#FFFFFF"),
                       color:
-                        periodeFilter === p ? "#FFFFFF" : theme.textMuted,
+                        periodeFilter === p ? "#0B5D32" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
@@ -3987,7 +3987,7 @@ export default function KopiLaba() {
             <div
               className="kl-dashboard-hero"
               style={{
-                background: "#0B5D32",
+                background: "#EAF6EE",
                 borderRadius: 24,
                 padding: 24,
                 marginBottom: 14,
@@ -3995,7 +3995,7 @@ export default function KopiLaba() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Laba Bersih</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#0B5D32" }}>Laba Bersih</p>
                 <button
                   onClick={() => setShowLaba(!showLaba)}
                   style={{
@@ -4003,7 +4003,7 @@ export default function KopiLaba() {
                     border: "none",
                     fontSize: 18,
                     cursor: "pointer",
-                    color: "rgba(255,255,255,0.8)",
+                    color: "#0B5D32",
                     transition: "all 0.3s",
                   }}
                 >
@@ -4015,7 +4015,7 @@ export default function KopiLaba() {
                   margin: "0 0 16px",
                   fontSize: 30,
                   fontWeight: 800,
-                  color: "#fff",
+                  color: "#0B5D32",
                   filter: showLaba ? "none" : "blur(8px)",
                   transition: "filter 0.3s",
                 }}
@@ -4024,14 +4024,14 @@ export default function KopiLaba() {
               </p>
               <div style={{ display: "flex", gap: 16 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Pemasukan</p>
+                  <p style={{ margin: 0, fontSize: 10, color: "#38744F" }}>Pemasukan</p>
                   <p
                     className="kl-summary-money"
                     style={{
                       margin: 0,
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#fff",
+                      color: "#0B5D32",
                       filter: showLaba ? "none" : "blur(6px)",
                       transition: "filter 0.3s",
                     }}
@@ -4041,7 +4041,7 @@ export default function KopiLaba() {
                 </div>
                 
                 <div>
-                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+                  <p style={{ margin: 0, fontSize: 10, color: "#38744F" }}>
                     Pengeluaran
                   </p>
                   <p
@@ -4091,7 +4091,7 @@ export default function KopiLaba() {
                 }}
               >
                 <p style={{ margin: "0 0 4px", fontSize: 20 }}>💰</p>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#0B5D32" }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#38744F" }}>
                   Catat Pemasukan
                 </p>
               </button>
