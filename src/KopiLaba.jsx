@@ -6907,8 +6907,7 @@ export default function KopiLaba() {
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
               </div>
             </div>
-              <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 14, margin: "14px 0", background: theme.input }}>
-                <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 13, color: theme.textMuted, lineHeight: 1.65 }}>
+              <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 13, color: theme.textMuted, lineHeight: 1.65 }}>
                 <b style={{ color: theme.text }}>Alur yang disarankan</b>
                 <ol style={{ paddingLeft: 20, margin: "6px 0 8px" }}>
                   <li>Pasangkan printer Bluetooth atau sambungkan USB melalui pengaturan/layanan cetak perangkat satu kali.</li>
