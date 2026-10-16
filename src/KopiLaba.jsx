@@ -242,8 +242,44 @@ const buildReceiptHTML = (data, printerSettings = {}) => {
 </html>`;
 };
 
+const receiptTextForBluetooth = (data) => {
+  const lines = [
+    String(data.namaKafe || "KOPILABA"),
+    data.alamatKafe || "",
+    data.teleponKafe || "",
+    "--------------------------------",
+    "No: " + (data.nomorTrx || "-"),
+    "Tanggal: " + (data.tanggal || "-"),
+    "Kasir: " + (data.kasir || "-"),
+    "--------------------------------",
+    ...(data.items || []).map((it) => {
+      const name = String(it.nama || it.name || "Item").replace(/[^\\x20-\\x7E]/g, "?");
+      const qty = Number(it.qty || 1);
+      const price = Number(it.total ?? (Number(it.harga || 0) * qty));
+      return [name, "  " + qty + " x Rp" + Number(it.harga || 0).toLocaleString("id-ID"), "  = Rp" + price.toLocaleString("id-ID")].join("\\n");
+    }),
+    "--------------------------------",
+    "Subtotal: Rp" + Number(data.subtotal || 0).toLocaleString("id-ID"),
+    ...(Number(data.pajak || 0) > 0 ? ["Pajak: Rp" + Number(data.pajak).toLocaleString("id-ID")] : []),
+    "TOTAL: Rp" + Number(data.total || 0).toLocaleString("id-ID"),
+    "Bayar: Rp" + Number(data.bayar || 0).toLocaleString("id-ID"),
+    "Kembali: Rp" + Number(data.kembalian || 0).toLocaleString("id-ID"),
+    "Metode: " + (data.metode || "-"),
+    "",
+    "Terima kasih",
+    "Powered by KopiLaba",
+    "",
+    ""
+  ];
+  return lines.join("\\n").replace(/[^\\x09\\x0A\\x0D\\x20-\\x7E]/g, "?") + "\\n";
+};
+
 const printReceipt = (data, printerSettings = {}) => {
   try {
+    if (typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
+      window.__kopilabaBlePrint(data);
+      return;
+    }
     const html = buildReceiptHTML(data, printerSettings);
     const w = window.open("", "_blank", "width=420,height=680");
     if (!w) {
@@ -6889,19 +6925,60 @@ export default function KopiLaba() {
                 <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
                 <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
               </ol>
-              <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => {
-                const isAndroid = /Android/i.test(navigator.userAgent);
-                if (isAndroid) {
-                  // Chrome Android lebih mengenali format intent:// dengan host.
-                  window.location.href = "intent://settings/#Intent;action=android.settings.BLUETOOTH_SETTINGS;category=android.intent.category.DEFAULT;end";
-                  window.setTimeout(() => {
-                    alert("Jika Pengaturan Bluetooth tidak terbuka, browser/perangkat memblokir tautan sistem. Buka Pengaturan HP > Bluetooth secara manual, pasangkan printer, lalu kembali ke KopiLaba.");
-                  }, 1200);
-                } else {
-                  alert("Buka Pengaturan perangkat, lalu pilih Bluetooth untuk memasangkan printer. Untuk USB, sambungkan printer dan aktifkan layanan cetak/driver terlebih dahulu.");
+              <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
+                if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
+                  alert("Browser ini belum mendukung koneksi printer Bluetooth langsung. Coba Google Chrome terbaru di Android. Printer Bluetooth klasik (SPP) umumnya perlu aplikasi Android penghubung; website hanya bisa mencoba printer Bluetooth BLE yang kompatibel.");
+                  return;
+                }
+                try {
+                  const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ["000018f0-0000-1000-8000-00805f9b34fb", "0000ffe0-0000-1000-8000-00805f9b34fb", "0000ae30-0000-1000-8000-00805f9b34fb"]
+                  });
+                  if (!device.gatt) throw new Error("Perangkat ini tidak menyediakan koneksi Bluetooth BLE yang didukung browser.");
+                  const server = await device.gatt.connect();
+                  let writable = null;
+                  const serviceIds = ["000018f0-0000-1000-8000-00805f9b34fb", "0000ffe0-0000-1000-8000-00805f9b34fb", "0000ae30-0000-1000-8000-00805f9b34fb"];
+                  for (const id of serviceIds) {
+                    try {
+                      const service = await server.getPrimaryService(id);
+                      const chars = await service.getCharacteristics();
+                      writable = chars.find(c => c.properties.writeWithoutResponse) || chars.find(c => c.properties.write) || null;
+                      if (writable) break;
+                    } catch (_) {}
+                  }
+                  if (!writable) {
+                    try {
+                      const services = await server.getPrimaryServices();
+                      for (const service of services) {
+                        const chars = await service.getCharacteristics();
+                        writable = chars.find(c => c.properties.writeWithoutResponse) || chars.find(c => c.properties.write) || null;
+                        if (writable) break;
+                      }
+                    } catch (_) {}
+                  }
+                  if (!writable) {
+                    try { device.gatt.disconnect(); } catch (_) {}
+                    throw new Error("Printer ditemukan, tetapi tidak ada karakteristik BLE yang bisa ditulis. Printer mungkin memakai Bluetooth klasik atau protokol khusus.");
+                  }
+                  window.__kopilabaBleDevice = device;
+                  window.__kopilabaBlePrint = async (data) => {
+                    if (!device.gatt.connected) await device.gatt.connect();
+                    const bytes = new TextEncoder().encode("\\x1B@"+receiptTextForBluetooth(data)+"\\n\\n\\x1DVA\\x00");
+                    const chunkSize = 180;
+                    for (let i = 0; i < bytes.length; i += chunkSize) {
+                      const part = bytes.slice(i, i + chunkSize);
+                      if (writable.properties.writeWithoutResponse && writable.writeValueWithoutResponse) await writable.writeValueWithoutResponse(part);
+                      else await writable.writeValue(part);
+                    }
+                    alert("Struk dikirim ke printer Bluetooth. Jika kertas tidak keluar, printer mungkin tidak kompatibel dengan mode BLE/ESC-POS ini.");
+                  };
+                  alert("Printer BLE terhubung: " + (device.name || "Printer Bluetooth") + ". Coba tombol Cetak Tes Printer. Printer Bluetooth klasik mungkin tidak didukung browser.");
+                } catch (err) {
+                  alert("Belum berhasil menghubungkan printer: " + (err?.message || err) + "\\nPastikan Bluetooth aktif, printer menyala, dan gunakan Chrome Android. Jika printer sudah dipasangkan tetapi tidak muncul, kemungkinan printer memakai Bluetooth klasik (SPP) yang tidak bisa diakses langsung dari website.");
                 }
               }}>
-                🔵 Hubungkan Printer Bluetooth (Buka Pengaturan)
+                🔵 Cari & Hubungkan Printer Bluetooth
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 46, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => {
                 alert("Untuk printer USB di Android: sambungkan printer dengan kabel/OTG, izinkan akses jika diminta, lalu aktifkan atau pasang layanan cetak/driver yang kompatibel. Android tidak menyediakan satu halaman pengaturan USB printer universal yang bisa dibuka oleh website.");
@@ -6923,7 +7000,7 @@ export default function KopiLaba() {
                 🧾 Cetak Tes Printer
               </button>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
-                Bluetooth membuka pengaturan Android bila browser mengizinkan intent sistem. Setelah dipasangkan, kembali ke KopiLaba dan gunakan Cetak Tes Printer. Printer USB memerlukan dukungan OTG, izin, serta layanan cetak/driver yang cocok; website tidak bisa memasang driver sendiri.
+                KopiLaba mencoba mencari printer BLE yang kompatibel melalui Chrome. Setelah terhubung, tombol Cetak Tes dan struk transaksi akan dikirim langsung. Banyak printer kasir murah memakai Bluetooth klasik (SPP), bukan BLE; untuk model tersebut dibutuhkan aplikasi Android penghubung atau versi aplikasi native. USB langsung belum diaktifkan pada mode website ini.
               </div>
               <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5, marginTop: 8 }}>
                 Tes cetak memakai printer yang tersedia melalui layanan cetak sistem/browser. Jika printer tidak muncul, pasangkan/tambahkan printer di pengaturan perangkat dan jadikan printer tersebut pilihan/default. Browser web tidak dapat menjamin cetak senyap tanpa dialog untuk semua printer Bluetooth/USB.
