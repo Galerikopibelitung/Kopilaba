@@ -2915,6 +2915,7 @@ export default function KopiLaba() {
     : [
         { id: "dashboard", icon: "dashboard", label: "Ringkasan" },
         { id: "transaksi", icon: "receipt", label: "Transaksi" },
+        { id: "antrean", icon: "list-ordered", label: "Antrean & Pesanan" },
         { id: "menu", icon: "coffee", label: "Menu" },
         { id: "karyawan", icon: "users", label: "Karyawan" },
         { id: "laporan", icon: "chart", label: "Laporan" },
