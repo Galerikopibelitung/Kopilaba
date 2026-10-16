@@ -2885,3 +2885,54 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   background-color:#8de5d9 !important;
   border-color:#0f8f83 !important;
 }
+
+
+/* ICON VISIBILITY FIX — burger, cart, and all interface icons */
+#root svg,
+#root svg * {
+  visibility:visible !important;
+  opacity:1 !important;
+  stroke:#000000 !important;
+}
+#root svg {
+  display:inline-block !important;
+  flex-shrink:0 !important;
+  overflow:visible !important;
+}
+#root svg path:not([fill="none"]),
+#root svg circle:not([fill="none"]),
+#root svg rect:not([fill="none"]),
+#root svg polygon:not([fill="none"]),
+#root svg ellipse:not([fill="none"]) {
+  fill:#000000 !important;
+}
+#root button svg,
+#root [role="button"] svg,
+#root a svg,
+#root .kl-topbar svg,
+#root .kl-sidebar svg {
+  color:#000000 !important;
+  stroke:#000000 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+#root .kl-topbar button,
+#root .kl-sidebar button {
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
+}
+#root .kl-topbar button svg,
+#root .kl-sidebar button svg {
+  width:22px !important;
+  height:22px !important;
+  min-width:22px !important;
+  min-height:22px !important;
+}
+#root button,
+#root [role="button"] {
+  align-items:center;
+}
+#root button:has(svg),
+#root [role="button"]:has(svg) {
+  overflow:visible !important;
+}
