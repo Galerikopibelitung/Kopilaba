@@ -6892,7 +6892,11 @@ export default function KopiLaba() {
               <button style={{ ...s.btn, width: "100%", minHeight: 48, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={() => {
                 const isAndroid = /Android/i.test(navigator.userAgent);
                 if (isAndroid) {
-                  window.location.href = "intent:#Intent;action=android.settings.BLUETOOTH_SETTINGS;end";
+                  // Chrome Android lebih mengenali format intent:// dengan host.
+                  window.location.href = "intent://settings/#Intent;action=android.settings.BLUETOOTH_SETTINGS;category=android.intent.category.DEFAULT;end";
+                  window.setTimeout(() => {
+                    alert("Jika Pengaturan Bluetooth tidak terbuka, browser/perangkat memblokir tautan sistem. Buka Pengaturan HP > Bluetooth secara manual, pasangkan printer, lalu kembali ke KopiLaba.");
+                  }, 1200);
                 } else {
                   alert("Buka Pengaturan perangkat, lalu pilih Bluetooth untuk memasangkan printer. Untuk USB, sambungkan printer dan aktifkan layanan cetak/driver terlebih dahulu.");
                 }
