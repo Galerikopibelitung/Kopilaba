@@ -142,13 +142,16 @@ const formatDateTimeWIB = (value) => {
 // ============================================================
 // PRINT RECEIPT (KUITANSI)
 // ============================================================
-const buildReceiptHTML = (data) => {
+const buildReceiptHTML = (data, printerSettings = {}) => {
   const {
     namaKafe, alamatKafe, teleponKafe,
     nomorTrx, tanggal, kasir, kasirRole,
     items, subtotal, pajak, pajakPersen,
     total, bayar, kembalian, metode, status, bayarTunai, bayarQris,
   } = data;
+  const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : "48mm";
+  const receiptFontSize = printerSettings.fontSize === "compact" ? "10px" : printerSettings.fontSize === "large" ? "13px" : "12px";
+  const printMargin = ["2", "4", "6"].includes(String(printerSettings.margin)) ? printerSettings.margin + "mm" : "4mm";
 
   const itemRows = (items || [])
     .map(
@@ -174,11 +177,12 @@ const buildReceiptHTML = (data) => {
   html, body { margin: 0; padding: 0; }
   body {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
-    padding: 8px;
+    font-size: ${receiptFontSize};
+    padding: 4px;
     color: #000;
     background: #fff;
-    max-width: 320px;
+    width: ${paperWidth};
+    max-width: 100%;
     margin: 0 auto;
   }
   .center { text-align: center; }
@@ -191,16 +195,16 @@ const buildReceiptHTML = (data) => {
   .total-row { font-weight: bold; font-size: 13px; }
   .footer { font-size: 10px; color: #333; }
   @media print {
-    body { padding: 4mm; max-width: 100%; }
-    @page { margin: 4mm; }
+    body { padding: 0; width: ${paperWidth}; max-width: 100%; }
+    @page { size: ${printerSettings.paper === "A4" ? "A4" : "auto"}; margin: ${printMargin}; }
   }
 </style>
 </head>
 <body>
   <div class="center">
     <div class="name">${escapeHTML(namaKafe || "KAFE")}</div>
-    ${alamatKafe ? `<div>${escapeHTML(alamatKafe)}</div>` : ""}
-    ${teleponKafe ? `<div>Telp: ${escapeHTML(teleponKafe)}</div>` : ""}
+    ${printerSettings.showAddress === false ? "" : (alamatKafe ? `<div>${escapeHTML(alamatKafe)}</div>` : "")}
+    ${printerSettings.showPhone === false ? "" : (teleponKafe ? `<div>Telp: ${escapeHTML(teleponKafe)}</div>` : "")}
   </div>
   <div class="dashed"></div>
   <div class="row"><span>No</span><span>${escapeHTML(nomorTrx || "-")}</span></div>
@@ -238,9 +242,9 @@ const buildReceiptHTML = (data) => {
 </html>`;
 };
 
-const printReceipt = (data) => {
+const printReceipt = (data, printerSettings = {}) => {
   try {
-    const html = buildReceiptHTML(data);
+    const html = buildReceiptHTML(data, printerSettings);
     const w = window.open("", "_blank", "width=420,height=680");
     if (!w) {
       alert("Popup diblokir oleh browser. Izinkan popup untuk mencetak struk.");
@@ -393,6 +397,20 @@ export default function KopiLaba() {
   const [profile, setProfile] = useState(null);
   const [token, setToken] = useState(null);
   const [tab, setTab] = useState("dashboard");
+  const [printerSettings, setPrinterSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("kopilaba_printer_settings") || "{}");
+      return {
+        paper: ["58", "80", "A4"].includes(String(saved.paper)) ? String(saved.paper) : "58",
+        fontSize: ["compact", "normal", "large"].includes(saved.fontSize) ? saved.fontSize : "normal",
+        margin: ["2", "4", "6"].includes(String(saved.margin)) ? String(saved.margin) : "4",
+        showAddress: saved.showAddress !== false,
+        showPhone: saved.showPhone !== false,
+      };
+    } catch (_) {
+      return { paper: "58", fontSize: "normal", margin: "4", showAddress: true, showPhone: true };
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -501,6 +519,10 @@ export default function KopiLaba() {
     // OAuth callback is handled once on mount; session completion uses current app functions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("kopilaba_printer_settings", JSON.stringify(printerSettings)); } catch (_) {}
+  }, [printerSettings]);
 
   useEffect(() => {
     try {
@@ -960,8 +982,10 @@ export default function KopiLaba() {
       const daftar = mode === "daftar";
       const orders = daftar ? (order || []) : [order];
       const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+      const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : "48mm";
+      const queueFont = printerSettings.fontSize === "compact" ? "10px" : printerSettings.fontSize === "large" ? "13px" : "12px";
       const html = `<!doctype html><html><head><meta charset="utf-8"><title>Antrean KopiLaba</title>
-      <style>body{font-family:Arial,sans-serif;color:#111;margin:12px;font-size:12px}h2,p{margin:3px 0;text-align:center}.line{border-top:1px dashed #555;margin:8px 0}.row{display:flex;justify-content:space-between;gap:8px}.big{font-size:28px;font-weight:bold;text-align:center;margin:8px 0}.muted{font-size:10px}.item{margin:5px 0}@page{margin:4mm}</style></head><body>
+      <style>body{font-family:Arial,sans-serif;color:#111;margin:0 auto;font-size:${queueFont};padding:3px;width:${paperWidth};max-width:100%}h2,p{margin:3px 0;text-align:center}.line{border-top:1px dashed #555;margin:8px 0}.row{display:flex;justify-content:space-between;gap:8px}.big{font-size:28px;font-weight:bold;text-align:center;margin:8px 0}.muted{font-size:10px}.item{margin:5px 0}@page{size:${printerSettings.paper === "A4" ? "A4" : "auto"};margin:${printerSettings.margin}mm}</style></head><body>
       <h2>${esc(kafe?.nama || "KOPILABA")}</h2><p>${daftar ? "DAFTAR ANTREAN & PESANAN" : "BUKTI ANTREAN PESANAN"}</p><div class="line"></div>
       ${orders.map((o) => `<section><div class="big">NO. ${esc(o.nomor)}</div><p><b>${esc(o.nama || "Pelanggan")}</b></p><p>${o.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang"}</p><p class="muted">${esc(o.waktu || "")}</p><div class="line"></div>
       ${(o.items || []).map((it) => `<div class="item"><div class="row"><span>${esc(it.nama)} x${esc(it.qty)}</span><span>${fmt((Number(it.harga)||0)*(Number(it.qty)||0))}</span></div>${it.catatan ? `<div class="muted">Catatan: ${esc(it.catatan)}</div>` : ""}</div>`).join("")}
@@ -2506,7 +2530,7 @@ export default function KopiLaba() {
       kembalian,
       metode,
       status: selectedTransaksi.status || "lunas",
-    });
+    }, printerSettings);
   };
 
   // ============================================================
@@ -2921,6 +2945,7 @@ export default function KopiLaba() {
         { id: "laporan", icon: "chart", label: "Laporan" },
         { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
         { id: "struk", icon: "file", label: "Struk" },
+        { id: "printer", icon: "file", label: "Pengaturan Printer" },
         { id: "qris", icon: "qr", label: "QRIS" },
         ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
       ], [isSuperAdmin, profile?.role]);
@@ -6844,6 +6869,64 @@ export default function KopiLaba() {
 
 
 
+      {tab === "printer" && !isSuperAdmin && (
+        <div className="kl-printer-settings" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
+          <div style={s.card}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
+            <p style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
+              Atur format cetak struk transaksi dan antrean di perangkat ini. Pengaturan tersimpan otomatis di browser/perangkat ini.
+            </p>
+            <label style={s.label} htmlFor="kl-printer-paper">Ukuran kertas</label>
+            <select id="kl-printer-paper" value={printerSettings.paper} onChange={(e) => setPrinterSettings(p => ({ ...p, paper: e.target.value }))} style={s.input}>
+              <option value="58">Thermal 58 mm (printer kasir kecil)</option>
+              <option value="80">Thermal 80 mm (printer kasir lebar)</option>
+              <option value="A4">A4 (printer biasa)</option>
+            </select>
+            <label style={s.label} htmlFor="kl-printer-font">Ukuran tulisan</label>
+            <select id="kl-printer-font" value={printerSettings.fontSize} onChange={(e) => setPrinterSettings(p => ({ ...p, fontSize: e.target.value }))} style={s.input}>
+              <option value="compact">Kecil — hemat kertas</option>
+              <option value="normal">Normal</option>
+              <option value="large">Besar — mudah dibaca</option>
+            </select>
+            <label style={s.label} htmlFor="kl-printer-margin">Margin kertas</label>
+            <select id="kl-printer-margin" value={printerSettings.margin} onChange={(e) => setPrinterSettings(p => ({ ...p, margin: e.target.value }))} style={s.input}>
+              <option value="2">Sempit (2 mm)</option>
+              <option value="4">Normal (4 mm)</option>
+              <option value="6">Lebar (6 mm)</option>
+            </select>
+            <div style={{ borderTop: "1px solid " + theme.cardBorder, paddingTop: 12, marginTop: 4 }}>
+              <label style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, marginBottom: 12, color: theme.text }}>
+                <input type="checkbox" checked={printerSettings.showAddress} onChange={(e) => setPrinterSettings(p => ({ ...p, showAddress: e.target.checked }))} />
+                Tampilkan alamat kafe pada struk
+              </label>
+              <label style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, marginBottom: 8, color: theme.text }}>
+                <input type="checkbox" checked={printerSettings.showPhone} onChange={(e) => setPrinterSettings(p => ({ ...p, showPhone: e.target.checked }))} />
+                Tampilkan nomor telepon kafe pada struk
+              </label>
+            </div>
+            <div style={{ background: theme.input, border: "1px solid " + theme.cardBorder, borderRadius: 12, padding: 12, margin: "14px 0", fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
+              <b style={{ color: theme.text }}>Catatan:</b> Pilihan ukuran kertas mengatur tata letak cetak, bukan koneksi printer secara langsung. Saat mencetak, pilih printer yang tersambung dari dialog cetak browser. Untuk printer Bluetooth/USB di HP, dukungan bergantung pada aplikasi/browser dan printer yang digunakan.
+            </div>
+            <button style={{ ...s.btn, background: "#25D366", color: "#073B1A" }} onClick={() => printReceipt({
+              namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
+              alamatKafe: kafe?.alamat || "",
+              teleponKafe: kafe?.telepon || "",
+              nomorTrx: "TES-PRINTER",
+              tanggal: formatDateTimeWIB(new Date()),
+              kasir: profile?.nama || "Kasir",
+              kasirRole: profile?.role || "",
+              items: [{ nama: "Contoh Americano", harga: 15000, qty: 1, total: 15000 }],
+              subtotal: 15000, pajak: 0, pajakPersen: 0, total: 15000, bayar: 20000,
+              kembalian: 5000, metode: "Tunai", status: "lunas"
+            }, printerSettings)}>
+              🧾 Cetak Tes Printer
+            </button>
+            <button style={{ ...s.btn, marginTop: 8, background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={() => setPrinterSettings({ paper: "58", fontSize: "normal", margin: "4", showAddress: true, showPhone: true })}>
+              Kembalikan ke Pengaturan Awal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
