@@ -7006,7 +7006,7 @@ export default function KopiLaba() {
                   alert("Belum berhasil menghubungkan printer: " + (err?.message || err) + "\\nPastikan Bluetooth aktif, printer menyala, dan gunakan Chrome Android. Jika printer sudah dipasangkan tetapi tidak muncul, kemungkinan printer memakai Bluetooth klasik (SPP) yang tidak bisa diakses langsung dari website.");
                 }
               }}>
-                🔵 Cari & Hubungkan Printer Bluetooth
+                🔵 Cari Printer Bluetooth (BLE)
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.serial || !navigator.serial.requestPort) {
