@@ -397,7 +397,13 @@ export default function KopiLaba() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [networkError, setNetworkError] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      return window.localStorage.getItem("kopilaba_theme") === "dark";
+    } catch (_) {
+      return false;
+    }
+  });
   const [showLaba, setShowLaba] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const canManageCatalog = profile?.role === "pemilik" || isSuperAdmin;
@@ -495,6 +501,14 @@ export default function KopiLaba() {
     // OAuth callback is handled once on mount; session completion uses current app functions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("kopilaba_theme", darkMode ? "dark" : "light");
+    } catch (_) {
+      // Tema tetap dapat dipakai untuk sesi ini jika penyimpanan browser diblokir.
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     document.body.style.margin = "0";
@@ -3415,14 +3429,14 @@ export default function KopiLaba() {
           border: 1px solid var(--kl-border) !important;
           color: var(--kl-ink) !important;
         }
-        .kl-app-shell .kl-sidebar { background: #FFFFFF !important; color: var(--kl-ink) !important; }
-        .kl-app-shell .kl-sidebar .kl-sidebar-item { color: #385447 !important; background: #FFFFFF !important; }
+        .kl-app-shell .kl-sidebar { background: var(--kl-surface) !important; color: var(--kl-ink) !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-item { color: var(--kl-ink) !important; background: var(--kl-surface) !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; font-weight: 750 !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-logout { color: var(--kl-green) !important; }
         .kl-app-shell .kl-sidebar .kl-sidebar-item:hover,
-        .kl-app-shell .kl-sidebar .kl-sidebar-logout:hover { background: #FFFFFF !important; color: var(--kl-green) !important; }
+        .kl-app-shell .kl-sidebar .kl-sidebar-logout:hover { background: var(--kl-surface-alt) !important; color: var(--kl-green) !important; }
         .kl-app-shell .kl-brand-mark { color: var(--kl-green) !important; }
         .kl-app-shell .kl-topbar { border-bottom-color: var(--kl-border) !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar { background: #10291C !important; color: #F5FBF7 !important; }
@@ -3443,14 +3457,14 @@ export default function KopiLaba() {
           .kl-app-shell .kl-dashboard-actions button:first-child { background: var(--kl-surface) !important; border-color: var(--kl-border) !important; }
          .kl-app-shell .kl-dashboard-actions button:first-child p { color: var(--kl-green) !important; }
          .kl-app-shell .kl-backup-page { color: var(--kl-ink); }
-         .kl-app-shell .kl-backup-page .kl-backup-card { background: #FFFFFF !important; border-color: var(--kl-border) !important; color: var(--kl-ink) !important; }
-         .kl-app-shell .kl-backup-page .kl-backup-icon { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-card { background: var(--kl-surface) !important; border-color: var(--kl-border) !important; color: var(--kl-ink) !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-icon { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; border-color: var(--kl-border-soft) !important; }
          .kl-app-shell .kl-backup-page .kl-primary-action { background: var(--kl-green) !important; color: #FFFFFF !important; border-color: var(--kl-green) !important; }
-         .kl-app-shell .kl-backup-page .kl-secondary-action { background: #FFFFFF !important; color: var(--kl-green) !important; border-color: var(--kl-green) !important; }
+         .kl-app-shell .kl-backup-page .kl-secondary-action { background: var(--kl-surface) !important; color: var(--kl-green) !important; border-color: var(--kl-green) !important; }
          .kl-app-shell .kl-backup-page .kl-status-pill { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; border-color: #CDE8D5 !important; }
-         .kl-app-shell .kl-backup-page .kl-counts span { background: var(--kl-green-soft) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-counts span { background: var(--kl-green-soft) !important; border-color: var(--kl-border-soft) !important; }
          .kl-app-shell .kl-backup-page .kl-counts b { color: var(--kl-green) !important; }
-         .kl-app-shell .kl-backup-page .kl-backup-warning { background: var(--kl-green-soft) !important; color: var(--kl-ink) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-warning { background: var(--kl-green-soft) !important; color: var(--kl-ink) !important; border-color: var(--kl-border-soft) !important; }
          .kl-app-shell .kl-backup-page .kl-backup-warning b { color: var(--kl-green) !important; }
          .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-card { background: #10291C !important; border-color: rgba(18,140,74,.32) !important; color: #F5FBF7 !important; }
           .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #62D68F !important; border-color: #62D68F !important; }
