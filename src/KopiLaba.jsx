@@ -294,7 +294,7 @@ const api = async (endpoint, method = "GET", body = null, token = null) => {
 };
 
 const getApiErrorMessage = (error, fallback) => {
-  const raw = String(error?.message || "").replace(/^HTTP \\d+:\\s*/, "").trim();
+  const raw = String(error?.message || "").replace(/^HTTP \d+:\s*/, "").trim();
   if (!raw) return fallback;
   try {
     const parsed = JSON.parse(raw);
