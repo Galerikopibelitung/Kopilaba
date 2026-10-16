@@ -2934,6 +2934,7 @@ export default function KopiLaba() {
         { id: "laporan", icon: "chart", label: "Laporan" },
         { id: "pembayaran", icon: "wallet", label: "Analitik Bayar" },
         { id: "struk", icon: "file", label: "Struk" },
+        { id: "printer", icon: "file", label: "Pengaturan Printer" },
         { id: "qris", icon: "qr", label: "QRIS" },
       ]
     : [
@@ -6869,7 +6870,7 @@ export default function KopiLaba() {
 
 
 
-      {tab === "printer" && !isSuperAdmin && (
+      {tab === "printer" && (
         <div className="kl-printer-settings" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
           <div style={s.card}>
             <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, marginBottom: 4 }}>🖨️ Pengaturan Printer</div>
