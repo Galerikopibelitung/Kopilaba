@@ -3294,3 +3294,64 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   width:22px !important;
   height:22px !important;
 }
+
+
+/* UNIFIED BRAND PALETTE ACROSS LEGACY FORMS, MODALS, AND ACTION PANELS */
+/* Light mode: replace leftover coffee/brown/gold surfaces with mint-white */
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(111, 61, 33)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(69, 38, 22)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(217, 154, 69)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(248, 240, 231)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(244, 228, 209)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(251, 247, 241)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(255, 250, 243)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background-color: rgb(255, 253, 249)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background: rgb(111, 61, 33)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background: rgb(69, 38, 22)"],
+#root > div:not([data-theme="dark"]) .kl-content [style*="background: rgb(217, 154, 69)"] {
+  background:#e8f8f5 !important;
+  border-color:#8fd8cd !important;
+  color:#102d29 !important;
+}
+/* Dark mode: old light/brown panels become consistent deep-teal surfaces */
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(111, 61, 33)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(69, 38, 22)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(217, 154, 69)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(248, 240, 231)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(244, 228, 209)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(251, 247, 241)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(255, 250, 243)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(255, 253, 249)"],
+#root > div[data-theme="dark"] .kl-content [style*="background: rgb(111, 61, 33)"],
+#root > div[data-theme="dark"] .kl-content [style*="background: rgb(69, 38, 22)"],
+#root > div[data-theme="dark"] .kl-content [style*="background: rgb(217, 154, 69)"] {
+  background:#123b36 !important;
+  border-color:#28564f !important;
+  color:#e8fffb !important;
+}
+/* Legacy hard-coded brown/gold text is recolored to the brand teal */
+#root .kl-content [style*="color: rgb(111, 61, 33)"],
+#root .kl-content [style*="color: rgb(69, 38, 22)"],
+#root .kl-content [style*="color: rgb(217, 154, 69)"] {
+  color:#0f8f83 !important;
+  -webkit-text-fill-color:#0f8f83 !important;
+}
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(111, 61, 33)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(69, 38, 22)"],
+#root > div[data-theme="dark"] .kl-content [style*="color: rgb(217, 154, 69)"] {
+  color:#75dfd1 !important;
+  -webkit-text-fill-color:#75dfd1 !important;
+}
+/* All common entry forms stay on-brand */
+#root .kl-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+#root .kl-content select,
+#root .kl-content textarea {
+  border-color:#75cfc2 !important;
+}
+#root:not(:has(> div[data-theme="dark"])) .kl-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+#root:not(:has(> div[data-theme="dark"])) .kl-content select,
+#root:not(:has(> div[data-theme="dark"])) .kl-content textarea {
+  background:#ffffff !important;
+  color:#111827 !important;
+  -webkit-text-fill-color:#111827 !important;
+}
