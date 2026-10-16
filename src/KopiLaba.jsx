@@ -277,19 +277,23 @@ const receiptTextForBluetooth = (data) => {
 const printReceipt = (data, printerSettings = {}, options = {}) => {
   try {
     if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
-      window.__kopilabaActivePrint(data).catch((err) => alert("Gagal mencetak melalui koneksi yang dipilih: " + (err?.message || err)));
+      Promise.resolve(window.__kopilabaActivePrint(data)).catch((err) => alert("Gagal mencetak melalui koneksi yang dipilih: " + (err?.message || err)));
       return;
     }
     if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
-      window.__kopilabaBlePrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth BLE: " + (err?.message || err)));
+      Promise.resolve(window.__kopilabaBlePrint(data)).catch((err) => alert("Gagal mencetak melalui Bluetooth BLE: " + (err?.message || err)));
       return;
     }
     if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaUsbPrint === "function") {
-      window.__kopilabaUsbPrint(data).catch((err) => alert("Gagal mencetak melalui USB: " + (err?.message || err)));
+      Promise.resolve(window.__kopilabaUsbPrint(data)).catch((err) => alert("Gagal mencetak melalui USB: " + (err?.message || err)));
       return;
     }
     if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaSerialPrint === "function") {
-      window.__kopilabaSerialPrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
+      Promise.resolve(window.__kopilabaSerialPrint(data)).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
+      return;
+    }
+    if (options.directOnly) {
+      alert("Struk tersimpan, tetapi printer belum terhubung langsung ke KopiLaba. Buka Pengaturan Printer dan hubungkan printer sekali. Dialog pilih kertas/printer tidak akan dibuka dari transaksi.");
       return;
     }
     const html = buildReceiptHTML(data, printerSettings);
@@ -2546,8 +2550,9 @@ export default function KopiLaba() {
       setPembayaran("tunai");
       setSuccess("Transaksi berhasil! Struk sedang dicetak...");
       // Cetak otomatis setiap checkout yang berhasil disimpan, tanpa membuka halaman struk baru.
-      // Jika printer langsung sudah terhubung, gunakan jalur tersebut; jika tidak, gunakan dialog cetak sistem.
-      printReceipt(receipt, printerSettings);
+      // Transaksi hanya memakai koneksi printer langsung yang sudah dipilih.
+      // Jangan membuka dialog printer/kertas dari alur kasir.
+      printReceipt(receipt, printerSettings, { directOnly: true });
       await loadTransaksi(token, kafeId);
       await loadMenu(token, kafeId);
     } catch (err) {
