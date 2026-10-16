@@ -4945,9 +4945,9 @@ export default function KopiLaba() {
                       padding: "6px 16px",
                       borderRadius: 20,
                       border: "none",
-                      background: periodeFilter === p ? theme.gold : theme.input,
+                      background: periodeFilter === p ? "#128C4A" : theme.input,
                       color:
-                        periodeFilter === p ? (darkMode ? "#fff" : "#18251D") : theme.textMuted,
+                        periodeFilter === p ? "#FFFFFF" : theme.textMuted,
                       fontWeight: periodeFilter === p ? 700 : 400,
                       cursor: "pointer",
                       fontSize: 12,
