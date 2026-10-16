@@ -3388,7 +3388,7 @@ export default function KopiLaba() {
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item .kl-nav-icon { color: var(--kl-green) !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active { background: var(--kl-green) !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item.is-active .kl-nav-icon { color: #FFFFFF !important; }
-        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #25D366 !important; }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout { color: #128C4A !important; }
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-item:hover,
         .kl-app-shell[data-theme="dark"] .kl-sidebar .kl-sidebar-logout:hover { background: #183D2A !important; color: #FFFFFF !important; }
         .kl-app-shell[data-theme="dark"] .kl-menu-toggle,
