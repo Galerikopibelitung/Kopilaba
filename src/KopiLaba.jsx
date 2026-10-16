@@ -3263,6 +3263,68 @@ export default function KopiLaba() {
           .kl-identity-cafe-name { max-width:48vw; }
         }
       `}</style>
+      <style>{`
+        /* Final palette pass: explicitly cover header, cart button and burger drawer. */
+        .kl-app-shell[data-theme="light"] .kl-topbar {
+          background: rgba(246,248,246,.98) !important;
+          color: #18251D !important;
+          border-bottom-color: #E1E9E3 !important;
+        }
+        .kl-app-shell[data-theme="dark"] .kl-topbar {
+          background: rgba(11,36,24,.98) !important;
+          color: #F5FBF7 !important;
+          border-bottom-color: rgba(37,211,102,.20) !important;
+        }
+        .kl-app-shell .kl-menu-toggle {
+          color: #128C4A !important;
+          border-radius: 10px !important;
+          width: 44px !important;
+          height: 44px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex: 0 0 44px !important;
+        }
+        .kl-app-shell[data-theme="dark"] .kl-menu-toggle { color: #25D366 !important; }
+        .kl-app-shell .kl-topbar .kl-kasir-toggle {
+          background: #128C4A !important;
+          border-color: #128C4A !important;
+          color: #FFFFFF !important;
+          box-shadow: 0 3px 8px rgba(18,140,74,.20) !important;
+        }
+        .kl-app-shell[data-theme="dark"] .kl-topbar .kl-kasir-toggle {
+          background: #25D366 !important;
+          border-color: #25D366 !important;
+          color: #071C12 !important;
+        }
+        .kl-app-shell .kl-topbar .kl-kasir-toggle svg { color: inherit !important; stroke: currentColor !important; }
+        .kl-app-shell .kl-sidebar {
+          background: #FFFFFF !important;
+          color: #18251D !important;
+          border-right-color: #E1E9E3 !important;
+        }
+        .kl-app-shell[data-theme="dark"] .kl-sidebar {
+          background: #10291C !important;
+          color: #F5FBF7 !important;
+          border-right-color: rgba(37,211,102,.20) !important;
+        }
+        .kl-app-shell .kl-sidebar-brand { color: inherit !important; }
+        .kl-app-shell .kl-brand-mark {
+          color: #128C4A !important;
+          background: #EAF6EE !important;
+          border-color: #CDE8D5 !important;
+        }
+        .kl-app-shell[data-theme="dark"] .kl-brand-mark {
+          color: #25D366 !important;
+          background: #0B2116 !important;
+          border-color: rgba(37,211,102,.28) !important;
+        }
+        .kl-app-shell .kl-sidebar button { transition: background-color .15s ease, color .15s ease; }
+        @media (max-width:640px) {
+          .kl-app-shell[data-theme="light"] .kl-topbar { background: rgba(246,248,246,.98) !important; }
+          .kl-app-shell[data-theme="dark"] .kl-topbar { background: rgba(11,36,24,.98) !important; }
+        }
+      `}</style>
       {/* HEADER */}
       <div
         className="kl-topbar"
