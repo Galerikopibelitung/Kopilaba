@@ -3203,3 +3203,94 @@ body, #root > div[data-theme] { background:#effaf8 !important; color:#123b38; }
   color:#e8fffb !important;
   -webkit-text-fill-color:#e8fffb !important;
 }
+
+
+/* SUMMARY PAGE DARK MODE: force readable contrast on legacy inline-styled widgets */
+#root > div[data-theme="dark"] .kl-content,
+#root > div[data-theme="dark"] .kl-content div,
+#root > div[data-theme="dark"] .kl-content p,
+#root > div[data-theme="dark"] .kl-content span,
+#root > div[data-theme="dark"] .kl-content b,
+#root > div[data-theme="dark"] .kl-content strong,
+#root > div[data-theme="dark"] .kl-content label,
+#root > div[data-theme="dark"] .kl-content h1,
+#root > div[data-theme="dark"] .kl-content h2,
+#root > div[data-theme="dark"] .kl-content h3,
+#root > div[data-theme="dark"] .kl-content h4,
+#root > div[data-theme="dark"] .kl-content li,
+#root > div[data-theme="dark"] .kl-content td,
+#root > div[data-theme="dark"] .kl-content th,
+#root > div[data-theme="dark"] .kl-content a:not([role="button"]) {
+  color:#e8fffb !important;
+  -webkit-text-fill-color:#e8fffb !important;
+}
+#root > div[data-theme="dark"] .kl-content [style*="color:"],
+#root > div[data-theme="dark"] .kl-content [class*="text-gray"],
+#root > div[data-theme="dark"] .kl-content [class*="text-slate"],
+#root > div[data-theme="dark"] .kl-content [class*="text-zinc"],
+#root > div[data-theme="dark"] .kl-content [class*="text-black"],
+#root > div[data-theme="dark"] .kl-content [class*="text-neutral"] {
+  color:#e8fffb !important;
+  -webkit-text-fill-color:#e8fffb !important;
+}
+#root > div[data-theme="dark"] .kl-content [style*="background"],
+#root > div[data-theme="dark"] .kl-content [class*="bg-white"],
+#root > div[data-theme="dark"] .kl-content [class*="bg-gray"],
+#root > div[data-theme="dark"] .kl-content [class*="bg-slate"],
+#root > div[data-theme="dark"] .kl-content [class*="bg-zinc"] {
+  background-color:#123b36 !important;
+  border-color:#28564f !important;
+}
+#root > div[data-theme="dark"] .kl-content [style*="background: rgb(255, 255, 255)"],
+#root > div[data-theme="dark"] .kl-content [style*="background-color: rgb(255, 255, 255)"] {
+  background:#123b36 !important;
+}
+/* Colorful, recognizable icons instead of forcing every logo to black */
+#root svg { flex-shrink:0 !important; visibility:visible !important; opacity:1 !important; }
+#root .kl-topbar svg,
+#root .kl-sidebar svg,
+#root .kl-content > * svg,
+#root .kl-content [class*="card"] > svg {
+  color:#0f8f83 !important;
+  stroke:#0f8f83 !important;
+}
+#root .kl-content button svg,
+#root .kl-content [role="button"] svg {
+  color:#ffffff !important;
+  stroke:#ffffff !important;
+}
+#root .kl-content button svg path:not([fill="none"]),
+#root .kl-content [role="button"] svg path:not([fill="none"]),
+#root .kl-content button svg circle:not([fill="none"]),
+#root .kl-content [role="button"] svg circle:not([fill="none"]) {
+  fill:none !important;
+}
+#root > div[data-theme="dark"] .kl-topbar svg,
+#root > div[data-theme="dark"] .kl-sidebar svg,
+#root > div[data-theme="dark"] .kl-content > * svg,
+#root > div[data-theme="dark"] .kl-content [class*="card"] > svg {
+  color:#75dfd1 !important;
+  stroke:#75dfd1 !important;
+}
+#root > div[data-theme="dark"] .kl-content button svg,
+#root > div[data-theme="dark"] .kl-content [role="button"] svg {
+  color:#062b27 !important;
+  stroke:#062b27 !important;
+}
+#root > div[data-theme="dark"] .kl-content button svg path:not([fill="none"]),
+#root > div[data-theme="dark"] .kl-content [role="button"] svg path:not([fill="none"]) {
+  fill:none !important;
+}
+#root .kl-topbar button,
+#root .kl-sidebar button {
+  min-width:40px !important;
+  min-height:40px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+#root .kl-topbar button svg,
+#root .kl-sidebar button svg {
+  width:22px !important;
+  height:22px !important;
+}
