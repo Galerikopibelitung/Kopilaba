@@ -6888,6 +6888,36 @@ export default function KopiLaba() {
                 <li><b>Wi-Fi/LAN:</b> hubungkan printer dan perangkat ke jaringan yang sama, lalu tambahkan printer di pengaturan perangkat.</li>
                 <li>Tekan tombol di bawah, lalu pilih nama printer pada dialog cetak.</li>
               </ol>
+              <div style={{ border: "1px solid " + theme.cardBorder, borderRadius: 10, padding: 12, margin: "0 0 12px", background: theme.card }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: theme.text, marginBottom: 6 }}>🔎 Pencarian Printer</div>
+                <div style={{ color: theme.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+                  Cari perangkat terlebih dahulu. Untuk printer Bluetooth thermal klasik (SPP), lakukan pemasangan melalui Pengaturan Bluetooth Android karena pencarian dari browser tidak mendukung semua model.
+                </div>
+                <button style={{ ...s.btn, width: "100%", background: "#25D366", color: "#073B1A", marginBottom: 8 }} onClick={async () => {
+                  if (!(navigator.bluetooth && navigator.bluetooth.requestDevice)) {
+                    alert("Pencarian Bluetooth dari browser ini tidak didukung. Buka Pengaturan tablet → Bluetooth, pasangkan printer di sana, lalu kembali ke KopiLaba.");
+                    return;
+                  }
+                  try {
+                    const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+                    alert("Perangkat ditemukan: " + (device.name || "Bluetooth tanpa nama") + ". Perangkat baru dipilih, belum dipastikan terhubung atau bisa mencetak. Printer thermal Bluetooth klasik/SPP perlu dipasangkan lewat Pengaturan Android.");
+                  } catch (err) {
+                    if (err?.name !== "NotFoundError" && err?.name !== "AbortError") alert("Pencarian Bluetooth gagal. Coba pasangkan printer lewat Pengaturan Android. " + (err?.message || ""));
+                  }
+                }}>🔵 Cari Printer Bluetooth</button>
+                <button style={{ ...s.btn, width: "100%", background: theme.card, color: theme.text, border: "1px solid " + theme.cardBorder }} onClick={async () => {
+                  if (!(navigator.usb && navigator.usb.requestDevice)) {
+                    alert("Pencarian USB dari browser ini tidak didukung. Sambungkan printer dengan kabel OTG, lalu gunakan layanan cetak Android yang kompatibel.");
+                    return;
+                  }
+                  try {
+                    const device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+                    alert("Perangkat USB dipilih: " + (device.productName || "Printer USB") + ". Ini belum memastikan printer bisa mencetak; lanjutkan dengan layanan cetak yang kompatibel.");
+                  } catch (err) {
+                    if (err?.name !== "NotFoundError" && err?.name !== "AbortError") alert("Pencarian USB gagal. Periksa kabel OTG dan izin browser. " + (err?.message || ""));
+                  }
+                }}>🔌 Cari Printer USB</button>
+              </div>
               <button style={{ ...s.btn, width: "100%", background: "#16803D", color: "#fff" }} onClick={() => printReceipt({
                 namaKafe: (kafe?.nama || "KOPILABA").toUpperCase(),
                 alamatKafe: kafe?.alamat || "",
