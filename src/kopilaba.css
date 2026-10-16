@@ -2560,3 +2560,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 #root [style*="background-color: rgb(244, 232, 220)"],
 #root [style*="background: rgb(244, 232, 220)"] { background:#effaf8 !important; }
+
+
+/* Preserve semantic status colors while keeping the interface palette consistently teal */
+#root :is(.kl-danger,.kl-error,.kl-delete-button,.kl-text-danger,[data-status="error"],[data-status="danger"]) { color:#c2412d !important; }
+#root :is(.kl-danger-button,.kl-delete-button,[data-action="delete"]) { border-color:#f1c7c3 !important; }
+#root .kl-dashboard-actions button:last-child p:first-child,
+#root .kl-dashboard-actions button:last-child p:last-child { color:#c2412d !important; }
+#root :is(.kl-success,.kl-positive,[data-status="success"]) { color:#087f78; }
