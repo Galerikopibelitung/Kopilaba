@@ -3394,6 +3394,29 @@ export default function KopiLaba() {
         .kl-app-shell[data-theme="dark"] .kl-menu-toggle,
         .kl-app-shell[data-theme="dark"] .kl-topbar .kl-kasir-toggle { background: var(--kl-green) !important; color: #FFFFFF !important; border-color: var(--kl-green) !important; }
         .kl-app-shell .kl-menu-toggle { width: 44px !important; height: 44px !important; border-radius: 10px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+         /* Palet seragam untuk Ringkasan dan Backup Data */
+         .kl-app-shell .kl-dashboard-range button { border: 1px solid var(--kl-border) !important; }
+         .kl-app-shell .kl-dashboard-range button:focus { background: var(--kl-green) !important; color: #fff !important; border-color: var(--kl-green) !important; }
+         .kl-app-shell .kl-dashboard-actions button:first-child { background: var(--kl-green-soft) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-dashboard-actions button:first-child p { color: var(--kl-green) !important; }
+         .kl-app-shell .kl-backup-page { color: var(--kl-ink); }
+         .kl-app-shell .kl-backup-page .kl-backup-card { background: #FFFFFF !important; border-color: var(--kl-border) !important; color: var(--kl-ink) !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-icon { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-primary-action { background: var(--kl-green) !important; color: #FFFFFF !important; border-color: var(--kl-green) !important; }
+         .kl-app-shell .kl-backup-page .kl-secondary-action { background: #FFFFFF !important; color: var(--kl-green) !important; border-color: var(--kl-green) !important; }
+         .kl-app-shell .kl-backup-page .kl-status-pill { background: var(--kl-green-soft) !important; color: var(--kl-green) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-counts span { background: var(--kl-green-soft) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-counts b { color: var(--kl-green) !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-warning { background: var(--kl-green-soft) !important; color: var(--kl-ink) !important; border-color: #CDE8D5 !important; }
+         .kl-app-shell .kl-backup-page .kl-backup-warning b { color: var(--kl-green) !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-card { background: #10291C !important; border-color: rgba(18,140,74,.32) !important; color: #F5FBF7 !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-secondary-action { background: #0B2116 !important; color: #35C977 !important; border-color: #128C4A !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-status-pill,
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts span,
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning { background: #183D2A !important; color: #F5FBF7 !important; border-color: rgba(18,140,74,.32) !important; }
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-backup-warning b,
+         .kl-app-shell[data-theme="dark"] .kl-backup-page .kl-counts b { color: #35C977 !important; }
+
       `}
 </style>
       {/* HEADER */}
