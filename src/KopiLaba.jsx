@@ -276,12 +276,20 @@ const receiptTextForBluetooth = (data) => {
 
 const printReceipt = (data, printerSettings = {}) => {
   try {
+    if (typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
+      window.__kopilabaActivePrint(data).catch((err) => alert("Gagal mencetak melalui koneksi yang dipilih: " + (err?.message || err)));
+      return;
+    }
     if (typeof window !== "undefined" && typeof window.__kopilabaBlePrint === "function") {
-      window.__kopilabaBlePrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth: " + (err?.message || err)));
+      window.__kopilabaBlePrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth BLE: " + (err?.message || err)));
       return;
     }
     if (typeof window !== "undefined" && typeof window.__kopilabaUsbPrint === "function") {
       window.__kopilabaUsbPrint(data).catch((err) => alert("Gagal mencetak melalui USB: " + (err?.message || err)));
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window.__kopilabaSerialPrint === "function") {
+      window.__kopilabaSerialPrint(data).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
       return;
     }
     const html = buildReceiptHTML(data, printerSettings);
@@ -6983,6 +6991,9 @@ export default function KopiLaba() {
                     try { device.gatt.disconnect(); } catch (_) {}
                     throw new Error("Printer ditemukan, tetapi tidak ada karakteristik BLE yang bisa ditulis. Printer mungkin memakai Bluetooth klasik atau protokol khusus.");
                   }
+                  window.__kopilabaUsbPrint = undefined;
+                  window.__kopilabaSerialPrint = undefined;
+                  window.__kopilabaActivePrint = undefined;
                   window.__kopilabaBleDevice = device;
                   window.__kopilabaBlePrint = async (data) => {
                     if (!device.gatt.connected) await device.gatt.connect();
@@ -6993,14 +7004,45 @@ export default function KopiLaba() {
                       if (writable.properties.writeWithoutResponse && writable.writeValueWithoutResponse) await writable.writeValueWithoutResponse(part);
                       else await writable.writeValue(part);
                     }
-                    alert("Struk dikirim ke printer Bluetooth. Jika kertas tidak keluar, printer mungkin tidak kompatibel dengan mode BLE/ESC-POS ini.");
+                    alert("Struk dikirim ke printer Bluetooth BLE. Jika kertas tidak keluar, printer mungkin tidak kompatibel dengan mode BLE/ESC-POS ini.");
                   };
-                  alert("Printer BLE terhubung: " + (device.name || "Printer Bluetooth") + ". Coba tombol Cetak Tes Printer. Printer Bluetooth klasik mungkin tidak didukung browser.");
+                  window.__kopilabaActivePrint = window.__kopilabaBlePrint;
+                  alert("Perangkat BLE terhubung: " + (device.name || "Bluetooth") + ". Untuk mencetak, perangkat harus menyediakan layanan BLE tulis yang kompatibel ESC/POS. Earphone hanya untuk audio, bukan printer.");
                 } catch (err) {
                   alert("Belum berhasil menghubungkan printer: " + (err?.message || err) + "\\nPastikan Bluetooth aktif, printer menyala, dan gunakan Chrome Android. Jika printer sudah dipasangkan tetapi tidak muncul, kemungkinan printer memakai Bluetooth klasik (SPP) yang tidak bisa diakses langsung dari website.");
                 }
               }}>
                 🔵 Cari & Hubungkan Printer Bluetooth
+              </button>
+              <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
+                if (!navigator.serial || !navigator.serial.requestPort) {
+                  alert("Bluetooth klasik/SPP tidak tersedia untuk website pada Chrome Android. Di Android gunakan printer BLE yang kompatibel atau cetak lewat layanan cetak sistem setelah printer dipasangkan. Jalur serial Bluetooth klasik tersedia pada Chrome desktop yang mendukung Web Serial.");
+                  return;
+                }
+                let port;
+                try {
+                  port = await navigator.serial.requestPort();
+                  await port.open({ baudRate: 9600 });
+                  window.__kopilabaBlePrint = undefined;
+                  window.__kopilabaUsbPrint = undefined;
+                  window.__kopilabaSerialPort = port;
+                  window.__kopilabaSerialPrint = async (data) => {
+                    if (!port.writable) throw new Error("Port serial tidak siap menerima data.");
+                    const writer = port.writable.getWriter();
+                    try {
+                      const bytes = new TextEncoder().encode("\x1B@" + receiptTextForBluetooth(data) + "\n\n\x1DVA\x00");
+                      await writer.write(bytes);
+                    } finally { writer.releaseLock(); }
+                    alert("Struk dikirim melalui port serial. Jika tidak tercetak, periksa baud rate/protokol printer.");
+                  };
+                  window.__kopilabaActivePrint = window.__kopilabaSerialPrint;
+                  alert("Port serial terhubung. Pilih printer Bluetooth SPP/serial, bukan perangkat audio seperti earphone.");
+                } catch (err) {
+                  try { if (port) await port.close(); } catch (_) {}
+                  alert("Koneksi Bluetooth klasik/serial gagal: " + (err?.message || err) + ". Fitur ini tidak tersedia di Chrome Android; dukungannya terutama di Chrome desktop.");
+                }
+              }}>
+                🟦 Bluetooth Klasik / SPP (perangkat yang mendukung)
               </button>
               <button style={{ ...s.btn, width: "100%", minHeight: 48, marginTop: 8, background: "#16803D", color: "#fff", fontWeight: 800 }} onClick={async () => {
                 if (!navigator.usb || !navigator.usb.requestDevice) {
@@ -7009,7 +7051,14 @@ export default function KopiLaba() {
                 }
                 let device;
                 try {
-                  device = await navigator.usb.requestDevice({ acceptAllDevices: true });
+                  device = await navigator.usb.requestDevice({ filters: [
+                    { classCode: 7 },
+                    { vendorId: 0x04b8 }, { vendorId: 0x0519 }, { vendorId: 0x154f },
+                    { vendorId: 0x0fe6 }, { vendorId: 0x6868 }, { vendorId: 0x0483 },
+                    { vendorId: 0x0416 }, { vendorId: 0x1fc9 }, { vendorId: 0x1a86 },
+                    { vendorId: 0x067b }, { vendorId: 0x20d1 }, { vendorId: 0x28e9 },
+                    { vendorId: 0x0dd4 }, { vendorId: 0x0525 }
+                  ] });
                   await device.open();
                   if (!device.configuration) await device.selectConfiguration(1);
                   let output = null;
@@ -7027,6 +7076,9 @@ export default function KopiLaba() {
                   if (alternate.alternateSetting !== 0) {
                     try { await device.selectAlternateInterface(iface.interfaceNumber, alternate.alternateSetting); } catch (_) {}
                   }
+                  window.__kopilabaBlePrint = undefined;
+                  window.__kopilabaSerialPrint = undefined;
+                  window.__kopilabaActivePrint = undefined;
                   window.__kopilabaUsbDevice = device;
                   window.__kopilabaUsbPrint = async (data) => {
                     if (!device.opened) await device.open();
@@ -7038,6 +7090,7 @@ export default function KopiLaba() {
                     }
                     alert("Data struk telah dikirim melalui USB. Jika kertas tidak keluar, printer mungkin membutuhkan protokol/driver khusus.");
                   };
+                  window.__kopilabaActivePrint = window.__kopilabaUsbPrint;
                   alert("Printer USB terhubung: " + (device.productName || "Printer USB") + ". Coba Cetak Tes Printer.");
                 } catch (err) {
                   try { if (device?.opened) await device.close(); } catch (_) {}
