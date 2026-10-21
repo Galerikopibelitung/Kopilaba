@@ -1,0 +1,11 @@
+{
+  "appId": "id.kopilaba.app",
+  "appName": "KopiLaba",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
