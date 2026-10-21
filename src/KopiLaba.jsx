@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 
 // KopiLaba styles are kept in this file so layout and behavior have one source of truth.
 
@@ -620,6 +623,53 @@ export default function KopiLaba() {
     })();
     return () => { cancelled = true; };
     // OAuth callback is handled once on mount; session completion uses current app functions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Android OAuth deep-link: kembali ke aplikasi setelah Google selesai.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle;
+    let active = true;
+    const processCallback = async (rawUrl) => {
+      try {
+        const callback = new URL(rawUrl);
+        const params = new URLSearchParams((callback.hash || "").replace(/^#/, ""));
+        const query = callback.searchParams;
+        const oauthError = params.get("error_description") || params.get("error") || query.get("error_description") || query.get("error");
+        const oauthToken = params.get("access_token") || query.get("access_token");
+        await Browser.close().catch(() => {});
+        if (oauthError) {
+          setError(oauthError.replace(/\\+/g, " "));
+          setScreen("login");
+          setLoading(false);
+          return;
+        }
+        if (!oauthToken) {
+          setError("Login Google belum mengembalikan sesi. Silakan coba lagi.");
+          setScreen("login");
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${oauthToken}` }
+        });
+        const oauthUser = await response.json().catch(() => ({}));
+        if (!response.ok || !oauthUser?.id) throw new Error(oauthUser?.message || "Login Google gagal.");
+        if (active) await finishAuthenticatedSession(oauthUser, oauthToken);
+      } catch (err) {
+        if (active) {
+          setError(err.message || "Login Google gagal. Coba ulangi.");
+          setScreen("login");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    App.addListener("appUrlOpen", ({ url }) => processCallback(url)).then((h) => { handle = h; });
+    App.getLaunchUrl().then((launch) => { if (launch?.url) processCallback(launch.url); }).catch(() => {});
+    return () => { active = false; handle?.remove?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1419,7 +1469,8 @@ export default function KopiLaba() {
     // Use the canonical site origin as the OAuth return URL.
     // The publishable key is safe for browser use and helps gateways that
     // require an API key on a top-level browser navigation.
-    const redirectTo = `${window.location.origin}/`;
+    const isNativeAndroid = Capacitor.isNativePlatform();
+    const redirectTo = isNativeAndroid ? "id.kopilaba.app://auth/callback" : `${window.location.origin}/`;
     const authUrl = new URL(`${SUPABASE_URL}/auth/v1/authorize`);
     authUrl.searchParams.set("provider", "google");
     authUrl.searchParams.set("redirect_to", redirectTo);
@@ -1430,7 +1481,15 @@ export default function KopiLaba() {
     try {
       sessionStorage.setItem("kopilaba_google_auth_origin", screen === "register" ? "register" : "login");
     } catch (_) {}
-    window.location.assign(authUrl.toString());
+    if (isNativeAndroid) {
+      Browser.open({ url: authUrl.toString(), presentationStyle: "popover" }).catch((err) => {
+        setLoading(false);
+        setError("Tidak bisa membuka login Google. Coba lagi.");
+        console.error("Google OAuth browser error:", err);
+      });
+    } else {
+      window.location.assign(authUrl.toString());
+    }
   };
 
   const finishAuthenticatedSession = async (u, tok) => {
