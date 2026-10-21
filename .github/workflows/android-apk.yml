@@ -45,19 +45,27 @@ jobs:
               t=(x+y)/(2*S)
               px[x,y]=(int(30-12*t),int(190-65*t),int(100-38*t))
           d=ImageDraw.Draw(im)
-          d.ellipse((100,100,924,924),fill=(255,255,255,30))
-          d.rounded_rectangle((260,390,710,745),radius=75,fill=(255,255,255))
-          d.arc((650,445,825,655),start=265,end=95,fill=(255,255,255),width=48)
-          d.line((330,510,640,510),fill=(18,140,74),width=28)
-          d.line((385,585,585,585),fill=(18,140,74),width=22)
-          for x in (385,510,635):
-            d.arc((x-35,235,x+35,375),start=190,end=330,fill=(255,255,255),width=22)
+          d.rounded_rectangle((180,150,275,810),radius=20,fill=(255,255,255))
+          d.polygon([(260,440),(555,150),(790,150),(470,470),(810,810),(565,810),(330,590),(275,650)],fill=(255,255,255))
+          d.polygon([(280,810),(385,650),(500,570),(455,660),(330,810)],fill=(185,248,201))
           im.save('assets/icon.png')
           PY
       - name: Build web app
         run: npm run build
       - name: Add Android platform
         run: npx cap add android
+      - name: Configure Android OAuth deep link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          marker='</activity>'
+          intent='''<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="id.kopilaba.app" android:host="auth" android:pathPrefix="/callback"/></intent-filter>'''
+          if intent not in s:
+            s=s.replace(marker, intent + marker, 1)
+          p.write_text(s)
+          PY
       - name: Generate native app icons
         run: npx capacitor-assets generate --android
       - name: Sync Capacitor
