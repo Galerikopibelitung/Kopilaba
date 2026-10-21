@@ -87,13 +87,22 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('android/app/src/main/AndroidManifest.xml')
-          s=p.read_text()
-          marker='</activity>'
-          intent='''<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="id.kopilaba.app" android:host="auth" android:pathPrefix="/callback"/></intent-filter>'''
-          if intent not in s:
-            s=s.replace(marker, intent + marker, 1)
+          import re
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          intent = '''<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="id.kopilaba.app" android:host="auth" android:pathPrefix="/callback"/></intent-filter>'''
+          # Put the callback filter on MainActivity specifically, not just the first activity.
+          match = re.search(r'<activity\b(?=[^>]*android:name="[^"]*MainActivity")[^>]*>.*?</activity>', s, re.S)
+          if not match:
+            raise SystemExit('MainActivity activity not found in AndroidManifest.xml')
+          activity = match.group(0)
+          if 'android:launchMode=' not in activity:
+            activity = activity.replace('<activity', '<activity android:launchMode="singleTask"', 1)
+          if 'android:scheme="id.kopilaba.app"' not in activity:
+            activity = activity.replace('</activity>', intent + '</activity>')
+          s = s[:match.start()] + activity + s[match.end():]
           p.write_text(s)
+          print('OAuth callback intent filter configured on MainActivity')
           PY
       - name: Generate native app icons
         run: npx capacitor-assets generate --android
