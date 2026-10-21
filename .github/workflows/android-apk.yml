@@ -10,7 +10,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'vite.config.js'
-      - 'capacitor.config.ts'
+      - 'capacitor.config.json'
       - '.github/workflows/android-apk.yml'
 permissions:
   contents: read
