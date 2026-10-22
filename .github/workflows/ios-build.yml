@@ -41,11 +41,12 @@ jobs:
         run: |
           npx cap add ios
           npx cap sync ios
+          cd ios/App && pod install && cd ../..
 
       - name: Build iOS Simulator app
         run: |
           xcodebuild \
-            -project ios/App/App.xcodeproj \
+            -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphonesimulator \
@@ -112,7 +113,7 @@ jobs:
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
           xcodebuild \
-            -project ios/App/App.xcodeproj \
+            -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
