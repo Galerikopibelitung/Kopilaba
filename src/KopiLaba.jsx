@@ -305,6 +305,18 @@ const receiptTextForBluetooth = (data) => {
   return lines.join("\n").replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?") + "\n";
 };
 
+const buildOrderPrintHTML = (data, printerSettings = {}) => {
+  const orders = Array.isArray(data?.orders) ? data.orders : [data || {}];
+  const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : printerSettings.paper === "58" ? "48mm" : "100%";
+  const printMargin = ["2", "4", "6"].includes(String(printerSettings.margin)) ? printerSettings.margin + "mm" : "4mm";
+  const orderHTML = orders.filter(Boolean).map((order) => {
+    const items = (order.items || []).map((it) => `<div class="item"><span>${escapeHTML(it.nama || "Item")} ×${Number(it.qty) || 1}${it.catatan ? `<small>Catatan: ${escapeHTML(it.catatan)}</small>` : ""}</span><span>Rp${((Number(it.harga) || 0) * (Number(it.qty) || 1)).toLocaleString("id-ID")}</span></div>`).join("");
+    const total = (order.items || []).reduce((sum, it) => sum + (Number(it.harga) || 0) * (Number(it.qty) || 1), 0);
+    return `<section><h2>${data?.documentType === "pesanan" ? "RINCIAN PESANAN" : "BUKTI ANTREAN"}</h2><div class="line"><b>NO. ANTREAN</b><b>${escapeHTML(order.nomor || "-")}</b></div><div class="line"><span>Pelanggan</span><span>${escapeHTML(order.nama || "Pelanggan")}</span></div><div class="line"><span>Jenis</span><span>${escapeHTML(order.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang")}</span></div><div class="line"><span>Waktu</span><span>${escapeHTML(order.waktu || "-")}</span></div><hr/>${items}<hr/><div class="line total"><span>TOTAL</span><span>Rp${total.toLocaleString("id-ID")}</span></div>${order.catatan ? `<p>Catatan pesanan: ${escapeHTML(order.catatan)}</p>` : ""}<div>Status: ${escapeHTML(order.status || "Menunggu")}</div></section>`;
+  }).join("");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cetak ${data?.documentType === "pesanan" ? "pesanan" : "antrean"}</title><style>*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:12px 'Courier New',monospace;color:#000;background:#fff;width:${paperWidth};max-width:100%;margin:0 auto;padding:4px}.center{text-align:center}.line{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.item{display:flex;justify-content:space-between;gap:8px;margin:4px 0}.item small{display:block;font-size:10px}.total{font-weight:bold;font-size:13px}section{break-inside:avoid;margin-bottom:12px}h1,h2{text-align:center;font-size:14px;margin:6px 0}hr{border:0;border-top:1px dashed #000;margin:6px 0}@media print{body{padding:0;width:${paperWidth}}@page{size:${printerSettings.paper === "A4" ? "A4" : "auto"};margin:${printMargin}}</style></head><body><header class="center"><h1>${escapeHTML(data?.namaKafe || "KOPILABA")}</h1></header>${orderHTML}<footer class="center">Dicetak dari KopiLaba</footer></body></html>`;
+};
+
 const printReceipt = (data, printerSettings = {}, options = {}) => {
   try {
     if (!options.forceSystem && typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
@@ -323,11 +335,8 @@ const printReceipt = (data, printerSettings = {}, options = {}) => {
       Promise.resolve(window.__kopilabaSerialPrint(data)).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
       return;
     }
-    if (options.directOnly) {
-      alert("Struk tersimpan, tetapi printer belum terhubung langsung ke KopiLaba. Buka Pengaturan Printer dan hubungkan printer sekali. Dialog pilih kertas/printer tidak akan dibuka dari transaksi.");
-      return;
-    }
-    const html = buildReceiptHTML(data, printerSettings);
+    const isOrderDocument = data?.documentType === "antrean" || data?.documentType === "pesanan";
+    const html = isOrderDocument ? buildOrderPrintHTML(data, printerSettings) : buildReceiptHTML(data, printerSettings);
     // Cetak di frame tersembunyi agar KopiLaba tidak membuka halaman/tab struk baru.
     // Browser tetap dapat menampilkan dialog cetak jika memakai jalur cetak sistem.
     const frame = document.createElement("iframe");
@@ -1153,7 +1162,7 @@ export default function KopiLaba() {
 
       // Semua dokumen antrean memakai jalur cetak langsung yang sama dengan struk.
       // Jangan membuka tab/pratinjau browser jika koneksi printer langsung tidak tersedia.
-      printReceipt(printData, printerSettings, { directOnly: true });
+      printReceipt(printData, printerSettings);
     } catch (err) {
       alert("Gagal mengirim dokumen ke printer: " + (err?.message || err));
     }
