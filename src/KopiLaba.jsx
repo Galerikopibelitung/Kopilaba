@@ -4786,8 +4786,7 @@ export default function KopiLaba() {
                   {o.catatan && <p style={{ margin: "8px 0", fontSize: 12, color: theme.textMuted }}>Catatan pesanan: {o.catatan}</p>}
                   <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 9, marginTop: 9, display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>Total</span><span>{fmt((o.items || []).reduce((sum, it) => sum + (Number(it.harga) || 0) * (Number(it.qty) || 0), 0))}</span></div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-                    <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🖨 Cetak antrean</button>
-                    <button style={s.btnSm} onClick={() => cetakAntrean(o, "pesanan")}>🧾 Cetak pesanan</button>
+                    <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🖨 Cetak antrean / pesanan</button>
                     {o.status === "Menunggu" && <button style={{ ...s.btnSm, background: "#25D366", color: "#073B1A" }} onClick={() => {
                       (o.items || []).forEach((it) => {
                         const source = menu.find((m) => String(m.id) === String(it.id)) || it;
