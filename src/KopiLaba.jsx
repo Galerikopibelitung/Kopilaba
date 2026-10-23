@@ -1132,40 +1132,31 @@ export default function KopiLaba() {
     try {
       const daftar = mode === "daftar";
       const orders = daftar ? (order || []) : [order];
-      // Jika printer sudah terhubung di Pengaturan Printer, cetak langsung tanpa popup/dialog browser.
-      if (typeof window !== "undefined" && typeof window.__kopilabaActivePrint === "function") {
-        const printData = {
-          documentType: "antrean",
-          namaKafe: kafe?.nama || "KOPILABA",
-          orders: orders.filter(Boolean).map((o) => ({
-            nomor: o.nomor,
-            nama: o.nama || "Pelanggan",
-            jenis: o.jenis,
-            waktu: o.waktu,
-            status: o.status || "Menunggu",
-            catatan: o.catatan || "",
-            items: (o.items || []).map((it) => ({ nama: it.nama, qty: it.qty, harga: it.harga, catatan: it.catatan || "" }))
+      const printData = {
+        documentType: mode === "pesanan" ? "pesanan" : "antrean",
+        namaKafe: kafe?.nama || "KOPILABA",
+        orders: orders.filter(Boolean).map((o) => ({
+          nomor: o.nomor,
+          nama: o.nama || "Pelanggan",
+          jenis: o.jenis,
+          waktu: o.waktu,
+          status: o.status || "Menunggu",
+          catatan: o.catatan || "",
+          items: (o.items || []).map((it) => ({
+            nama: it.nama,
+            qty: it.qty,
+            harga: it.harga,
+            catatan: it.catatan || ""
           }))
-        };
-        Promise.resolve(window.__kopilabaActivePrint(printData)).catch((err) => alert("Gagal mencetak antrean melalui printer terhubung: " + (err?.message || err)));
-        return;
-      }
-      const w = window.open("", "_blank", "width=420,height=680");
-      if (!w) { alert("Popup diblokir. Hubungkan printer di Pengaturan Printer untuk cetak langsung, atau izinkan popup untuk cetak melalui browser."); return; }
-      const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-      const paperWidth = printerSettings.paper === "80" ? "72mm" : printerSettings.paper === "A4" ? "190mm" : "48mm";
-      const queueFont = printerSettings.fontSize === "compact" ? "10px" : printerSettings.fontSize === "large" ? "13px" : "12px";
-      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Antrean KopiLaba</title>
-      <style>body{font-family:Arial,sans-serif;color:#111;margin:0 auto;font-size:${queueFont};padding:3px;width:${paperWidth};max-width:100%}h2,p{margin:3px 0;text-align:center}.line{border-top:1px dashed #555;margin:8px 0}.row{display:flex;justify-content:space-between;gap:8px}.big{font-size:28px;font-weight:bold;text-align:center;margin:8px 0}.muted{font-size:10px}.item{margin:5px 0}@page{size:${printerSettings.paper === "A4" ? "A4" : "auto"};margin:${printerSettings.margin}mm}</style></head><body>
-      <h2>${esc(kafe?.nama || "KOPILABA")}</h2><p>${daftar ? "DAFTAR ANTREAN & PESANAN" : "BUKTI ANTREAN PESANAN"}</p><div class="line"></div>
-      ${orders.map((o) => `<section><div class="big">NO. ${esc(o.nomor)}</div><p><b>${esc(o.nama || "Pelanggan")}</b></p><p>${o.jenis === "makan_di_tempat" ? "Makan di tempat" : "Bawa pulang"}</p><p class="muted">${esc(o.waktu || "")}</p><div class="line"></div>
-      ${(o.items || []).map((it) => `<div class="item"><div class="row"><span>${esc(it.nama)} x${esc(it.qty)}</span><span>${fmt((Number(it.harga)||0)*(Number(it.qty)||0))}</span></div>${it.catatan ? `<div class="muted">Catatan: ${esc(it.catatan)}</div>` : ""}</div>`).join("")}
-      <div class="line"></div><div class="row"><b>Total</b><b>${fmt((o.items||[]).reduce((sum,it)=>sum+(Number(it.harga)||0)*(Number(it.qty)||0),0))}</b></div>
-      ${o.catatan ? `<p style="text-align:left;margin-top:8px"><b>Catatan pesanan:</b> ${esc(o.catatan)}</p>` : ""}
-      <p class="muted">Status: ${esc(o.status || "menunggu")}</p><div class="line"></div></section>`).join(daftar ? '<div style="page-break-after:always"></div>' : "")}
-      <p class="muted">Dicetak dari KopiLaba</p><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`;
-      w.document.open(); w.document.write(html); w.document.close();
-    } catch (err) { alert("Gagal mencetak antrean: " + err.message); }
+        }))
+      };
+
+      // Semua dokumen antrean memakai jalur cetak langsung yang sama dengan struk.
+      // Jangan membuka tab/pratinjau browser jika koneksi printer langsung tidak tersedia.
+      printReceipt(printData, printerSettings, { directOnly: true });
+    } catch (err) {
+      alert("Gagal mengirim dokumen ke printer: " + (err?.message || err));
+    }
   };
   const tambahItemAntrean = () => {
     const item = menu.find((m) => String(m.id) === String(antreanMenuId));
@@ -4796,7 +4787,7 @@ export default function KopiLaba() {
                   <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 9, marginTop: 9, display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>Total</span><span>{fmt((o.items || []).reduce((sum, it) => sum + (Number(it.harga) || 0) * (Number(it.qty) || 0), 0))}</span></div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
                     <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🖨 Cetak antrean</button>
-                    <button style={s.btnSm} onClick={() => cetakAntrean(o)}>🧾 Cetak pesanan</button>
+                    <button style={s.btnSm} onClick={() => cetakAntrean(o, "pesanan")}>🧾 Cetak pesanan</button>
                     {o.status === "Menunggu" && <button style={{ ...s.btnSm, background: "#25D366", color: "#073B1A" }} onClick={() => {
                       (o.items || []).forEach((it) => {
                         const source = menu.find((m) => String(m.id) === String(it.id)) || it;
