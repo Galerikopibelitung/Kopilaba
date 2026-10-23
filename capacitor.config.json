@@ -6,6 +6,7 @@
     "allowMixedContent": false
   },
   "server": {
+    "url": "https://kopilaba.pages.dev",
     "androidScheme": "https"
   }
 }
