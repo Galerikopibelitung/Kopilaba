@@ -335,6 +335,10 @@ const printReceipt = (data, printerSettings = {}, options = {}) => {
       Promise.resolve(window.__kopilabaSerialPrint(data)).catch((err) => alert("Gagal mencetak melalui Bluetooth klasik/serial: " + (err?.message || err)));
       return;
     }
+    if (options.directOnly) {
+      alert("Printer belum siap atau belum terhubung. Hubungkan printer melalui Pengaturan Printer terlebih dahulu.");
+      return;
+    }
     const isOrderDocument = data?.documentType === "antrean" || data?.documentType === "pesanan";
     const html = isOrderDocument ? buildOrderPrintHTML(data, printerSettings) : buildReceiptHTML(data, printerSettings);
     // Cetak di frame tersembunyi agar KopiLaba tidak membuka halaman/tab struk baru.
@@ -1162,7 +1166,7 @@ export default function KopiLaba() {
 
       // Semua dokumen antrean memakai jalur cetak langsung yang sama dengan struk.
       // Jangan membuka tab/pratinjau browser jika koneksi printer langsung tidak tersedia.
-      printReceipt(printData, printerSettings);
+      printReceipt(printData, printerSettings, { directOnly: true });
     } catch (err) {
       alert("Gagal mengirim dokumen ke printer: " + (err?.message || err));
     }
