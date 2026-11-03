@@ -2773,9 +2773,14 @@ export default function KopiLaba() {
     [transaksi, profile?.role, filterTglMulai, filterTglSelesai, filterStatus, periodeFilter, wibDayKey]
   );
 
-  // Daftar Semua Transaksi tidak boleh dibatasi periode laporan (default laporan: hari ini).
-  // Riwayat lama tetap ditampilkan; tab hanya menyaring status pembayaran.
+  // Daftar transaksi menampilkan seluruh riwayat; filter hanya menyaring jenis/status.
   const transaksiListFiltered = useMemo(() => {
+    if (filterStatus === "pemasukan") {
+      return transaksi.filter((t) => t.tipe === "masuk");
+    }
+    if (filterStatus === "pengeluaran") {
+      return transaksi.filter((t) => t.tipe === "keluar");
+    }
     if (filterStatus === "lunas") {
       return transaksi.filter((t) => String(t.status || "lunas").trim().toLowerCase() === "lunas");
     }
@@ -4626,13 +4631,25 @@ export default function KopiLaba() {
                 </button>
               )}
             </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              {["semua", "lunas", "belum_lunas"].map((f) => (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 14,
+                overflowX: "auto",
+                overflowY: "hidden",
+                flexWrap: "nowrap",
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none",
+              }}
+            >
+              {["semua", "lunas", "belum_lunas", "pemasukan", "pengeluaran"].map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilterStatus(f)}
                   style={{
-                    flex: 1,
+                    flex: "0 0 auto",
+                    whiteSpace: "nowrap",
                     padding: "8px 12px",
                     borderRadius: 10,
                     border: "none",
@@ -4643,7 +4660,15 @@ export default function KopiLaba() {
                     fontSize: 12,
                   }}
                 >
-                  {f === "semua" ? "Semua" : f === "lunas" ? "✅ Lunas" : "🔴 Piutang"}
+                  {f === "semua"
+                    ? "Semua"
+                    : f === "lunas"
+                    ? "✅ Lunas"
+                    : f === "belum_lunas"
+                    ? "🔴 Piutang"
+                    : f === "pemasukan"
+                    ? "↑ Pemasukan"
+                    : "↓ Pengeluaran"}
                 </button>
               ))}
             </div>
@@ -4654,7 +4679,11 @@ export default function KopiLaba() {
                     ? "Belum ada transaksi."
                     : filterStatus === "lunas"
                     ? "Belum ada transaksi lunas."
-                    : "Belum ada transaksi piutang."}
+                    : filterStatus === "belum_lunas"
+                    ? "Belum ada transaksi piutang."
+                    : filterStatus === "pemasukan"
+                    ? "Belum ada pemasukan."
+                    : "Belum ada pengeluaran."}
                 </p>
               )}
               {transaksiListFiltered.map((t, i) => {
