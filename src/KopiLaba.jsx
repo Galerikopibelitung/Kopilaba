@@ -2772,6 +2772,18 @@ export default function KopiLaba() {
     () => getFilteredTransaksi(),
     [transaksi, profile?.role, filterTglMulai, filterTglSelesai, filterStatus, periodeFilter, wibDayKey]
   );
+
+  // Daftar Semua Transaksi tidak boleh dibatasi periode laporan (default laporan: hari ini).
+  // Riwayat lama tetap ditampilkan; tab hanya menyaring status pembayaran.
+  const transaksiListFiltered = useMemo(() => {
+    if (filterStatus === "lunas") {
+      return transaksi.filter((t) => String(t.status || "lunas").trim().toLowerCase() === "lunas");
+    }
+    if (filterStatus === "belum_lunas" || filterStatus === "piutang") {
+      return transaksi.filter((t) => String(t.status || "lunas").trim().toLowerCase() !== "lunas");
+    }
+    return transaksi;
+  }, [transaksi, filterStatus]);
   const dashboardData = useMemo(
     () => getDashboardData(),
     [transaksi, periodeFilter, profile?.role, wibDayKey]
@@ -4636,7 +4648,7 @@ export default function KopiLaba() {
               ))}
             </div>
             <div style={s.card}>
-              {filtered.length === 0 && (
+              {transaksiListFiltered.length === 0 && (
                 <p style={{ color: theme.textMuted, fontSize: 13 }}>
                   {filterStatus === "semua"
                     ? "Belum ada transaksi."
@@ -4645,7 +4657,7 @@ export default function KopiLaba() {
                     : "Belum ada transaksi piutang."}
                 </p>
               )}
-              {filtered.map((t, i) => {
+              {transaksiListFiltered.map((t, i) => {
                 const items = parseItems(t.item);
                 const display = items.map((it) => `${it.nama} x${it.qty}`).join(", ");
                 return (
