@@ -4643,7 +4643,7 @@ export default function KopiLaba() {
                 scrollbarWidth: "none",
               }}
             >
-              {["semua", "lunas", "belum_lunas", "pemasukan", "pengeluaran"].map((f) => (
+              {["semua", "pemasukan", "pengeluaran", "lunas", "belum_lunas"].map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilterStatus(f)}
