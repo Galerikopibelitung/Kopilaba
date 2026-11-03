@@ -2745,10 +2745,13 @@ export default function KopiLaba() {
     if (!filterTglMulai && !filterTglSelesai) {
       filtered = filterTransaksiByPeriode(filtered, periodeFilter);
     }
+    // Tombol UI memakai label "piutang", sedangkan sebagian data lama
+    // menyimpan status sebagai "belum_lunas". Samakan keduanya saat memfilter.
+    const normalizedStatus = (t) => String(t.status || "lunas").trim().toLowerCase();
     if (filterStatus === "lunas") {
-      filtered = filtered.filter((t) => t.status === "lunas");
-    } else if (filterStatus === "belum_lunas") {
-      filtered = filtered.filter((t) => t.status === "belum_lunas");
+      filtered = filtered.filter((t) => normalizedStatus(t) === "lunas");
+    } else if (filterStatus === "belum_lunas" || filterStatus === "piutang") {
+      filtered = filtered.filter((t) => normalizedStatus(t) !== "lunas");
     }
     return filtered;
   };
