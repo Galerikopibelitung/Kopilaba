@@ -4636,10 +4636,16 @@ export default function KopiLaba() {
               ))}
             </div>
             <div style={s.card}>
-              {transaksi.length === 0 && (
-                <p style={{ color: theme.textMuted, fontSize: 13 }}>Belum ada transaksi.</p>
+              {filtered.length === 0 && (
+                <p style={{ color: theme.textMuted, fontSize: 13 }}>
+                  {filterStatus === "semua"
+                    ? "Belum ada transaksi."
+                    : filterStatus === "lunas"
+                    ? "Belum ada transaksi lunas."
+                    : "Belum ada transaksi piutang."}
+                </p>
               )}
-              {transaksi.map((t, i) => {
+              {filtered.map((t, i) => {
                 const items = parseItems(t.item);
                 const display = items.map((it) => `${it.nama} x${it.qty}`).join(", ");
                 return (
