@@ -764,7 +764,7 @@ export default function KopiLaba() {
   const [kategori, setKategori] = useState([]);
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
-  const [tokoForm, setTokoForm] = useState({ nama: "", alamat: "", telepon: "" });
+  const [tokoForm, setTokoForm] = useState({ nama: "", alamat: "", telepon: "", namaPemilik: "" });
   const [tokoSaving, setTokoSaving] = useState(false);
   const [absensi, setAbsensi] = useState([]);
   const [allOwners, setAllOwners] = useState([]);
@@ -831,8 +831,8 @@ export default function KopiLaba() {
 
   useEffect(() => {
     if (!kafe) return;
-    setTokoForm({ nama: kafe.nama || "", alamat: kafe.alamat || "", telepon: kafe.telepon || "" });
-  }, [kafe?.id, kafe?.nama, kafe?.alamat, kafe?.telepon]);
+    setTokoForm((prev) => ({ ...prev, nama: kafe.nama || "", alamat: kafe.alamat || "", telepon: kafe.telepon || "", namaPemilik: profile?.nama || "" }));
+  }, [kafe?.id, kafe?.nama, kafe?.alamat, kafe?.telepon, profile?.nama]);
 
   const handleSaveTokoSettings = async () => {
     if (profile?.role !== "pemilik" || !kafe?.id || !profile?.id || !token) {
@@ -844,7 +844,9 @@ export default function KopiLaba() {
       alamat: tokoForm.alamat.trim(),
       telepon: tokoForm.telepon.trim(),
     };
+    const namaPemilik = tokoForm.namaPemilik.trim();
     if (!payload.nama) { setError("Nama toko wajib diisi."); return; }
+    if (!namaPemilik) { setError("Nama pemilik/user wajib diisi."); return; }
     setTokoSaving(true);
     setError("");
     setSuccess("");
@@ -857,8 +859,11 @@ export default function KopiLaba() {
         throw new Error("Pengaturan toko tidak tersimpan. Pastikan akun ini adalah pemilik toko.");
       }
       setKafe((prev) => ({ ...prev, ...result[0] }));
-      setTokoForm({ nama: result[0].nama || "", alamat: result[0].alamat || "", telepon: result[0].telepon || "" });
-      setSuccess("Pengaturan toko berhasil disimpan dan diperbarui di semua perangkat.");
+      const profileResult = await api(`/rest/v1/profiles?id=eq.${encodeURIComponent(profile.id)}`, "PATCH", { nama: namaPemilik }, token);
+      if (!Array.isArray(profileResult) || profileResult.length === 0) throw new Error("Data toko tersimpan, tetapi nama pemilik belum berhasil diperbarui.");
+      setProfile((prev) => ({ ...prev, nama: profileResult[0].nama || namaPemilik }));
+      setTokoForm({ nama: result[0].nama || "", alamat: result[0].alamat || "", telepon: result[0].telepon || "", namaPemilik: profileResult[0].nama || namaPemilik });
+      setSuccess("Pengaturan toko dan nama pemilik berhasil disimpan dan diperbarui di semua perangkat.");
     } catch (err) {
       setError(err.message || "Gagal menyimpan pengaturan toko.");
     } finally {
@@ -4378,6 +4383,8 @@ export default function KopiLaba() {
               <h2 style={{ margin: "5px 0", fontSize: 23, color: theme.text }}>Pengaturan Toko</h2>
               <p style={{ margin: 0, color: theme.textMuted, fontSize: 13 }}>Perbarui identitas dan informasi kontak toko. Perubahan tersimpan online dan digunakan pada seluruh perangkat.</p>
             </div>
+            <label style={s.label}>Nama Pemilik / User</label>
+            <input style={s.input} type="text" maxLength={120} placeholder="Nama pemilik atau pengguna" value={tokoForm.namaPemilik} onChange={(e) => setTokoForm((p) => ({ ...p, namaPemilik: e.target.value }))} />
             <label style={s.label}>Nama Toko</label>
             <input style={s.input} type="text" maxLength={120} placeholder="Nama toko" value={tokoForm.nama} onChange={(e) => setTokoForm((p) => ({ ...p, nama: e.target.value }))} />
             <label style={s.label}>Alamat Toko</label>
