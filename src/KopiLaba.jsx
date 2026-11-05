@@ -764,6 +764,8 @@ export default function KopiLaba() {
   const [kategori, setKategori] = useState([]);
   const [karyawan, setKaryawan] = useState([]);
   const [kafe, setKafe] = useState(null);
+  const [tokoForm, setTokoForm] = useState({ nama: "", alamat: "", telepon: "" });
+  const [tokoSaving, setTokoSaving] = useState(false);
   const [absensi, setAbsensi] = useState([]);
   const [allOwners, setAllOwners] = useState([]);
   const [allTransaksi, setAllTransaksi] = useState([]);
@@ -826,6 +828,43 @@ export default function KopiLaba() {
       if (Number.isFinite(rate) && rate >= 0 && rate <= 100) setPersentasePajak(rate);
     }
   }, [kafe?.id, kafe?.pajak_enabled, kafe?.pajak_persen]);
+
+  useEffect(() => {
+    if (!kafe) return;
+    setTokoForm({ nama: kafe.nama || "", alamat: kafe.alamat || "", telepon: kafe.telepon || "" });
+  }, [kafe?.id, kafe?.nama, kafe?.alamat, kafe?.telepon]);
+
+  const handleSaveTokoSettings = async () => {
+    if (profile?.role !== "pemilik" || !kafe?.id || !profile?.id || !token) {
+      setError("Hanya pemilik toko yang dapat mengubah pengaturan toko.");
+      return;
+    }
+    const payload = {
+      nama: tokoForm.nama.trim(),
+      alamat: tokoForm.alamat.trim(),
+      telepon: tokoForm.telepon.trim(),
+    };
+    if (!payload.nama) { setError("Nama toko wajib diisi."); return; }
+    setTokoSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await api(
+        `/rest/v1/kafe?id=eq.${encodeURIComponent(kafe.id)}&pemilik_id=eq.${encodeURIComponent(profile.id)}`,
+        "PATCH", payload, token
+      );
+      if (!Array.isArray(result) || result.length === 0) {
+        throw new Error("Pengaturan toko tidak tersimpan. Pastikan akun ini adalah pemilik toko.");
+      }
+      setKafe((prev) => ({ ...prev, ...result[0] }));
+      setTokoForm({ nama: result[0].nama || "", alamat: result[0].alamat || "", telepon: result[0].telepon || "" });
+      setSuccess("Pengaturan toko berhasil disimpan dan diperbarui di semua perangkat.");
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan pengaturan toko.");
+    } finally {
+      setTokoSaving(false);
+    }
+  };
 
   const handleSaveTaxSettings = async () => {
     if (profile?.role !== "pemilik" || !kafe?.id || !token) {
@@ -3156,7 +3195,7 @@ export default function KopiLaba() {
         { id: "struk", icon: "file", label: "Struk" },
         { id: "printer", icon: "file", label: "Pengaturan Printer" },
         { id: "qris", icon: "qr", label: "QRIS" },
-        ...(profile?.role === "pemilik" ? [{ id: "backup", icon: "database", label: "Backup Data" }] : []),
+        ...(profile?.role === "pemilik" ? [{ id: "toko", icon: "coffee", label: "Pengaturan Toko" }, { id: "backup", icon: "database", label: "Backup Data" }] : []),
       ], [isSuperAdmin, profile?.role]);
 
   const filteredMenu = useMemo(
@@ -4328,6 +4367,29 @@ export default function KopiLaba() {
             </div>
             {retentionReminder?.show && ["pemilik", "barista"].includes(profile?.role) && <div className="kl-backup-warning" role="status"><b>Pengingat backup transaksi</b><p>{retentionReminder.days === 0 ? "Jadwal retensi hari ini." : "Jadwal retensi dalam " + retentionReminder.days + " hari."} Jadwal yang direncanakan: {retentionReminder.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}. Unduh backup lengkap sekarang dan pastikan file tersimpan. Penghapusan otomatis belum akan berjalan tanpa verifikasi backup yang aman.</p></div>}
             <div className="kl-backup-warning"><b>Jadwal retensi data</b><p>Rencana penghapusan hanya pada 1 Januari dan 1 Juli. Menu, foto produk, QRIS, pengaturan pajak, dan akun tidak termasuk. Penghapusan transaksi tetap dinonaktifkan sampai proses backup semua perangkat dan pemulihan teruji aman.</p></div>
+          </div>
+        )}
+
+        {/* PENGATURAN TOKO - KHUSUS PEMILIK */}
+        {!isSuperAdmin && profile?.role === "pemilik" && tab === "toko" && (
+          <div style={{ ...s.card, maxWidth: 720, margin: "0 auto" }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: theme.gold }}>PROFIL USAHA</div>
+              <h2 style={{ margin: "5px 0", fontSize: 23, color: theme.text }}>Pengaturan Toko</h2>
+              <p style={{ margin: 0, color: theme.textMuted, fontSize: 13 }}>Perbarui identitas dan informasi kontak toko. Perubahan tersimpan online dan digunakan pada seluruh perangkat.</p>
+            </div>
+            <label style={s.label}>Nama Toko</label>
+            <input style={s.input} type="text" maxLength={120} placeholder="Nama toko" value={tokoForm.nama} onChange={(e) => setTokoForm((p) => ({ ...p, nama: e.target.value }))} />
+            <label style={s.label}>Alamat Toko</label>
+            <textarea style={{ ...s.input, minHeight: 82, resize: "vertical" }} maxLength={500} placeholder="Alamat lengkap toko" value={tokoForm.alamat} onChange={(e) => setTokoForm((p) => ({ ...p, alamat: e.target.value }))} />
+            <label style={s.label}>Nomor HP / WhatsApp</label>
+            <input style={s.input} type="tel" inputMode="tel" maxLength={30} placeholder="Nomor HP toko" value={tokoForm.telepon} onChange={(e) => setTokoForm((p) => ({ ...p, telepon: e.target.value }))} />
+            <button type="button" style={{ ...s.btn, marginTop: 14 }} disabled={tokoSaving || loading} onClick={handleSaveTokoSettings}>{tokoSaving ? "Menyimpan..." : "Simpan Pengaturan Toko"}</button>
+            <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${theme.cardBorder}` }}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: theme.text }}>Keamanan Akun</h3>
+              <p style={{ margin: "0 0 12px", color: theme.textMuted, fontSize: 13 }}>Ubah password akun pemilik. Password lama akan diverifikasi sebelum perubahan disimpan.</p>
+              <button type="button" onClick={() => setShowGantiPassword(true)} style={{ ...s.btn, background: "transparent", color: theme.text, border: `1px solid ${theme.cardBorder}` }}> <AppIcon name="key" size={16} /> Ganti Password</button>
+            </div>
           </div>
         )}
 
